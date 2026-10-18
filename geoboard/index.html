@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>數學釘板・多邊形面積｜順德聯誼總會何日東小學— 何老師設計</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  :root {
+    --bg: #fff8f0;
+    --card: #ffffff;
+    --primary: #e67e22;
+    --primary-dark: #d35400;
+    --accent: #3498db;
+    --accent-dark: #2980b9;
+    --success: #27ae60;
+    --danger: #e74c3c;
+    --split: #8e44ad;
+    --text: #2c3e50;
+    --muted: #7f8c8d;
+    --border: #f0e6d8;
+    --shadow: 0 4px 16px rgba(0,0,0,0.08);
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    width: 100%;
+    max-width: 100%;
+    font-family: "PingFang HK", "Noto Sans TC", "Microsoft JhengHei", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    overflow-x: hidden;
+  }
+  body { min-height: 100vh; overflow-x: hidden; }
+  /* Lock page scroll while finger is drawing on a geoboard */
+  html.drawing-lock, body.drawing-lock {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    touch-action: none;
+    position: relative;
+    height: 100%;
+  }
+  body.drawing-lock {
+    /* freeze scroll position on iOS */
+    position: fixed;
+    width: 100%;
+    left: 0;
+    right: 0;
+  }
+  .screen {
+    display: none;
+    min-height: 100vh;
+    padding: 12px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+  .screen.active { display: flex; flex-direction: column; align-items: center; }
+  #screen-landing { justify-content: center; }
+  .header { text-align: center; margin-bottom: 14px; flex-shrink: 0; width: 100%; }
+  .header h1 {
+    font-size: clamp(1.2rem, 4vw, 1.7rem);
+    color: var(--primary-dark);
+    margin-bottom: 4px;
+  }
+  .header .school { font-size: 0.85rem; color: var(--muted); }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    max-width: 720px;
+    width: 100%;
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: none; border-radius: 12px; padding: 12px 18px;
+    font-size: 1rem; font-weight: 600; cursor: pointer; font-family: inherit;
+    transition: transform 0.1s, background 0.15s; min-height: 48px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover:not(:disabled) { background: var(--accent-dark); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover:not(:disabled) { filter: brightness(0.92); }
+  .btn-split { background: var(--split); color: #fff; }
+  .btn-ghost { background: #f5f0ea; color: var(--text); }
+  .btn-ghost:hover:not(:disabled) { background: #ebe3d8; }
+  .btn-block { width: 100%; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; width: 100%; max-width: min(560px, 100%); box-sizing: border-box; }
+  .btn-row .btn { flex: 1 1 auto; min-width: 100px; }
+  .role-btns { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+  .role-btns .btn { font-size: 1.15rem; padding: 16px; }
+
+  .name-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px; max-height: 55vh; overflow-y: auto; padding: 4px;
+  }
+  .name-btn {
+    background: #fff5eb; border: 2px solid var(--border); border-radius: 12px;
+    padding: 12px 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    font-family: inherit; color: var(--text); text-align: center; min-height: 52px;
+  }
+  .name-btn:hover { border-color: var(--primary); background: #ffe8d1; }
+  .name-btn.submitted { border-color: var(--success); background: #e8f8ef; }
+  .name-btn.submitted::after { content: " ✓"; color: var(--success); }
+
+  .student-badge {
+    display: inline-block; background: #ffe8d1; color: var(--primary-dark);
+    padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.95rem; margin-bottom: 8px;
+  }
+  .board-hint { text-align: center; color: var(--muted); font-size: 0.9rem; margin-bottom: 8px; }
+  .board-wrap {
+    width: 100%;
+    max-width: min(520px, 100%);
+    margin: 0 auto;
+    position: relative;
+    box-sizing: border-box;
+    touch-action: none; -webkit-user-select: none; user-select: none;
+  }
+  .board-cm-label {
+    text-align: center; font-size: 1rem; font-weight: 800; color: var(--primary-dark);
+    background: #ffe8d1; border-radius: 10px; padding: 8px 12px; margin-bottom: 8px;
+    box-sizing: border-box; max-width: 100%;
+  }
+  .board-size-tag { text-align: center; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+  .board-frame {
+    position: relative; background: #fff; border-radius: 12px;
+    border: 3px solid #e8d5c0; padding: 8px 8px 28px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    touch-action: none; overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+    overflow: hidden;
+  }
+  #geoboard, #calc-canvas {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    background: #fff;
+    display: block;
+    box-sizing: border-box;
+    cursor: crosshair;
+    touch-action: none;
+    user-select: none; -webkit-user-select: none;
+    border-radius: 4px;
+    overscroll-behavior: none;
+    -webkit-touch-callout: none;
+  }
+  /* Board / calc screens: reduce iOS rubber-band scroll */
+  #screen-board.active, #screen-calc.active {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: auto;
+  }
+  .board-under-label {
+    position: absolute; left: 0; right: 0; bottom: 6px; text-align: center;
+    font-size: 0.82rem; font-weight: 700; color: var(--primary-dark); pointer-events: none;
+  }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(80px);
+    background: var(--text); color: #fff; padding: 12px 20px; border-radius: 12px;
+    font-weight: 600; z-index: 1000; opacity: 0; transition: transform 0.25s, opacity 0.25s;
+    pointer-events: none; max-width: 90vw; text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .toast.ok { background: var(--success); }
+  .toast.err { background: var(--danger); }
+
+  .pin-input, .code-input, .area-input {
+    width: 100%; font-size: 1.4rem; text-align: center; padding: 14px;
+    border: 2px solid var(--border); border-radius: 12px; margin: 12px 0; font-family: inherit;
+  }
+  .code-input { letter-spacing: 0.35em; font-weight: 800; }
+  .area-input { letter-spacing: 0.05em; max-width: 280px; margin-left: auto; margin-right: auto; display: block; }
+
+  .room-code-big {
+    font-size: clamp(2.5rem, 12vw, 4rem); font-weight: 900; letter-spacing: 0.2em;
+    color: var(--primary-dark); text-align: center; padding: 12px; background: #ffe8d1;
+    border-radius: 16px; margin: 12px 0;
+  }
+  .sync-bar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center;
+    width: 100%; max-width: 900px; margin-bottom: 10px;
+  }
+  .sync-pill {
+    background: #fff; border-radius: 20px; padding: 6px 14px; font-size: 0.88rem;
+    font-weight: 700; box-shadow: var(--shadow);
+  }
+  .sync-pill.on { color: var(--success); }
+  .sync-pill.off { color: var(--danger); }
+
+  .progress-summary { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat-pill {
+    background: #fff; border-radius: 20px; padding: 8px 16px; font-weight: 700;
+    box-shadow: var(--shadow); font-size: 0.95rem;
+  }
+  .stat-pill.done { color: var(--success); }
+  .stat-pill.todo { color: var(--danger); }
+  .progress-list {
+    width: 100%; max-width: 720px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;
+  }
+  .progress-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--card); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow);
+    border: 2px solid transparent; font-weight: 600; font-size: 0.95rem;
+  }
+  .progress-item.done { border-color: #a8e6c1; background: #e8f8ef; }
+  .progress-item.todo { border-color: #f5d0c8; background: #fff5f3; }
+  .progress-item.me { outline: 3px solid var(--primary); }
+  .progress-item.clickable { cursor: pointer; }
+  .progress-item.clickable:hover { border-color: var(--primary); }
+  .progress-item .status { font-size: 0.82rem; white-space: nowrap; font-weight: 800; }
+  .progress-item.done .status { color: var(--success); }
+  .progress-item.todo .status { color: var(--danger); }
+
+  .gallery-section-title {
+    width: 100%; max-width: 900px; font-size: 1.1rem; font-weight: 800;
+    color: var(--primary-dark); margin: 18px 0 10px;
+  }
+  .gallery-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px; width: 100%; max-width: 900px;
+  }
+  .gallery-card {
+    background: var(--card); border-radius: 14px; box-shadow: var(--shadow);
+    padding: 10px; cursor: pointer; border: 2px solid transparent;
+  }
+  .gallery-card:hover, .gallery-card.live { border-color: var(--primary); }
+  .gallery-card canvas { width: 100%; aspect-ratio: 1; background: #faf6f1; border-radius: 8px; display: block; }
+  .gallery-card .meta { margin-top: 8px; text-align: center; }
+  .gallery-card .meta .name { font-weight: 700; font-size: 0.95rem; }
+  .gallery-card .meta .date { font-size: 0.75rem; color: var(--muted); }
+  .empty-msg { text-align: center; color: var(--muted); padding: 24px 16px; font-size: 1.05rem; }
+
+  .answer-box {
+    margin-top: 14px; padding: 16px; background: #e8f8ef; border-radius: 12px;
+    text-align: center; display: none; width: 100%; max-width: 560px;
+  }
+  .answer-box.show { display: block; }
+  .answer-box .area { font-size: 1.6rem; font-weight: 800; color: var(--success); }
+  .answer-box .picks { margin-top: 8px; font-size: 0.95rem; }
+
+  .toolbar-top {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between;
+    align-items: center; width: 100%; max-width: 900px; margin-bottom: 12px;
+  }
+  .file-input-hidden { display: none; }
+  .guess-box {
+    width: 100%; max-width: 560px; background: #fff; border-radius: 14px;
+    box-shadow: var(--shadow); padding: 14px; margin-top: 12px; text-align: center;
+  }
+  .guess-box label { font-weight: 700; display: block; margin-bottom: 4px; }
+  .legend {
+    display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    font-size: 0.85rem; font-weight: 600; margin: 6px 0 8px; color: var(--muted);
+  }
+  .legend span::before {
+    content: ''; display: inline-block; width: 14px; height: 4px; border-radius: 2px;
+    margin-right: 6px; vertical-align: middle;
+  }
+  .legend .orig::before { background: #2980b9; }
+  .legend .cut::before { background: #8e44ad; height: 4px; }
+
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 900; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 16px; padding: 24px; max-width: 360px;
+    width: 100%; text-align: center;
+  }
+  .modal h3 { margin-bottom: 10px; color: var(--primary-dark); }
+  .modal p { color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
+  .answers-list {
+    width: 100%; max-width: 560px; margin-top: 10px; font-size: 0.9rem;
+  }
+  .answers-list div {
+    display: flex; justify-content: space-between; padding: 8px 12px;
+    background: #fff; border-radius: 8px; margin-bottom: 6px; box-shadow: var(--shadow);
+  }
+</style>
+</head>
+<body>
+
+<!-- LANDING -->
+<div id="screen-landing" class="screen active">
+  <div class="card">
+    <div class="header">
+      <h1>數學釘板・多邊形面積</h1>
+      <div class="school">順德聯誼總會何日東小學— 何老師設計</div>
+    </div>
+    <p style="text-align:center;color:var(--muted);margin-bottom:8px;">釘板 10 cm × 10 cm　每格邊長 1 cm</p>
+    <p style="text-align:center;color:var(--muted);">請選擇身份開始</p>
+    <div class="role-btns">
+      <button class="btn btn-primary" id="btn-student">學生</button>
+      <button class="btn btn-accent" id="btn-teacher">老師</button>
+    </div>
+  </div>
+</div>
+
+<!-- NAME PICKER -->
+<div id="screen-names" class="screen">
+  <div class="header">
+    <h1>揀選你的姓名</h1>
+    <div class="school">揀咗名先可以開始</div>
+  </div>
+  <div class="card" style="max-width:720px;width:100%;">
+    <div class="name-grid" id="name-grid"></div>
+    <div class="btn-row" style="max-width:100%;">
+      <button class="btn btn-ghost" id="btn-names-back">返回</button>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT JOIN ROOM -->
+<div id="screen-join" class="screen">
+  <div class="card" style="max-width:400px;">
+    <div class="header">
+      <h1>加入課堂</h1>
+      <div class="school" id="join-student-label"></div>
+    </div>
+    <p style="text-align:center;color:var(--muted);">輸入老師顯示嘅<strong>課堂編號</strong></p>
+    <input class="code-input" id="join-code" type="text" inputmode="numeric" maxlength="6" placeholder="例如 4821" autocomplete="off">
+    <div class="btn-row" style="max-width:100%;">
+      <button class="btn btn-ghost" id="btn-join-skip">稍後加入／單機用</button>
+      <button class="btn btn-primary" id="btn-join-go">加入</button>
+    </div>
+    <p style="margin-top:10px;font-size:0.8rem;color:var(--muted);text-align:center;">建議同老師同一個 Wi‑Fi。老師頁面要保持開啟。</p>
+  </div>
+</div>
+
+<!-- BOARD (design) -->
+<div id="screen-board" class="screen">
+  <div class="header">
+    <h1>設計你的多邊形</h1>
+    <div class="school">順德聯誼總會何日東小學— 何老師設計</div>
+  </div>
+  <div class="sync-bar" id="student-sync-bar"></div>
+  <div class="student-badge" id="student-badge"></div>
+  <div class="board-wrap">
+    <div class="board-cm-label">每格邊長 1 cm</div>
+    <div class="board-size-tag">釘板大小：10 cm × 10 cm（11 × 11 釘）</div>
+    <div class="board-frame">
+      <canvas id="geoboard" width="600" height="600"></canvas>
+      <div class="board-under-label">每格邊長 1 cm　｜　總長 10 cm</div>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="btn-undo">撤銷上點</button>
+    <button class="btn btn-ghost" id="btn-clear">清除</button>
+    <button class="btn btn-accent" id="btn-close-poly">封閉多邊形</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-success btn-block" id="btn-submit" disabled>提交圖案</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="btn-board-progress">全班進度</button>
+    <button class="btn btn-ghost" id="btn-board-join">課堂編號</button>
+    <button class="btn btn-ghost" id="btn-board-back">返回選名</button>
+  </div>
+</div>
+
+<!-- CLASS PROGRESS -->
+<div id="screen-progress" class="screen">
+  <div class="header">
+    <h1>全班提交進度</h1>
+    <div class="school">睇下邊個已經交咗、邊個未完成</div>
+  </div>
+  <div class="progress-summary" id="progress-summary"></div>
+  <div class="progress-list" id="progress-list"></div>
+  <div class="btn-row" style="margin-top:16px;">
+    <button class="btn btn-primary" id="btn-progress-design" style="display:none;">繼續設計／再交</button>
+    <button class="btn btn-ghost" id="btn-progress-back">返回</button>
+  </div>
+</div>
+
+<!-- TEACHER PIN -->
+<div id="screen-teacher-pin" class="screen">
+  <div class="card" style="max-width:360px;">
+    <div class="header">
+      <h1>老師登入</h1>
+      <div class="school">請輸入 PIN</div>
+    </div>
+    <input class="pin-input" id="pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="••••" autocomplete="off">
+    <div class="btn-row" style="max-width:100%;">
+      <button class="btn btn-ghost" id="btn-pin-back">返回</button>
+      <button class="btn btn-accent" id="btn-pin-ok">進入</button>
+    </div>
+    <p style="margin-top:12px;font-size:0.8rem;color:var(--muted);text-align:center;">預設 PIN：1234</p>
+  </div>
+</div>
+
+<!-- TEACHER ROOM -->
+<div id="screen-teacher-room" class="screen">
+  <div class="card" style="max-width:480px;">
+    <div class="header">
+      <h1>建立課堂</h1>
+      <div class="school">請學生輸入同一個編號加入</div>
+    </div>
+    <div class="room-code-big" id="room-code-display">----</div>
+    <p id="room-status" style="text-align:center;color:var(--muted);">準備中…</p>
+    <div class="btn-row" style="max-width:100%;">
+      <button class="btn btn-ghost" id="btn-room-regen">換編號</button>
+      <button class="btn btn-primary" id="btn-room-enter">進入控制台</button>
+    </div>
+    <p style="margin-top:12px;font-size:0.8rem;color:var(--muted);text-align:center;">課堂期間請唔好關閉呢個分頁，否則學生會斷線。</p>
+  </div>
+</div>
+
+<!-- TEACHER GALLERY / CONSOLE -->
+<div id="screen-gallery" class="screen">
+  <div class="toolbar-top">
+    <div class="header" style="margin:0;text-align:left;width:auto;">
+      <h1 style="font-size:1.35rem;">老師控制台</h1>
+      <div class="school">進度 · 同步 · 揀圖叫全班計</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-ghost" id="btn-export">匯出資料</button>
+      <button class="btn btn-ghost" id="btn-import">匯入資料</button>
+      <input type="file" id="import-file" class="file-input-hidden" accept="application/json,.json">
+      <button class="btn btn-ghost" id="btn-gallery-home">返回主頁</button>
+    </div>
+  </div>
+  <div class="sync-bar">
+    <div class="sync-pill" id="teacher-room-pill">課堂：----</div>
+    <div class="sync-pill" id="teacher-conn-pill">連線：0</div>
+  </div>
+  <div class="btn-row" style="max-width:900px;margin:4px 0 8px;">
+    <button class="btn btn-danger btn-block" id="btn-new-round" style="font-size:1.1rem;padding:14px 20px;">開新一輪（清除本輪提交）</button>
+  </div>
+  <p style="width:100%;max-width:900px;text-align:center;font-size:0.82rem;color:var(--muted);margin-bottom:8px;">會清咗全班本輪圖案同答案，學生要重新畫。舊圖會留喺歷史備份。</p>
+
+  <div class="gallery-section-title">① 全班進度</div>
+  <div class="progress-summary" id="teacher-progress-summary"></div>
+  <div class="progress-list" id="teacher-progress-list"></div>
+
+  <div class="gallery-section-title">② 已提交圖案（撳入去 → 全班一齊計）</div>
+  <div id="gallery-empty" class="empty-msg card" style="display:none;max-width:900px;width:100%;">暫時未有學生提交圖案。</div>
+  <div class="gallery-grid" id="gallery-grid"></div>
+</div>
+
+<!-- CALC / SHARED VIEW (teacher + students) -->
+<div id="screen-calc" class="screen">
+  <div class="header">
+    <h1 id="calc-title">一起計算面積</h1>
+    <div class="school" id="calc-subtitle">用分割線幫手計</div>
+  </div>
+  <div class="student-badge" id="calc-badge"></div>
+  <div class="sync-bar" id="calc-sync-bar"></div>
+  <div class="legend">
+    <span class="orig">原多邊形</span>
+    <span class="cut">我嘅分割線</span>
+  </div>
+  <div class="board-wrap">
+    <div class="board-cm-label">每格邊長 1 cm</div>
+    <div class="board-frame">
+      <canvas id="calc-canvas" width="600" height="600"></canvas>
+      <div class="board-under-label">每格邊長 1 cm　｜　總長 10 cm</div>
+    </div>
+  </div>
+
+  <!-- Student tools -->
+  <div id="calc-student-tools" style="width:100%;max-width:560px;display:none;">
+    <div class="board-hint">喺釘板畫<strong>分割線</strong>（紫線）將圖分成簡單圖形，再填面積</div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="btn-split-undo">撤銷分割</button>
+      <button class="btn btn-ghost" id="btn-split-clear">清除分割</button>
+    </div>
+    <div class="guess-box">
+      <label for="area-guess">我計嘅面積（cm²）</label>
+      <input class="area-input" id="area-guess" type="text" inputmode="decimal" placeholder="例如 12 或 7.5">
+      <div class="btn-row" style="max-width:100%;">
+        <button class="btn btn-split btn-block" id="btn-submit-guess">提交答案俾老師</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Teacher tools -->
+  <div id="calc-teacher-tools" style="width:100%;max-width:560px;display:none;">
+    <div class="btn-row">
+      <button class="btn btn-success" id="btn-reveal">顯示答案（廣播全班）</button>
+      <button class="btn btn-ghost" id="btn-hide-answer" style="display:none;">隱藏答案</button>
+      <button class="btn btn-ghost" id="btn-calc-back">返回圖庫</button>
+    </div>
+    <div class="answers-list" id="student-answers-list"></div>
+  </div>
+
+  <div class="answer-box" id="answer-box">
+    <div class="area" id="answer-area"></div>
+    <div class="picks" id="answer-picks"></div>
+  </div>
+
+  <div class="btn-row" id="calc-student-nav" style="display:none;">
+    <button class="btn btn-ghost btn-block" id="btn-calc-student-back">返回設計／進度</button>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">提示</h3>
+    <p id="modal-msg"></p>
+    <div class="btn-row" style="max-width:100%;">
+      <button class="btn btn-primary" id="modal-ok">好</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   數學釘板・多邊形面積 + 課堂同步（PeerJS）
+   順德聯誼總會何日東小學— 何老師設計
+   TEACHER_PIN default 1234
+   Board: 11×11 pegs = 10 cm × 10 cm
+   ============================================================ */
+const TEACHER_PIN = '1234';
+const STORAGE_KEY = 'hyt-geoboard-v1';
+const GRID_SIZE = 11;
+const PEER_PREFIX = 'hytgb'; // peer id = hytgb{roomCode}
+const SNAP_FRAC = 0.38;
+
+const STUDENTS = [
+  { no: 1, name: '陳倬宇' }, { no: 2, name: '陳志恒' }, { no: 3, name: '陳雅渝' },
+  { no: 4, name: '陳穎晞' }, { no: 5, name: '陳亦琛' }, { no: 6, name: '鄭憫橋' },
+  { no: 7, name: '張竣僖' }, { no: 8, name: '張芷惠' }, { no: 9, name: '曹晞朗' },
+  { no: 10, name: '鍾睿祺' }, { no: 11, name: '夏進鉊' }, { no: 12, name: '簡綽霆' },
+  { no: 13, name: '黎蕊瑤' }, { no: 14, name: '林安琪' }, { no: 15, name: '劉曉柔' },
+  { no: 16, name: '羅允妍' }, { no: 17, name: '李思諾' }, { no: 18, name: '梁可柔' },
+  { no: 19, name: '呂晞旻' }, { no: 20, name: '麥頌昕' }, { no: 21, name: '莫佩穎' },
+  { no: 22, name: '伍嘉倩' }, { no: 23, name: '吳芯柔' }, { no: 24, name: '吳日藍' },
+  { no: 25, name: '顏穎晴' }, { no: 26, name: '譚淨遙' }, { no: 27, name: '唐凱晨' },
+  { no: 28, name: '謝彧槐' }, { no: 29, name: '涂奕凡' }, { no: 30, name: '胡恩晞' },
+  { no: 31, name: '葉芷曈' }, { no: 32, name: '葉子墨' }
+];
+
+/* ---------- Storage ---------- */
+function loadStore() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { submissions: [], history: [], answers: [] };
+    const data = JSON.parse(raw);
+    if (!data.submissions) data.submissions = [];
+    if (!data.history) data.history = [];
+    if (!data.answers) data.answers = [];
+    return data;
+  } catch (e) { return { submissions: [], history: [], answers: [] }; }
+}
+function saveStore(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function getLatestByStudent() {
+  return loadStore().submissions.slice().sort((a, b) => a.studentNo - b.studentNo);
+}
+function getSubmittedNos() { return new Set(getLatestByStudent().map(s => s.studentNo)); }
+function upsertSubmission(entry) {
+  const store = loadStore();
+  store.history.push(Object.assign({}, entry, { archivedAt: new Date().toISOString() }));
+  const idx = store.submissions.findIndex(s => s.studentNo === entry.studentNo);
+  if (idx >= 0) store.submissions[idx] = entry; else store.submissions.push(entry);
+  saveStore(store);
+}
+function upsertAnswer(ans) {
+  const store = loadStore();
+  const idx = store.answers.findIndex(a => a.studentNo === ans.studentNo && a.designId === ans.designId);
+  if (idx >= 0) store.answers[idx] = ans; else store.answers.push(ans);
+  saveStore(store);
+}
+/** Archive current submissions/answers into history, then clear for a new round */
+function clearCurrentRoundLocal() {
+  const store = loadStore();
+  const stamp = new Date().toISOString();
+  (store.submissions || []).forEach(s => {
+    store.history.push(Object.assign({}, s, { archivedAt: stamp, archivedReason: 'new-round' }));
+  });
+  (store.answers || []).forEach(a => {
+    store.history.push(Object.assign({}, a, { archivedAt: stamp, archivedReason: 'new-round-answer', kind: 'answer' }));
+  });
+  store.submissions = [];
+  store.answers = [];
+  saveStore(store);
+}
+function mergeRemoteSubmission(entry) {
+  const store = loadStore();
+  const old = store.submissions.find(s => s.studentNo === entry.studentNo);
+  if (!old || new Date(entry.createdAt) >= new Date(old.createdAt)) {
+    upsertSubmission(entry);
+    return true;
+  }
+  return false;
+}
+
+/* ---------- Math ---------- */
+function shoelaceArea(points) {
+  const n = points.length; if (n < 3) return 0;
+  let sum = 0;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    sum += points[i].x * points[j].y - points[j].x * points[i].y;
+  }
+  return Math.abs(sum) / 2;
+}
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { const t = b; b = a % b; a = t; } return a; }
+function boundaryPoints(points) {
+  let B = 0; const n = points.length;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    B += gcd(points[j].x - points[i].x, points[j].y - points[i].y);
+  }
+  return B;
+}
+function pickInterior(area, B) { return area - B / 2 + 1; }
+function formatAreaNice(a) {
+  if (Math.abs(a - Math.round(a)) < 1e-9) return String(Math.round(a));
+  if (Math.abs(a * 2 - Math.round(a * 2)) < 1e-9) {
+    const num = Math.round(a * 2);
+    if (num % 2 === 0) return String(num / 2);
+    return num + '/2';
+  }
+  return (Math.round(a * 1000) / 1000).toString();
+}
+
+/* ---------- UI helpers ---------- */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 2600);
+}
+function showModal(title, msg, onOk) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-msg').textContent = msg;
+  document.getElementById('modal').classList.add('show');
+  const btn = document.getElementById('modal-ok');
+  const handler = () => {
+    document.getElementById('modal').classList.remove('show');
+    btn.removeEventListener('click', handler);
+    if (onOk) onOk();
+  };
+  btn.addEventListener('click', handler);
+}
+function genRoomCode() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+/* ---------- App state ---------- */
+let currentStudent = null;
+let role = null; // 'student' | 'teacher'
+let points = [];
+let closed = false;
+let isDrawing = false;
+let rubberTip = null;
+let pointerIdActive = null;
+
+let focusSub = null;       // shared design being calculated
+let revealOn = false;
+let splitSegs = [];        // [{a:{x,y}, b:{x,y}}]
+let splitDraft = null;     // current peg while drawing a split segment
+let splitRubber = null;
+let splitDrawing = false;
+let splitPointerId = null;
+let studentGuesses = {};   // teacher: designId -> { studentNo: {name, guess, at} }
+
+let progressBackTarget = 'screen-board';
+
+/* ---------- PeerJS Sync ---------- */
+let peer = null;
+let roomCode = null;
+let isHost = false;
+const studentConns = new Map(); // peerId -> DataConnection (teacher)
+let hostConn = null;            // student → teacher
+let connectedStudents = [];     // [{peerId, studentNo, studentName}]
+let syncReady = false;
+let bc = null; // BroadcastChannel fallback same-browser
+
+function peerIdForRoom(code) { return PEER_PREFIX + code; }
+
+function updateSyncBars() {
+  const st = document.getElementById('student-sync-bar');
+  if (st) {
+    if (roomCode && syncReady) {
+      st.innerHTML = '<div class="sync-pill on">已加入課堂 ' + roomCode + '</div>';
+    } else if (roomCode && !syncReady) {
+      st.innerHTML = '<div class="sync-pill off">連接中… ' + roomCode + '</div>';
+    } else {
+      st.innerHTML = '<div class="sync-pill off">未加入課堂（單機）</div>';
+    }
+  }
+  const pill = document.getElementById('teacher-room-pill');
+  const conn = document.getElementById('teacher-conn-pill');
+  if (pill) pill.textContent = '課堂：' + (roomCode || '----');
+  if (conn) {
+    conn.textContent = '連線：' + connectedStudents.length + ' 人';
+    conn.className = 'sync-pill ' + (connectedStudents.length ? 'on' : 'off');
+  }
+  const calcBar = document.getElementById('calc-sync-bar');
+  if (calcBar) {
+    calcBar.innerHTML = roomCode
+      ? '<div class="sync-pill on">課堂 ' + roomCode + '</div>'
+      : '<div class="sync-pill off">單機模式</div>';
+  }
+}
+
+function bcSend(msg) {
+  try {
+    if (!bc && typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('hyt-geoboard-room');
+      bc.onmessage = (ev) => onSyncMessage(ev.data, 'broadcast');
+    }
+    if (bc) bc.postMessage(Object.assign({ room: roomCode }, msg));
+  } catch (e) { /* ignore */ }
+}
+
+function destroyPeer() {
+  try { if (peer) peer.destroy(); } catch (e) {}
+  peer = null;
+  hostConn = null;
+  studentConns.clear();
+  connectedStudents = [];
+  syncReady = false;
+}
+
+function teacherStartRoom(code) {
+  destroyPeer();
+  roomCode = code;
+  isHost = true;
+  syncReady = false;
+  document.getElementById('room-code-display').textContent = code;
+  document.getElementById('room-status').textContent = '連接伺服器中…';
+  updateSyncBars();
+
+  if (typeof Peer === 'undefined') {
+    document.getElementById('room-status').textContent = 'PeerJS 未載入，可用單機／BroadcastChannel（同一部電腦分頁）。';
+    syncReady = true;
+    bcSend({ type: 'host-hello', roomCode: code });
+    updateSyncBars();
+    return;
+  }
+
+  peer = new Peer(peerIdForRoom(code), { debug: 0 });
+  peer.on('open', (id) => {
+    syncReady = true;
+    document.getElementById('room-status').textContent = '課堂已就緒！請學生輸入編號 ' + code;
+    updateSyncBars();
+    bcSend({ type: 'host-hello', roomCode: code });
+  });
+  peer.on('connection', (conn) => {
+    setupTeacherConn(conn);
+  });
+  peer.on('error', (err) => {
+    console.warn('Peer error', err);
+    const t = (err && err.type) || '';
+    if (t === 'unavailable-id') {
+      document.getElementById('room-status').textContent = '編號已被占用，請換編號。';
+      toast('編號占用，請換一個', 'err');
+    } else {
+      document.getElementById('room-status').textContent = '連線問題：' + t + '（仍可用單機）';
+    }
+  });
+}
+
+function setupTeacherConn(conn) {
+  studentConns.set(conn.peer, conn);
+  conn.on('open', () => {
+    // send snapshot
+    conn.send({
+      type: 'welcome',
+      roomCode: roomCode,
+      submissions: getLatestByStudent(),
+      focus: focusSub,
+      reveal: revealOn
+    });
+    updateSyncBars();
+  });
+  conn.on('data', (data) => onSyncMessage(data, conn.peer));
+  conn.on('close', () => {
+    studentConns.delete(conn.peer);
+    connectedStudents = connectedStudents.filter(s => s.peerId !== conn.peer);
+    updateSyncBars();
+    broadcastTeacher({ type: 'roster', connected: connectedStudents });
+  });
+}
+
+function studentJoinRoom(code) {
+  destroyPeer();
+  roomCode = code;
+  isHost = false;
+  syncReady = false;
+  updateSyncBars();
+
+  if (typeof Peer === 'undefined') {
+    syncReady = true;
+    bcSend({ type: 'hello', studentNo: currentStudent.no, studentName: currentStudent.name, peerId: 'bc-' + currentStudent.no });
+    toast('已用本機廣播加入（測試用）', 'ok');
+    updateSyncBars();
+    return Promise.resolve(true);
+  }
+
+  return new Promise((resolve) => {
+    peer = new Peer({ debug: 0 });
+    let settled = false;
+    const failTimer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        toast('連接逾時，可稍後再試或用單機', 'err');
+        resolve(false);
+      }
+    }, 12000);
+
+    peer.on('open', () => {
+      const conn = peer.connect(peerIdForRoom(code), { reliable: true });
+      hostConn = conn;
+      conn.on('open', () => {
+        syncReady = true;
+        conn.send({
+          type: 'hello',
+          studentNo: currentStudent.no,
+          studentName: currentStudent.name
+        });
+        // push any existing local submission
+        const mine = getLatestByStudent().find(s => s.studentNo === currentStudent.no);
+        if (mine) conn.send({ type: 'submission', entry: mine });
+        clearTimeout(failTimer);
+        if (!settled) { settled = true; resolve(true); }
+        updateSyncBars();
+        toast('已加入課堂 ' + code, 'ok');
+      });
+      conn.on('data', (data) => onSyncMessage(data, 'host'));
+      conn.on('close', () => {
+        syncReady = false;
+        updateSyncBars();
+        toast('同老師斷線咗', 'err');
+      });
+      conn.on('error', () => {
+        if (!settled) { settled = true; clearTimeout(failTimer); resolve(false); }
+      });
+    });
+    peer.on('error', (err) => {
+      console.warn(err);
+      if (!settled) { settled = true; clearTimeout(failTimer); resolve(false); }
+      toast('無法加入：請確認老師已開課堂', 'err');
+    });
+  });
+}
+
+function broadcastTeacher(msg) {
+  studentConns.forEach((conn) => {
+    try { if (conn.open) conn.send(msg); } catch (e) {}
+  });
+  bcSend(msg);
+}
+
+function sendToHost(msg) {
+  if (hostConn && hostConn.open) {
+    try { hostConn.send(msg); } catch (e) {}
+  }
+  bcSend(msg);
+}
+
+function onSyncMessage(data, from) {
+  if (!data || !data.type) return;
+  // ignore other rooms on broadcast
+  if (data.room && roomCode && data.room !== roomCode && data.type !== 'host-hello') return;
+
+  if (isHost) {
+    if (data.type === 'hello') {
+      const peerId = from === 'broadcast' ? (data.peerId || ('bc-' + data.studentNo)) : from;
+      connectedStudents = connectedStudents.filter(s => s.studentNo !== data.studentNo);
+      connectedStudents.push({ peerId: peerId, studentNo: data.studentNo, studentName: data.studentName });
+      updateSyncBars();
+      broadcastTeacher({ type: 'roster', connected: connectedStudents });
+      toast(data.studentName + ' 已加入', 'ok');
+    } else if (data.type === 'submission') {
+      mergeRemoteSubmission(data.entry);
+      renderGallery();
+      toast(data.entry.studentName + ' 提交咗圖案', 'ok');
+    } else if (data.type === 'answer') {
+      const did = data.designId;
+      if (!studentGuesses[did]) studentGuesses[did] = {};
+      studentGuesses[did][data.studentNo] = {
+        name: data.studentName, guess: data.guess, at: data.at || new Date().toISOString()
+      };
+      upsertAnswer({
+        studentNo: data.studentNo, studentName: data.studentName,
+        designId: did, guess: data.guess, at: data.at
+      });
+      if (focusSub && focusSub.id === did) renderStudentAnswers();
+      toast(data.studentName + ' 交咗答案：' + data.guess, 'ok');
+    }
+  } else {
+    // student receiving from teacher
+    if (data.type === 'welcome') {
+      // Teacher snapshot = current round truth (handles reconnect after 開新一輪)
+      if (Array.isArray(data.submissions)) {
+        const store = loadStore();
+        store.submissions = data.submissions.map(s => Object.assign({}, s));
+        saveStore(store);
+      }
+      if (data.focus) {
+        enterCalcMode(data.focus, { asStudent: true, reveal: !!data.reveal });
+      } else {
+        focusSub = null;
+        revealOn = false;
+      }
+      updateSyncBars();
+    } else if (data.type === 'focus') {
+      enterCalcMode(data.submission, { asStudent: true, reveal: !!data.reveal });
+      toast('老師揀咗「' + data.submission.studentName + '」嘅圖，一齊計！', 'ok');
+    } else if (data.type === 'reveal') {
+      revealOn = true;
+      showAnswerBox(data.area, data.picksHtml);
+    } else if (data.type === 'unreveal') {
+      revealOn = false;
+      document.getElementById('answer-box').classList.remove('show');
+    } else if (data.type === 'unfocus') {
+      // optional: stay or go back
+    } else if (data.type === 'submissions') {
+      (data.list || []).forEach(mergeRemoteSubmission);
+    } else if (data.type === 'new-round') {
+      applyNewRoundAsStudent();
+    }
+  }
+}
+
+function applyNewRoundAsStudent() {
+  clearCurrentRoundLocal();
+  focusSub = null;
+  revealOn = false;
+  splitSegs = [];
+  splitDraft = null;
+  splitRubber = null;
+  resetDrawing();
+  const box = document.getElementById('answer-box');
+  if (box) box.classList.remove('show');
+  const guess = document.getElementById('area-guess');
+  if (guess) guess.value = '';
+  // Back to design board if student has picked a name
+  if (currentStudent && role === 'student') {
+    document.getElementById('student-badge').textContent =
+      currentStudent.no + ' ' + currentStudent.name;
+    updateSubmitBtn();
+    showScreen('screen-board');
+    resizeBoard();
+    drawBoard();
+  }
+  updateSyncBars();
+  toast('老師已開新一輪，請再畫一個多邊形', 'ok');
+}
+
+/* ---------- Progress ---------- */
+function renderProgressInto(summaryEl, listEl, opts) {
+  opts = opts || {};
+  const submitted = getSubmittedNos();
+  const byNo = new Map(getLatestByStudent().map(s => [s.studentNo, s]));
+  const done = submitted.size;
+  summaryEl.innerHTML =
+    '<div class="stat-pill done">✓ 已提交 ' + done + ' 人</div>' +
+    '<div class="stat-pill todo">未完成 ' + (STUDENTS.length - done) + ' 人</div>' +
+    '<div class="stat-pill">全班 ' + STUDENTS.length + ' 人</div>';
+  listEl.innerHTML = '';
+  STUDENTS.forEach(st => {
+    const isDone = submitted.has(st.no);
+    const item = document.createElement('div');
+    item.className = 'progress-item ' + (isDone ? 'done' : 'todo');
+    if (opts.highlightNo === st.no) item.classList.add('me');
+    if (opts.clickableDone && isDone) {
+      item.classList.add('clickable');
+      item.addEventListener('click', () => teacherOpenDesign(byNo.get(st.no)));
+    }
+    item.innerHTML = '<span>' + st.no + ' ' + st.name + '</span>' +
+      '<span class="status">' + (isDone ? '✓ 已提交' : '未完成') + '</span>';
+    listEl.appendChild(item);
+  });
+}
+function showStudentProgress() {
+  progressBackTarget = currentStudent ? 'screen-board' : 'screen-names';
+  renderProgressInto(document.getElementById('progress-summary'), document.getElementById('progress-list'),
+    { highlightNo: currentStudent ? currentStudent.no : null });
+  document.getElementById('btn-progress-design').style.display = currentStudent ? '' : 'none';
+  showScreen('screen-progress');
+}
+
+/* ---------- Name grid ---------- */
+function renderNameGrid() {
+  const grid = document.getElementById('name-grid');
+  const submitted = getSubmittedNos();
+  grid.innerHTML = '';
+  STUDENTS.forEach(st => {
+    const btn = document.createElement('button');
+    btn.className = 'name-btn' + (submitted.has(st.no) ? ' submitted' : '');
+    btn.textContent = st.no + ' ' + st.name;
+    btn.addEventListener('click', () => {
+      currentStudent = st;
+      role = 'student';
+      resetDrawing();
+      document.getElementById('student-badge').textContent = st.no + ' ' + st.name;
+      document.getElementById('join-student-label').textContent = st.no + ' ' + st.name;
+      document.getElementById('join-code').value = roomCode || '';
+      updateSubmitBtn();
+      showScreen('screen-join');
+    });
+    grid.appendChild(btn);
+  });
+}
+
+/* ---------- Design board ---------- */
+const canvas = document.getElementById('geoboard');
+const ctx = canvas.getContext('2d');
+
+function boardMetrics(c) {
+  c = c || canvas;
+  const w = c.width, h = c.height;
+  const pad = w * 0.08;
+  const step = (w - pad * 2) / (GRID_SIZE - 1);
+  return { pad, step, w, h };
+}
+function pegToPixelOn(c, p) {
+  const m = boardMetrics(c);
+  return { x: m.pad + p.x * m.step, y: m.pad + p.y * m.step };
+}
+function pegToPixel(p) { return pegToPixelOn(canvas, p); }
+function pixelToNearestPegOn(c, px, py, frac) {
+  const m = boardMetrics(c);
+  const maxDist = m.step * (frac == null ? SNAP_FRAC : frac);
+  const gx = Math.round((px - m.pad) / m.step);
+  const gy = Math.round((py - m.pad) / m.step);
+  if (gx < 0 || gy < 0 || gx >= GRID_SIZE || gy >= GRID_SIZE) return null;
+  const snap = pegToPixelOn(c, { x: gx, y: gy });
+  if (Math.hypot(px - snap.x, py - snap.y) > maxDist) return null;
+  return { x: gx, y: gy };
+}
+function pixelToNearestPeg(px, py, frac) { return pixelToNearestPegOn(canvas, px, py, frac); }
+function samePeg(a, b) { return a && b && a.x === b.x && a.y === b.y; }
+
+/* ---- Simple polygon: no revisit, no self-crossing ---- */
+let invalidFlash = null; // {a,b,until}
+let lastRejectToastAt = 0;
+
+function orient(a, b, c) {
+  // >0 left, <0 right, 0 collinear (integer-safe for grid)
+  return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+function pointOnSegment(a, b, p) {
+  if (orient(a, b, p) !== 0) return false;
+  return p.x >= Math.min(a.x, b.x) && p.x <= Math.max(a.x, b.x) &&
+         p.y >= Math.min(a.y, b.y) && p.y <= Math.max(a.y, b.y);
+}
+/** Proper intersect or interior overlap; shared endpoint alone is OK */
+function segmentsConflict(a, b, c, d) {
+  if (samePeg(a, c) || samePeg(a, d) || samePeg(b, c) || samePeg(b, d)) {
+    // shared endpoint: only conflict if they also overlap along a segment
+    // (collinear continuation handled below via on-segment checks excluding shared ends)
+  }
+  const o1 = orient(a, b, c);
+  const o2 = orient(a, b, d);
+  const o3 = orient(c, d, a);
+  const o4 = orient(c, d, b);
+  // Proper crossing (X shape)
+  if ((o1 > 0 && o2 < 0 || o1 < 0 && o2 > 0) &&
+      (o3 > 0 && o4 < 0 || o3 < 0 && o4 > 0)) {
+    return true;
+  }
+  // Endpoint of one lies in interior of the other (T-junction / overlap)
+  function interiorHit(p, u, v) {
+    if (samePeg(p, u) || samePeg(p, v)) return false;
+    return pointOnSegment(u, v, p);
+  }
+  if (interiorHit(c, a, b) || interiorHit(d, a, b) ||
+      interiorHit(a, c, d) || interiorHit(b, c, d)) {
+    return true;
+  }
+  return false;
+}
+
+/** Would edge (fromPeg → toPeg) cross existing path edges? closing=true when toPeg is first. */
+function edgeCrossesPath(fromPeg, toPeg, closing) {
+  const n = points.length;
+  if (n < 2) return false;
+  for (let i = 0; i < n - 1; i++) {
+    const c = points[i], d = points[i + 1];
+    // Skip edge that shares fromPeg (the previous edge ending at from)
+    if (i === n - 2 && samePeg(d, fromPeg)) continue;
+    // When closing, skip first edge that starts at toPeg (first vertex)
+    if (closing && i === 0 && samePeg(c, toPeg)) continue;
+    if (segmentsConflict(fromPeg, toPeg, c, d)) return true;
+  }
+  return false;
+}
+
+function pegAlreadyUsed(peg) {
+  return points.some(pt => samePeg(pt, peg));
+}
+
+function flashInvalidEdge(fromPeg, toPeg) {
+  invalidFlash = { a: { x: fromPeg.x, y: fromPeg.y }, b: { x: toPeg.x, y: toPeg.y }, until: Date.now() + 380 };
+  drawBoard();
+  clearTimeout(flashInvalidEdge._t);
+  flashInvalidEdge._t = setTimeout(() => {
+    invalidFlash = null;
+    drawBoard();
+  }, 400);
+}
+
+function rejectPeg(fromPeg, toPeg, reason) {
+  flashInvalidEdge(fromPeg, toPeg);
+  const now = Date.now();
+  if (now - lastRejectToastAt > 900) {
+    lastRejectToastAt = now;
+    toast(reason, 'err');
+  }
+}
+
+/**
+ * Validate adding toPeg after current path.
+ * Returns { ok, closing } or { ok:false }.
+ */
+function canAddPeg(toPeg) {
+  if (!toPeg || closed) return { ok: false };
+  if (!points.length) return { ok: true, closing: false };
+
+  const from = points[points.length - 1];
+  if (samePeg(toPeg, from)) return { ok: false, silent: true };
+
+  const closing = points.length >= 3 && samePeg(toPeg, points[0]);
+  if (!closing && pegAlreadyUsed(toPeg)) {
+    return {
+      ok: false,
+      from: from,
+      to: toPeg,
+      reason: '呢粒釘用過喇，唔可以再經過（封閉先可以返第一粒）'
+    };
+  }
+  if (edgeCrossesPath(from, toPeg, closing)) {
+    return {
+      ok: false,
+      from: from,
+      to: toPeg,
+      reason: '呢條線會同其他邊交叉，請換第二粒釘'
+    };
+  }
+  return { ok: true, closing: closing };
+}
+
+function resetDrawing() {
+  points = []; closed = false; isDrawing = false; rubberTip = null; pointerIdActive = null;
+  invalidFlash = null;
+}
+
+function tryLockPeg(peg) {
+  if (closed || !peg) return false;
+  const check = canAddPeg(peg);
+  if (!check.ok) {
+    if (!check.silent && check.from) rejectPeg(check.from, check.to, check.reason);
+    return false;
+  }
+  if (check.closing) {
+    closed = true; isDrawing = false; rubberTip = null; invalidFlash = null;
+    updateSubmitBtn(); toast('多邊形已封閉！可以提交', 'ok'); return true;
+  }
+  if (!points.length) {
+    points.push({ x: peg.x, y: peg.y });
+    updateSubmitBtn();
+    return true;
+  }
+  points.push({ x: peg.x, y: peg.y });
+  updateSubmitBtn();
+  return true;
+}
+
+function drawBoard() {
+  const m = boardMetrics();
+  ctx.clearRect(0, 0, m.w, m.h);
+  ctx.strokeStyle = '#f0e0d0'; ctx.lineWidth = 1;
+  for (let i = 0; i < GRID_SIZE; i++) {
+    const a = pegToPixel({ x: i, y: 0 }), b = pegToPixel({ x: i, y: GRID_SIZE - 1 });
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    const c0 = pegToPixel({ x: 0, y: i }), d = pegToPixel({ x: GRID_SIZE - 1, y: i });
+    ctx.beginPath(); ctx.moveTo(c0.x, c0.y); ctx.lineTo(d.x, d.y); ctx.stroke();
+  }
+  const lineW = Math.max(2.5, m.step * 0.1);
+  if (points.length >= 1) {
+    ctx.beginPath();
+    const first = pegToPixel(points[0]);
+    ctx.moveTo(first.x, first.y);
+    for (let i = 1; i < points.length; i++) { const p = pegToPixel(points[i]); ctx.lineTo(p.x, p.y); }
+    if (closed) {
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(52,152,219,0.28)'; ctx.fill();
+    }
+    ctx.strokeStyle = '#2980b9'; ctx.lineWidth = lineW; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+  // invalid edge flash (red)
+  if (invalidFlash && Date.now() < invalidFlash.until) {
+    const ia = pegToPixel(invalidFlash.a), ib = pegToPixel(invalidFlash.b);
+    ctx.beginPath(); ctx.moveTo(ia.x, ia.y); ctx.lineTo(ib.x, ib.y);
+    ctx.strokeStyle = 'rgba(231,76,60,0.95)'; ctx.lineWidth = lineW + 1;
+    ctx.lineCap = 'round'; ctx.setLineDash([5, 4]); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  if (!closed && points.length >= 1 && rubberTip) {
+    const last = pegToPixel(points[points.length - 1]);
+    // preview: if pointer near a peg that would be invalid, rubber turns red
+    const near = pixelToNearestPeg(rubberTip.x, rubberTip.y, SNAP_FRAC);
+    let badPreview = false;
+    if (near) {
+      const chk = canAddPeg(near);
+      badPreview = !chk.ok && !chk.silent;
+    }
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(rubberTip.x, rubberTip.y);
+    ctx.strokeStyle = badPreview ? 'rgba(231,76,60,0.65)' : 'rgba(41,128,185,0.55)';
+    ctx.lineWidth = lineW; ctx.lineCap = 'round';
+    ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]);
+  }
+  const r = Math.max(4, m.step * 0.14);
+  for (let y = 0; y < GRID_SIZE; y++) for (let x = 0; x < GRID_SIZE; x++) {
+    const p = pegToPixel({ x, y });
+    const isUsed = points.some(pt => pt.x === x && pt.y === y);
+    const isFirst = points.length && points[0].x === x && points[0].y === y;
+    ctx.beginPath(); ctx.arc(p.x, p.y, isFirst ? r * 1.2 : r, 0, Math.PI * 2);
+    ctx.fillStyle = isUsed ? '#e74c3c' : '#c0392b'; ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+    if (isFirst && !closed) {
+      ctx.beginPath(); ctx.arc(p.x, p.y, r * 1.7, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(231,76,60,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+    }
+  }
+  ctx.fillStyle = 'rgba(255,232,209,0.92)';
+  const labelH = Math.max(22, m.pad * 0.55);
+  ctx.fillRect(0, 0, m.w, labelH);
+  ctx.fillStyle = '#d35400';
+  ctx.font = 'bold ' + Math.max(12, Math.floor(m.w * 0.035)) + 'px "PingFang HK","Noto Sans TC",sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('每格邊長 1 cm　｜　釘板 10 cm × 10 cm', m.w / 2, labelH / 2);
+}
+
+function fitSquareCanvas(c) {
+  const frame = c.parentElement; // .board-frame
+  // Reset to fluid width so layout can measure correctly
+  c.style.width = '100%';
+  c.style.maxWidth = '100%';
+  c.style.height = 'auto';
+  const cs = getComputedStyle(frame);
+  const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+  const avail = Math.max(0, (frame.clientWidth || 0) - padX);
+  // Screen horizontal padding (both sides) + small safety margin
+  const screen = document.querySelector('.screen.active');
+  const screenPad = screen ? (() => {
+    const s = getComputedStyle(screen);
+    return (parseFloat(s.paddingLeft) || 0) + (parseFloat(s.paddingRight) || 0);
+  })() : 24;
+  const vwCap = Math.max(120, window.innerWidth - screenPad - 4);
+  const size = Math.max(120, Math.floor(Math.min(avail || vwCap, vwCap, 520)));
+  c.width = size;
+  c.height = size;
+  c.style.width = '100%';
+  c.style.maxWidth = '100%';
+  c.style.height = 'auto';
+  return size;
+}
+function resizeBoard() {
+  fitSquareCanvas(canvas);
+  drawBoard();
+}
+function updateSubmitBtn() {
+  document.getElementById('btn-submit').disabled = !(closed && points.length >= 3);
+}
+function getPointerPosOn(c, e) {
+  const rect = c.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * (c.width / rect.width),
+    y: (e.clientY - rect.top) * (c.height / rect.height)
+  };
+}
+function getPointerPos(e) { return getPointerPosOn(canvas, e); }
+
+/* ---- Scroll lock while drawing (esp. iPad Safari) ---- */
+let scrollLockCount = 0;
+let savedScrollY = 0;
+function onDocTouchMoveWhileDrawing(e) {
+  if (scrollLockCount > 0) e.preventDefault();
+}
+function lockPageScroll() {
+  if (scrollLockCount === 0) {
+    savedScrollY = window.scrollY || window.pageYOffset || 0;
+    document.documentElement.classList.add('drawing-lock');
+    document.body.classList.add('drawing-lock');
+    document.body.style.top = '-' + savedScrollY + 'px';
+    document.addEventListener('touchmove', onDocTouchMoveWhileDrawing, { passive: false });
+  }
+  scrollLockCount++;
+}
+function unlockPageScroll() {
+  if (scrollLockCount <= 0) { scrollLockCount = 0; return; }
+  scrollLockCount--;
+  if (scrollLockCount === 0) {
+    document.removeEventListener('touchmove', onDocTouchMoveWhileDrawing);
+    document.documentElement.classList.remove('drawing-lock');
+    document.body.classList.remove('drawing-lock');
+    document.body.style.top = '';
+    window.scrollTo(0, savedScrollY);
+  }
+}
+
+function onPointerDown(e) {
+  if (e.button != null && e.button !== 0) return;
+  e.preventDefault();
+  // Always lock scroll when touching the board (even if closed / miss peg)
+  lockPageScroll();
+  if (closed) { toast('已經封閉，請清除後再畫', 'err'); unlockPageScroll(); return; }
+  const pos = getPointerPos(e);
+  const peg = pixelToNearestPeg(pos.x, pos.y, 0.45);
+  if (!peg && points.length === 0) { unlockPageScroll(); return; }
+  isDrawing = true; pointerIdActive = e.pointerId;
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+  if (peg) tryLockPeg(peg);
+  rubberTip = pos; drawBoard();
+}
+function onPointerMove(e) {
+  if (!isDrawing || (pointerIdActive != null && e.pointerId !== pointerIdActive)) return;
+  e.preventDefault(); if (closed) return;
+  const pos = getPointerPos(e); rubberTip = pos;
+  const peg = pixelToNearestPeg(pos.x, pos.y, SNAP_FRAC);
+  if (peg) tryLockPeg(peg);
+  drawBoard();
+}
+function endDesignStroke(e) {
+  if (e && pointerIdActive != null && e.pointerId !== pointerIdActive) return;
+  if (e) e.preventDefault();
+  if (!closed && isDrawing && e) {
+    const pos = getPointerPos(e);
+    const peg = pixelToNearestPeg(pos.x, pos.y, 0.45);
+    if (peg) tryLockPeg(peg);
+  }
+  const wasDrawing = isDrawing || pointerIdActive != null;
+  isDrawing = false; rubberTip = null;
+  if (e) {
+    try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+  }
+  pointerIdActive = null;
+  if (wasDrawing) unlockPageScroll();
+  drawBoard(); updateSubmitBtn();
+}
+function onPointerUp(e) { endDesignStroke(e); }
+function onPointerCancel(e) {
+  isDrawing = false; rubberTip = null; pointerIdActive = null;
+  unlockPageScroll();
+  drawBoard();
+}
+canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
+canvas.addEventListener('pointermove', onPointerMove, { passive: false });
+canvas.addEventListener('pointerup', onPointerUp, { passive: false });
+canvas.addEventListener('pointercancel', onPointerCancel, { passive: false });
+canvas.addEventListener('lostpointercapture', onPointerCancel);
+// Block pan/zoom gestures on the board while finger moves (iOS)
+canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+
+document.getElementById('btn-undo').addEventListener('click', () => {
+  isDrawing = false; rubberTip = null; pointerIdActive = null;
+  while (scrollLockCount > 0) unlockPageScroll();
+  if (closed) { closed = false; drawBoard(); updateSubmitBtn(); return; }
+  if (points.length) { points.pop(); drawBoard(); updateSubmitBtn(); }
+});
+document.getElementById('btn-clear').addEventListener('click', () => {
+  resetDrawing();
+  while (scrollLockCount > 0) unlockPageScroll();
+  drawBoard(); updateSubmitBtn();
+});
+document.getElementById('btn-close-poly').addEventListener('click', () => {
+  if (points.length < 3) { toast('至少要 3 個點先可以封閉', 'err'); return; }
+  if (closed) { toast('已經封閉咗', 'ok'); return; }
+  const check = canAddPeg(points[0]);
+  if (!check.ok) {
+    if (check.from) rejectPeg(check.from, check.to || points[0], check.reason || '封閉邊會同其他邊交叉，請改圖形');
+    else toast('封閉邊會同其他邊交叉，請改圖形', 'err');
+    return;
+  }
+  closed = true; isDrawing = false; rubberTip = null; invalidFlash = null;
+  drawBoard(); updateSubmitBtn(); toast('多邊形已封閉！可以提交', 'ok');
+});
+
+document.getElementById('btn-submit').addEventListener('click', () => {
+  if (!closed || points.length < 3 || !currentStudent) return;
+  const entry = {
+    id: 'sub_' + Date.now() + '_' + currentStudent.no,
+    studentNo: currentStudent.no,
+    studentName: currentStudent.name,
+    gridSize: GRID_SIZE,
+    points: points.map(p => ({ x: p.x, y: p.y })),
+    createdAt: new Date().toISOString()
+  };
+  upsertSubmission(entry);
+  sendToHost({ type: 'submission', entry: entry });
+  showModal('提交成功！', currentStudent.no + ' ' + currentStudent.name + ' 嘅圖案已儲存' +
+    (syncReady ? '，並傳俾老師。' : '（單機）。') + '而家睇下全班進度。', () => {
+    resetDrawing(); drawBoard(); updateSubmitBtn(); showStudentProgress();
+  });
+});
+
+/* ---------- Draw submission / calc canvas ---------- */
+const calcCanvas = document.getElementById('calc-canvas');
+const calcCtx = calcCanvas.getContext('2d');
+
+function drawPolygonScene(c, cctx, sub, opts) {
+  opts = opts || {};
+  const size = c.width;
+  const gs = sub.gridSize || GRID_SIZE;
+  const pad = size * 0.08;
+  const step = (size - pad * 2) / (gs - 1);
+  const toPx = (p) => ({ x: pad + p.x * step, y: pad + p.y * step });
+
+  cctx.clearRect(0, 0, size, size);
+  cctx.fillStyle = opts.bg || '#fff';
+  cctx.fillRect(0, 0, size, size);
+
+  cctx.strokeStyle = '#f0e0d0'; cctx.lineWidth = 1;
+  for (let i = 0; i < gs; i++) {
+    cctx.beginPath(); cctx.moveTo(pad + i * step, pad); cctx.lineTo(pad + i * step, pad + (gs - 1) * step); cctx.stroke();
+    cctx.beginPath(); cctx.moveTo(pad, pad + i * step); cctx.lineTo(pad + (gs - 1) * step, pad + i * step); cctx.stroke();
+  }
+
+  const pts = sub.points || [];
+  if (pts.length >= 2) {
+    cctx.beginPath();
+    const f = toPx(pts[0]); cctx.moveTo(f.x, f.y);
+    for (let i = 1; i < pts.length; i++) { const p = toPx(pts[i]); cctx.lineTo(p.x, p.y); }
+    cctx.closePath();
+    cctx.fillStyle = 'rgba(52,152,219,0.28)'; cctx.fill();
+    cctx.strokeStyle = '#2980b9';
+    cctx.lineWidth = Math.max(2.5, step * 0.1);
+    cctx.lineJoin = 'round'; cctx.stroke();
+  }
+
+  // split segments
+  const segs = opts.splits || [];
+  if (segs.length) {
+    cctx.strokeStyle = '#8e44ad';
+    cctx.lineWidth = Math.max(2, step * 0.09);
+    cctx.lineCap = 'round';
+    segs.forEach(seg => {
+      const a = toPx(seg.a), b = toPx(seg.b);
+      cctx.beginPath(); cctx.moveTo(a.x, a.y); cctx.lineTo(b.x, b.y); cctx.stroke();
+    });
+  }
+  if (opts.splitDraft && opts.splitRubber) {
+    const a = toPx(opts.splitDraft);
+    cctx.beginPath(); cctx.moveTo(a.x, a.y); cctx.lineTo(opts.splitRubber.x, opts.splitRubber.y);
+    cctx.strokeStyle = 'rgba(142,68,173,0.55)'; cctx.setLineDash([6, 6]); cctx.stroke(); cctx.setLineDash([]);
+  }
+
+  const r = Math.max(opts.tiny ? 2.5 : 4, step * 0.14);
+  for (let y = 0; y < gs; y++) for (let x = 0; x < gs; x++) {
+    const p = toPx({ x, y });
+    cctx.beginPath(); cctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    cctx.fillStyle = '#c0392b'; cctx.fill();
+    if (!opts.tiny) { cctx.strokeStyle = '#fff'; cctx.lineWidth = 1.2; cctx.stroke(); }
+  }
+
+  if (!opts.tiny) {
+    cctx.fillStyle = 'rgba(255,232,209,0.92)';
+    const labelH = Math.max(20, pad * 0.55);
+    cctx.fillRect(0, 0, size, labelH);
+    cctx.fillStyle = '#d35400';
+    cctx.font = 'bold ' + Math.max(11, Math.floor(size * 0.032)) + 'px "PingFang HK","Noto Sans TC",sans-serif';
+    cctx.textAlign = 'center'; cctx.textBaseline = 'middle';
+    cctx.fillText('每格邊長 1 cm　｜　釘板 10 cm × 10 cm', size / 2, labelH / 2);
+  }
+}
+
+function drawCalc() {
+  if (!focusSub) return;
+  drawPolygonScene(calcCanvas, calcCtx, focusSub, {
+    splits: splitSegs,
+    splitDraft: splitDraft,
+    splitRubber: splitRubber
+  });
+}
+function resizeCalc() {
+  fitSquareCanvas(calcCanvas);
+  drawCalc();
+}
+
+/* Split drawing on calc canvas (students; teacher can also doodle but tools focus on reveal) */
+function tryAddSplitEndpoint(peg) {
+  if (!peg) return;
+  if (!splitDraft) {
+    splitDraft = { x: peg.x, y: peg.y };
+    return;
+  }
+  if (samePeg(splitDraft, peg)) return;
+  // avoid exact duplicate segment
+  const exists = splitSegs.some(s =>
+    (samePeg(s.a, splitDraft) && samePeg(s.b, peg)) ||
+    (samePeg(s.b, splitDraft) && samePeg(s.a, peg))
+  );
+  if (!exists) splitSegs.push({ a: { x: splitDraft.x, y: splitDraft.y }, b: { x: peg.x, y: peg.y } });
+  splitDraft = { x: peg.x, y: peg.y }; // continue chain like 一筆畫
+}
+function endSplitStroke(e) {
+  const was = splitDrawing || splitPointerId != null;
+  splitDrawing = false; splitRubber = null; splitDraft = null; splitPointerId = null;
+  if (was) unlockPageScroll();
+  drawCalc();
+}
+
+function onCalcPointerDown(e) {
+  if (role !== 'student') return; // only students draw splits in class mode
+  if (e.button != null && e.button !== 0) return;
+  e.preventDefault();
+  lockPageScroll();
+  const pos = getPointerPosOn(calcCanvas, e);
+  const peg = pixelToNearestPegOn(calcCanvas, pos.x, pos.y, 0.45);
+  if (!peg) { unlockPageScroll(); return; }
+  splitDrawing = true; splitPointerId = e.pointerId;
+  try { calcCanvas.setPointerCapture(e.pointerId); } catch (err) {}
+  splitDraft = null;
+  tryAddSplitEndpoint(peg);
+  splitRubber = pos;
+  drawCalc();
+}
+function onCalcPointerMove(e) {
+  if (!splitDrawing || (splitPointerId != null && e.pointerId !== splitPointerId)) return;
+  e.preventDefault();
+  const pos = getPointerPosOn(calcCanvas, e);
+  splitRubber = pos;
+  const peg = pixelToNearestPegOn(calcCanvas, pos.x, pos.y, SNAP_FRAC);
+  if (peg) tryAddSplitEndpoint(peg);
+  drawCalc();
+}
+function onCalcPointerUp(e) {
+  if (splitPointerId != null && e.pointerId !== splitPointerId) return;
+  e.preventDefault();
+  if (splitDrawing) {
+    const pos = getPointerPosOn(calcCanvas, e);
+    const peg = pixelToNearestPegOn(calcCanvas, pos.x, pos.y, 0.45);
+    if (peg) tryAddSplitEndpoint(peg);
+  }
+  try { calcCanvas.releasePointerCapture(e.pointerId); } catch (err) {}
+  // end stroke but keep segments; clear draft so next stroke starts fresh
+  const was = splitDrawing || splitPointerId != null;
+  splitDrawing = false; splitRubber = null; splitDraft = null; splitPointerId = null;
+  if (was) unlockPageScroll();
+  drawCalc();
+}
+calcCanvas.addEventListener('pointerdown', onCalcPointerDown, { passive: false });
+calcCanvas.addEventListener('pointermove', onCalcPointerMove, { passive: false });
+calcCanvas.addEventListener('pointerup', onCalcPointerUp, { passive: false });
+calcCanvas.addEventListener('pointercancel', endSplitStroke, { passive: false });
+calcCanvas.addEventListener('lostpointercapture', endSplitStroke);
+calcCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+
+document.getElementById('btn-split-undo').addEventListener('click', () => {
+  splitSegs.pop(); drawCalc();
+});
+document.getElementById('btn-split-clear').addEventListener('click', () => {
+  splitSegs = []; splitDraft = null; splitRubber = null; drawCalc();
+});
+
+document.getElementById('btn-submit-guess').addEventListener('click', () => {
+  if (!currentStudent || !focusSub) return;
+  const guess = document.getElementById('area-guess').value.trim();
+  if (!guess) { toast('請先輸入面積', 'err'); return; }
+  const ans = {
+    type: 'answer',
+    studentNo: currentStudent.no,
+    studentName: currentStudent.name,
+    designId: focusSub.id,
+    guess: guess,
+    at: new Date().toISOString()
+  };
+  upsertAnswer(ans);
+  sendToHost(ans);
+  toast('已提交答案：' + guess + ' cm²', 'ok');
+});
+
+function showAnswerBox(areaStr, picksHtml) {
+  document.getElementById('answer-area').textContent = '面積 = ' + areaStr + ' cm²';
+  document.getElementById('answer-picks').innerHTML = picksHtml || '';
+  document.getElementById('answer-box').classList.add('show');
+}
+
+function computeAnswerHtml(sub) {
+  const A = shoelaceArea(sub.points);
+  const B = boundaryPoints(sub.points);
+  const I = pickInterior(A, B);
+  return {
+    area: formatAreaNice(A),
+    picksHtml: 'Pick\'s 定理：I = ' + formatAreaNice(I) + '，B = ' + B +
+      '<br>A = I + B/2 − 1 = ' + formatAreaNice(I) + ' + ' + B + '/2 − 1'
+  };
+}
+
+function renderStudentAnswers() {
+  const el = document.getElementById('student-answers-list');
+  if (!focusSub) { el.innerHTML = ''; return; }
+  const map = studentGuesses[focusSub.id] || {};
+  const rows = Object.keys(map).map(k => map[k]).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-HK'));
+  if (!rows.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:8px;">暫時未有學生交答案</div>';
+    return;
+  }
+  el.innerHTML = rows.map(r =>
+    '<div><span>' + r.name + '</span><span><strong>' + r.guess + '</strong> cm²</span></div>'
+  ).join('');
+}
+
+function enterCalcMode(sub, opts) {
+  opts = opts || {};
+  focusSub = sub;
+  revealOn = !!opts.reveal;
+  splitSegs = [];
+  splitDraft = null;
+  splitRubber = null;
+  document.getElementById('calc-badge').textContent = '設計者：' + sub.studentNo + ' ' + sub.studentName;
+  document.getElementById('area-guess').value = '';
+  document.getElementById('answer-box').classList.remove('show');
+
+  const asStudent = !!opts.asStudent || role === 'student';
+  document.getElementById('calc-student-tools').style.display = asStudent ? '' : 'none';
+  document.getElementById('calc-teacher-tools').style.display = asStudent ? 'none' : '';
+  document.getElementById('calc-student-nav').style.display = asStudent ? '' : 'none';
+  document.getElementById('calc-title').textContent = asStudent ? '一起計算面積' : '課堂計算（老師）';
+  document.getElementById('calc-subtitle').textContent = asStudent
+    ? '畫紫線分割，再填你計到嘅面積'
+    : '撳「顯示答案」會同步晒全班';
+
+  if (!asStudent) {
+    document.getElementById('btn-reveal').style.display = revealOn ? 'none' : '';
+    document.getElementById('btn-hide-answer').style.display = revealOn ? '' : 'none';
+    renderStudentAnswers();
+  }
+  if (revealOn) {
+    const a = computeAnswerHtml(sub);
+    showAnswerBox(a.area, a.picksHtml);
+  }
+
+  showScreen('screen-calc');
+  resizeCalc();
+  updateSyncBars();
+}
+
+function teacherOpenDesign(sub) {
+  role = 'teacher';
+  enterCalcMode(sub, { asStudent: false, reveal: false });
+  broadcastTeacher({ type: 'focus', submission: sub, reveal: false });
+  toast('已廣播俾全班一齊計', 'ok');
+}
+
+/* ---------- Gallery ---------- */
+function renderGallery() {
+  renderProgressInto(
+    document.getElementById('teacher-progress-summary'),
+    document.getElementById('teacher-progress-list'),
+    { clickableDone: true }
+  );
+  const list = getLatestByStudent();
+  const grid = document.getElementById('gallery-grid');
+  const empty = document.getElementById('gallery-empty');
+  grid.innerHTML = '';
+  if (!list.length) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  list.forEach(sub => {
+    const card = document.createElement('div');
+    card.className = 'gallery-card';
+    const thumb = document.createElement('canvas');
+    thumb.width = 200; thumb.height = 200;
+    drawPolygonScene(thumb, thumb.getContext('2d'), sub, { tiny: true, bg: '#faf6f1' });
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const d = new Date(sub.createdAt);
+    const dateStr = d.toLocaleString('zh-HK', {
+      timeZone: 'Asia/Hong_Kong', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    meta.innerHTML = '<div class="name">' + sub.studentNo + ' ' + sub.studentName + '</div>' +
+      '<div class="date">' + dateStr + '（香港時間）</div>';
+    card.appendChild(thumb); card.appendChild(meta);
+    card.addEventListener('click', () => teacherOpenDesign(sub));
+    grid.appendChild(card);
+  });
+  updateSyncBars();
+}
+
+/* ---------- New round ---------- */
+function teacherStartNewRound() {
+  const n = getLatestByStudent().length;
+  const msg = n
+    ? ('確定開新一輪？會清除而家 ' + n + ' 份提交同所有答案，全班進度會變返「未完成」。舊資料會留喺歷史備份。')
+    : '確定開新一輪？會清除本輪資料，全班重新設計。';
+  if (!confirm(msg)) return;
+
+  clearCurrentRoundLocal();
+  focusSub = null;
+  revealOn = false;
+  studentGuesses = {};
+  splitSegs = [];
+  splitDraft = null;
+  splitRubber = null;
+
+  broadcastTeacher({ type: 'new-round' });
+  renderGallery();
+  // If teacher was on calc view, go back to gallery
+  if (document.getElementById('screen-calc').classList.contains('active')) {
+    showScreen('screen-gallery');
+  }
+  toast('已開新一輪，全班請重新畫圖', 'ok');
+}
+document.getElementById('btn-new-round').addEventListener('click', teacherStartNewRound);
+
+/* ---------- Import / Export ---------- */
+document.getElementById('btn-export').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(loadStore(), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'hyt-geoboard-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('已匯出資料', 'ok');
+});
+document.getElementById('btn-import').addEventListener('click', () => document.getElementById('import-file').click());
+document.getElementById('import-file').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!data.submissions || !Array.isArray(data.submissions)) { toast('檔案格式唔啱', 'err'); return; }
+      const current = loadStore();
+      const map = new Map();
+      current.submissions.forEach(s => map.set(s.studentNo, s));
+      data.submissions.forEach(s => {
+        const old = map.get(s.studentNo);
+        if (!old || new Date(s.createdAt) >= new Date(old.createdAt)) map.set(s.studentNo, s);
+      });
+      current.submissions = Array.from(map.values());
+      current.history = (current.history || []).concat(data.history || []);
+      current.answers = (current.answers || []).concat(data.answers || []);
+      saveStore(current);
+      renderGallery();
+      broadcastTeacher({ type: 'submissions', list: current.submissions });
+      toast('匯入成功', 'ok');
+    } catch (err) { toast('讀取失敗', 'err'); }
+  };
+  reader.readAsText(file); e.target.value = '';
+});
+
+/* ---------- Navigation ---------- */
+document.getElementById('btn-student').addEventListener('click', () => {
+  role = 'student'; renderNameGrid(); showScreen('screen-names');
+});
+document.getElementById('btn-teacher').addEventListener('click', () => {
+  role = 'teacher';
+  document.getElementById('pin-input').value = '';
+  showScreen('screen-teacher-pin');
+});
+document.getElementById('btn-names-back').addEventListener('click', () => showScreen('screen-landing'));
+
+document.getElementById('btn-join-skip').addEventListener('click', () => {
+  showScreen('screen-board'); resizeBoard(); drawBoard(); updateSyncBars();
+});
+document.getElementById('btn-join-go').addEventListener('click', async () => {
+  const code = document.getElementById('join-code').value.trim();
+  if (!/^\d{4,6}$/.test(code)) { toast('請輸入 4–6 位數字編號', 'err'); return; }
+  const ok = await studentJoinRoom(code);
+  showScreen('screen-board'); resizeBoard(); drawBoard(); updateSyncBars();
+  if (!ok) toast('未能連上老師，可稍後喺「課堂編號」再試', 'err');
+});
+
+document.getElementById('btn-board-back').addEventListener('click', () => {
+  renderNameGrid(); showScreen('screen-names');
+});
+document.getElementById('btn-board-progress').addEventListener('click', () => showStudentProgress());
+document.getElementById('btn-board-join').addEventListener('click', () => {
+  document.getElementById('join-code').value = roomCode || '';
+  document.getElementById('join-student-label').textContent =
+    currentStudent ? (currentStudent.no + ' ' + currentStudent.name) : '';
+  showScreen('screen-join');
+});
+document.getElementById('btn-progress-back').addEventListener('click', () => {
+  if (progressBackTarget === 'screen-board' && currentStudent) {
+    showScreen('screen-board'); resizeBoard(); drawBoard();
+  } else { renderNameGrid(); showScreen('screen-names'); }
+});
+document.getElementById('btn-progress-design').addEventListener('click', () => {
+  showScreen('screen-board'); resizeBoard(); drawBoard();
+});
+
+document.getElementById('btn-pin-back').addEventListener('click', () => showScreen('screen-landing'));
+document.getElementById('btn-pin-ok').addEventListener('click', () => {
+  if (document.getElementById('pin-input').value.trim() !== TEACHER_PIN) {
+    toast('PIN 不正確', 'err'); return;
+  }
+  const code = genRoomCode();
+  teacherStartRoom(code);
+  showScreen('screen-teacher-room');
+});
+document.getElementById('pin-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('btn-pin-ok').click();
+});
+document.getElementById('btn-room-regen').addEventListener('click', () => {
+  teacherStartRoom(genRoomCode());
+});
+document.getElementById('btn-room-enter').addEventListener('click', () => {
+  renderGallery(); showScreen('screen-gallery');
+});
+document.getElementById('btn-gallery-home').addEventListener('click', () => {
+  destroyPeer(); roomCode = null; showScreen('screen-landing');
+});
+
+document.getElementById('btn-reveal').addEventListener('click', () => {
+  if (!focusSub) return;
+  revealOn = true;
+  const a = computeAnswerHtml(focusSub);
+  showAnswerBox(a.area, a.picksHtml);
+  document.getElementById('btn-reveal').style.display = 'none';
+  document.getElementById('btn-hide-answer').style.display = '';
+  broadcastTeacher({ type: 'reveal', area: a.area, picksHtml: a.picksHtml, designId: focusSub.id });
+});
+document.getElementById('btn-hide-answer').addEventListener('click', () => {
+  revealOn = false;
+  document.getElementById('answer-box').classList.remove('show');
+  document.getElementById('btn-reveal').style.display = '';
+  document.getElementById('btn-hide-answer').style.display = 'none';
+  broadcastTeacher({ type: 'unreveal' });
+});
+document.getElementById('btn-calc-back').addEventListener('click', () => {
+  focusSub = null; revealOn = false;
+  renderGallery(); showScreen('screen-gallery');
+});
+document.getElementById('btn-calc-student-back').addEventListener('click', () => {
+  showScreen('screen-board'); resizeBoard(); drawBoard();
+});
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('screen-board').classList.contains('active')) resizeBoard();
+  if (document.getElementById('screen-calc').classList.contains('active')) resizeCalc();
+});
+
+// Init BroadcastChannel listener early for same-browser testing
+try {
+  if (typeof BroadcastChannel !== 'undefined') {
+    bc = new BroadcastChannel('hyt-geoboard-room');
+    bc.onmessage = (ev) => onSyncMessage(ev.data, 'broadcast');
+  }
+} catch (e) {}
+</script>
+</body>
+</html>
