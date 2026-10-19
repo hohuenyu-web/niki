@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>數學釘板・多邊形面積｜順德聯誼總會何日東小學— 何老師設計</title>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.6.3.min.js"></script>
 <style>
   :root {
     --bg: #fff8f0;
@@ -250,8 +250,25 @@
     text-align: center; display: none; width: 100%; max-width: 560px;
   }
   .answer-box.show { display: block; }
-  .answer-box .area { font-size: 1.6rem; font-weight: 800; color: var(--success); }
-  .answer-box .picks { margin-top: 8px; font-size: 0.95rem; }
+  .answer-box .area {
+    font-size: 1.6rem; font-weight: 800; color: var(--success);
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.35em;
+  }
+  .mixed-num {
+    display: inline-flex; align-items: center; gap: 0.28em;
+    line-height: 1; vertical-align: middle;
+  }
+  .mixed-num .whole { font-size: 1.15em; font-weight: 800; }
+  .mixed-num .frac {
+    display: inline-flex; flex-direction: column; align-items: center;
+    justify-content: center; font-size: 0.58em; font-weight: 800;
+    line-height: 1.05; min-width: 1.2em;
+  }
+  .mixed-num .frac .num {
+    border-bottom: 2.5px solid currentColor;
+    padding: 0 0.28em 0.08em; min-width: 1em; text-align: center;
+  }
+  .mixed-num .frac .den { padding: 0.08em 0.28em 0; min-width: 1em; text-align: center; }
 
   .toolbar-top {
     display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between;
@@ -339,7 +356,7 @@
       <button class="btn btn-ghost" id="btn-join-skip">稍後加入／單機用</button>
       <button class="btn btn-primary" id="btn-join-go">加入</button>
     </div>
-    <p style="margin-top:10px;font-size:0.8rem;color:var(--muted);text-align:center;">建議同老師同一個 Wi‑Fi。老師頁面要保持開啟。</p>
+    <p style="margin-top:10px;font-size:0.8rem;color:var(--muted);text-align:center;">用雲端同步，家用／校園網絡都得。老師關閉後可用同一個編號重開。</p>
   </div>
 </div>
 
@@ -408,16 +425,22 @@
 <div id="screen-teacher-room" class="screen">
   <div class="card" style="max-width:480px;">
     <div class="header">
-      <h1>建立課堂</h1>
-      <div class="school">請學生輸入同一個編號加入</div>
+      <h1>建立／重開課堂</h1>
+      <div class="school">學生用同一個編號，任何網絡都得</div>
     </div>
     <div class="room-code-big" id="room-code-display">----</div>
     <p id="room-status" style="text-align:center;color:var(--muted);">準備中…</p>
     <div class="btn-row" style="max-width:100%;">
-      <button class="btn btn-ghost" id="btn-room-regen">換編號</button>
+      <button class="btn btn-ghost" id="btn-room-regen">新編號</button>
       <button class="btn btn-primary" id="btn-room-enter">進入控制台</button>
     </div>
-    <p style="margin-top:12px;font-size:0.8rem;color:var(--muted);text-align:center;">課堂期間請唔好關閉呢個分頁，否則學生會斷線。</p>
+    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
+    <p style="text-align:center;color:var(--muted);font-size:0.9rem;margin-bottom:6px;">已經有編號？重開同一個課堂：</p>
+    <input class="code-input" id="teacher-rejoin-code" type="text" inputmode="numeric" maxlength="6" placeholder="輸入舊編號" autocomplete="off">
+    <div class="btn-row" style="max-width:100%;">
+      <button class="btn btn-accent btn-block" id="btn-room-rejoin">重開呢個課堂</button>
+    </div>
+    <p style="margin-top:12px;font-size:0.8rem;color:var(--muted);text-align:center;">課堂資料存喺雲端；關閉分頁後用同一個編號就可以重開。</p>
   </div>
 </div>
 
@@ -501,7 +524,6 @@
 
   <div class="answer-box" id="answer-box">
     <div class="area" id="answer-area"></div>
-    <div class="picks" id="answer-picks"></div>
   </div>
 
   <div class="btn-row" id="calc-student-nav" style="display:none;">
@@ -522,7 +544,7 @@
 
 <script>
 /* ============================================================
-   數學釘板・多邊形面積 + 課堂同步（PeerJS）
+   數學釘板・多邊形面積 + 課堂雲端同步（PubNub）
    順德聯誼總會何日東小學— 何老師設計
    TEACHER_PIN default 1234
    Board: 11×11 pegs = 10 cm × 10 cm
@@ -530,7 +552,9 @@
 const TEACHER_PIN = '1234';
 const STORAGE_KEY = 'hyt-geoboard-v1';
 const GRID_SIZE = 11;
-const PEER_PREFIX = 'hytgb'; // peer id = hytgb{roomCode}
+const PUBNUB_PUBLISH_KEY = 'demo';
+const PUBNUB_SUBSCRIBE_KEY = 'demo';
+const CLOUD_CHANNEL_PREFIX = 'hyt-geoboard-v2-'; // room channel = prefix + code
 const SNAP_FRAC = 0.38;
 
 const STUDENTS = [
@@ -612,23 +636,56 @@ function shoelaceArea(points) {
   return Math.abs(sum) / 2;
 }
 function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { const t = b; b = a % b; a = t; } return a; }
-function boundaryPoints(points) {
-  let B = 0; const n = points.length;
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
-    B += gcd(points[j].x - points[i].x, points[j].y - points[i].y);
+
+/** Convert area to mixed number parts for visual display (no slash string). */
+function areaToMixedParts(a) {
+  const x = Math.round(Number(a) * 1000000) / 1000000;
+  if (!isFinite(x)) return { kind: 'text', text: '—' };
+  if (Math.abs(x - Math.round(x)) < 1e-9) {
+    return { kind: 'whole', whole: Math.round(x) };
   }
-  return B;
+  for (const den of [2, 4, 8, 3, 5, 6, 10]) {
+    const total = Math.round(x * den);
+    if (Math.abs(total / den - x) < 1e-6) {
+      let whole = Math.floor(total / den);
+      let num = total % den;
+      if (num < 0) { whole -= 1; num += den; }
+      const g = gcd(num, den);
+      num /= g; const d = den / g;
+      if (num === 0) return { kind: 'whole', whole: whole };
+      if (whole === 0) return { kind: 'frac', num: num, den: d };
+      return { kind: 'mixed', whole: whole, num: num, den: d };
+    }
+  }
+  // fallback decimal (still not slash-triple)
+  const t = (Math.round(x * 1000) / 1000).toString();
+  return { kind: 'text', text: t };
 }
-function pickInterior(area, B) { return area - B / 2 + 1; }
-function formatAreaNice(a) {
-  if (Math.abs(a - Math.round(a)) < 1e-9) return String(Math.round(a));
-  if (Math.abs(a * 2 - Math.round(a * 2)) < 1e-9) {
-    const num = Math.round(a * 2);
-    if (num % 2 === 0) return String(num / 2);
-    return num + '/2';
+
+function mixedPartsToHtml(parts) {
+  if (!parts || parts.kind === 'text') {
+    return '<span class="whole">' + (parts && parts.text != null ? parts.text : '—') + '</span>';
   }
-  return (Math.round(a * 1000) / 1000).toString();
+  if (parts.kind === 'whole') {
+    return '<span class="whole">' + parts.whole + '</span>';
+  }
+  const frac = '<span class="frac"><span class="num">' + parts.num +
+    '</span><span class="den">' + parts.den + '</span></span>';
+  if (parts.kind === 'frac') return frac;
+  return '<span class="whole">' + parts.whole + '</span>' + frac;
+}
+
+function formatAreaNice(a) {
+  // Plain text fallback (exports / toasts) — prefer unicode ½ when possible
+  const p = areaToMixedParts(a);
+  if (p.kind === 'whole') return String(p.whole);
+  if (p.kind === 'text') return p.text;
+  if (p.kind === 'frac') {
+    if (p.num === 1 && p.den === 2) return '½';
+    return p.num + '/' + p.den;
+  }
+  if (p.num === 1 && p.den === 2) return p.whole + '½';
+  return p.whole + ' ' + p.num + '/' + p.den;
 }
 
 /* ---------- UI helpers ---------- */
@@ -679,25 +736,38 @@ let studentGuesses = {};   // teacher: designId -> { studentNo: {name, guess, at
 
 let progressBackTarget = 'screen-board';
 
-/* ---------- PeerJS Sync ---------- */
-let peer = null;
+/* ---------- Cloud Sync (PubNub) ---------- */
+let pubnub = null;
 let roomCode = null;
 let isHost = false;
-const studentConns = new Map(); // peerId -> DataConnection (teacher)
-let hostConn = null;            // student → teacher
-let connectedStudents = [];     // [{peerId, studentNo, studentName}]
 let syncReady = false;
-let bc = null; // BroadcastChannel fallback same-browser
+let connectedCount = 0;
+let cloudState = null; // canonical room snapshot
+let applyingCloud = false;
+let presenceTimer = null;
 
-function peerIdForRoom(code) { return PEER_PREFIX + code; }
+function cloudChannel(code) { return CLOUD_CHANNEL_PREFIX + code; }
+
+function emptyCloudState(code) {
+  return {
+    code: code,
+    submissions: [],
+    answers: [],
+    focus: null,
+    reveal: false,
+    revealArea: null,
+    updatedAt: Date.now(),
+    roundId: 'r' + Date.now()
+  };
+}
 
 function updateSyncBars() {
   const st = document.getElementById('student-sync-bar');
   if (st) {
     if (roomCode && syncReady) {
-      st.innerHTML = '<div class="sync-pill on">已加入課堂 ' + roomCode + '</div>';
+      st.innerHTML = '<div class="sync-pill on">已加入課堂 ' + roomCode + '（雲端）</div>';
     } else if (roomCode && !syncReady) {
-      st.innerHTML = '<div class="sync-pill off">連接中… ' + roomCode + '</div>';
+      st.innerHTML = '<div class="sync-pill off">連接雲端中… ' + roomCode + '</div>';
     } else {
       st.innerHTML = '<div class="sync-pill off">未加入課堂（單機）</div>';
     }
@@ -706,237 +776,397 @@ function updateSyncBars() {
   const conn = document.getElementById('teacher-conn-pill');
   if (pill) pill.textContent = '課堂：' + (roomCode || '----');
   if (conn) {
-    conn.textContent = '連線：' + connectedStudents.length + ' 人';
-    conn.className = 'sync-pill ' + (connectedStudents.length ? 'on' : 'off');
+    conn.textContent = '在線約：' + connectedCount + ' 人';
+    conn.className = 'sync-pill ' + (connectedCount ? 'on' : 'off');
   }
   const calcBar = document.getElementById('calc-sync-bar');
   if (calcBar) {
     calcBar.innerHTML = roomCode
-      ? '<div class="sync-pill on">課堂 ' + roomCode + '</div>'
+      ? '<div class="sync-pill on">課堂 ' + roomCode + '（雲端）</div>'
       : '<div class="sync-pill off">單機模式</div>';
   }
 }
 
-function bcSend(msg) {
-  try {
-    if (!bc && typeof BroadcastChannel !== 'undefined') {
-      bc = new BroadcastChannel('hyt-geoboard-room');
-      bc.onmessage = (ev) => onSyncMessage(ev.data, 'broadcast');
-    }
-    if (bc) bc.postMessage(Object.assign({ room: roomCode }, msg));
-  } catch (e) { /* ignore */ }
+function ensurePubNub() {
+  if (pubnub) return pubnub;
+  if (typeof PubNub === 'undefined') {
+    toast('雲端同步庫未載入，請檢查網絡後重新整理', 'err');
+    return null;
+  }
+  pubnub = new PubNub({
+    publishKey: PUBNUB_PUBLISH_KEY,
+    subscribeKey: PUBNUB_SUBSCRIBE_KEY,
+    uuid: 'hyt-' + Math.random().toString(36).slice(2, 10) + '-' + Date.now().toString(36),
+    heartbeatInterval: 30,
+    presenceTimeout: 60
+  });
+  pubnub.addListener({
+    message: function (ev) {
+      try { onCloudMessage(ev.message); } catch (err) { console.warn(err); }
+    },
+    status: function (st) {
+      if (st.category === 'PNConnectedCategory' || st.category === 'PNNetworkUpCategory') {
+        syncReady = true;
+        updateSyncBars();
+      }
+    },
+    presence: function () { refreshPresence(); }
+  });
+  return pubnub;
 }
 
-function destroyPeer() {
-  try { if (peer) peer.destroy(); } catch (e) {}
-  peer = null;
-  hostConn = null;
-  studentConns.clear();
-  connectedStudents = [];
+function leaveCloudRoom() {
+  if (presenceTimer) { clearInterval(presenceTimer); presenceTimer = null; }
+  if (pubnub && roomCode) {
+    try { pubnub.unsubscribe({ channels: [cloudChannel(roomCode)] }); } catch (e) {}
+  }
   syncReady = false;
+  connectedCount = 0;
+  cloudState = null;
+}
+
+function publishCloud(msg) {
+  if (!pubnub || !roomCode) return Promise.resolve(false);
+  return pubnub.publish({
+    channel: cloudChannel(roomCode),
+    message: msg,
+    storeInHistory: true
+  }).then(function () { return true; }).catch(function (e) {
+    console.warn('publish fail', e);
+    return false;
+  });
+}
+
+function publishCloudState() {
+  if (!cloudState || !roomCode) return Promise.resolve(false);
+  cloudState.updatedAt = Date.now();
+  cloudState.code = roomCode;
+  return publishCloud({ type: 'state', state: cloudState });
+}
+
+function applyCloudState(state, opts) {
+  opts = opts || {};
+  if (!state) return;
+  if (cloudState && state.updatedAt && cloudState.updatedAt && state.updatedAt < cloudState.updatedAt && !opts.force) {
+    return;
+  }
+  applyingCloud = true;
+  cloudState = state;
+  roomCode = state.code || roomCode;
+
+  // sync submissions into localStorage
+  const store = loadStore();
+  store.submissions = Array.isArray(state.submissions) ? state.submissions.map(function (s) { return Object.assign({}, s); }) : [];
+  if (Array.isArray(state.answers)) {
+    store.answers = state.answers.map(function (a) { return Object.assign({}, a); });
+  }
+  saveStore(store);
+
+  // rebuild teacher guess map
+  studentGuesses = {};
+  (state.answers || []).forEach(function (a) {
+    if (!a || !a.designId) return;
+    if (!studentGuesses[a.designId]) studentGuesses[a.designId] = {};
+    studentGuesses[a.designId][a.studentNo] = {
+      name: a.studentName, guess: a.guess, at: a.at
+    };
+  });
+
+  const hadFocus = !!focusSub;
+  const prevReveal = revealOn;
+
+  if (state.focus) {
+    const same = focusSub && focusSub.id === state.focus.id;
+    focusSub = state.focus;
+    revealOn = !!state.reveal;
+    if (role === 'student') {
+      if (!same || document.getElementById('screen-calc').classList.contains('active') === false) {
+        enterCalcMode(state.focus, { asStudent: true, reveal: !!state.reveal });
+        if (!opts.silent && !same) {
+          toast('老師揀咗「' + state.focus.studentName + '」嘅圖，一齊計！', 'ok');
+        }
+      } else if (state.reveal && state.revealArea != null) {
+        showAnswerBox(state.revealArea);
+      } else if (!state.reveal) {
+        document.getElementById('answer-box').classList.remove('show');
+      }
+    } else if (role === 'teacher' && document.getElementById('screen-calc').classList.contains('active')) {
+      if (state.reveal && state.revealArea != null) showAnswerBox(state.revealArea);
+      else if (!state.reveal) document.getElementById('answer-box').classList.remove('show');
+      renderStudentAnswers();
+    }
+  } else {
+    // no focus — if student was in calc because of previous focus, bounce back on new-round etc.
+    if (opts.fromNewRound) {
+      // handled by caller
+    } else if (role === 'student' && hadFocus && !state.focus) {
+      focusSub = null;
+      revealOn = false;
+    } else {
+      focusSub = null;
+      revealOn = false;
+    }
+  }
+
+  if (isHost || role === 'teacher') {
+    if (document.getElementById('screen-gallery').classList.contains('active') ||
+        document.getElementById('screen-calc').classList.contains('active')) {
+      renderGallery();
+    }
+  }
+  updateSyncBars();
+  applyingCloud = false;
+}
+
+function onCloudMessage(data) {
+  if (!data || !data.type) return;
+  if (data.type === 'state' && data.state) {
+    const prevRound = cloudState && cloudState.roundId;
+    const nextRound = data.state.roundId;
+    applyCloudState(data.state);
+    if (role === 'student' && prevRound && nextRound && prevRound !== nextRound) {
+      // new round detected via roundId change
+      resetDrawing();
+      splitSegs = [];
+      const box = document.getElementById('answer-box');
+      if (box) box.classList.remove('show');
+      const guess = document.getElementById('area-guess');
+      if (guess) guess.value = '';
+      if (currentStudent) {
+        showScreen('screen-board');
+        resizeBoard();
+        drawBoard();
+      }
+      toast('老師已開新一輪，請再畫一個多邊形', 'ok');
+    }
+    return;
+  }
+  if (data.type === 'submission' && data.entry) {
+    mergeRemoteSubmission(data.entry);
+    if (!cloudState) cloudState = emptyCloudState(roomCode);
+    const idx = cloudState.submissions.findIndex(function (s) { return s.studentNo === data.entry.studentNo; });
+    if (idx >= 0) cloudState.submissions[idx] = data.entry;
+    else cloudState.submissions.push(data.entry);
+    cloudState.updatedAt = Date.now();
+    if (isHost) {
+      publishCloudState();
+      renderGallery();
+      toast(data.entry.studentName + ' 提交咗圖案', 'ok');
+    } else if (role === 'teacher') {
+      renderGallery();
+    }
+    return;
+  }
+  if (data.type === 'answer' && data.designId != null) {
+    const ans = {
+      studentNo: data.studentNo,
+      studentName: data.studentName,
+      designId: data.designId,
+      guess: data.guess,
+      at: data.at || new Date().toISOString()
+    };
+    upsertAnswer(ans);
+    if (!cloudState) cloudState = emptyCloudState(roomCode);
+    if (!cloudState.answers) cloudState.answers = [];
+    const ai = cloudState.answers.findIndex(function (a) {
+      return a.studentNo === ans.studentNo && a.designId === ans.designId;
+    });
+    if (ai >= 0) cloudState.answers[ai] = ans; else cloudState.answers.push(ans);
+    if (!studentGuesses[ans.designId]) studentGuesses[ans.designId] = {};
+    studentGuesses[ans.designId][ans.studentNo] = { name: ans.studentName, guess: ans.guess, at: ans.at };
+    if (isHost) publishCloudState();
+    if (focusSub && focusSub.id === ans.designId) renderStudentAnswers();
+    if (role === 'teacher') toast(ans.studentName + ' 交咗答案：' + ans.guess, 'ok');
+    return;
+  }
+  if (data.type === 'hello' && isHost) {
+    refreshPresence();
+    // push latest state so late joiners catch up quickly
+    publishCloudState();
+  }
+}
+
+function refreshPresence() {
+  if (!pubnub || !roomCode) return;
+  pubnub.hereNow({ channels: [cloudChannel(roomCode)], includeUUIDs: true }, function (status, response) {
+    if (status.error || !response || !response.channels) return;
+    const ch = response.channels[cloudChannel(roomCode)];
+    connectedCount = ch && typeof ch.occupancy === 'number' ? ch.occupancy : 0;
+    updateSyncBars();
+  });
+}
+
+function fetchLatestCloudState(code) {
+  return new Promise(function (resolve) {
+    const pn = ensurePubNub();
+    if (!pn) { resolve(null); return; }
+    const ch = cloudChannel(code);
+    function pickBest(messages) {
+      let best = null;
+      (messages || []).forEach(function (m) {
+        const msg = (m && (m.entry || m.message || m)) || null;
+        if (msg && msg.type === 'state' && msg.state) {
+          if (!best || (msg.state.updatedAt || 0) >= (best.updatedAt || 0)) best = msg.state;
+        }
+      });
+      return best;
+    }
+    // PubNub v7+: prefer fetchMessages; fall back to history
+    if (typeof pn.fetchMessages === 'function') {
+      pn.fetchMessages({ channels: [ch], count: 40 }, function (status, response) {
+        if (status.error || !response || !response.channels) {
+          // fallback
+          pn.history({ channel: ch, count: 40, stringifiedTimeToken: true }, function (st2, res2) {
+            if (st2.error || !res2) { resolve(null); return; }
+            resolve(pickBest(res2.messages));
+          });
+          return;
+        }
+        resolve(pickBest(response.channels[ch]));
+      });
+    } else {
+      pn.history({ channel: ch, count: 40, stringifiedTimeToken: true }, function (status, response) {
+        if (status.error || !response) { resolve(null); return; }
+        resolve(pickBest(response.messages));
+      });
+    }
+  });
+}
+
+async function joinCloudRoom(code, asTeacher) {
+  leaveCloudRoom();
+  roomCode = code;
+  isHost = !!asTeacher;
+  syncReady = false;
+  updateSyncBars();
+  const pn = ensurePubNub();
+  if (!pn) return false;
+
+  pn.subscribe({ channels: [cloudChannel(code)], withPresence: true });
+  syncReady = true;
+
+  const latest = await fetchLatestCloudState(code);
+  if (latest) {
+    applyCloudState(latest, { force: true, silent: true });
+  } else if (asTeacher) {
+    cloudState = emptyCloudState(code);
+    // seed from local if any
+    cloudState.submissions = getLatestByStudent();
+    await publishCloudState();
+  } else {
+    cloudState = emptyCloudState(code);
+  }
+
+  refreshPresence();
+  if (presenceTimer) clearInterval(presenceTimer);
+  presenceTimer = setInterval(refreshPresence, 8000);
+
+  if (!asTeacher && currentStudent) {
+    publishCloud({
+      type: 'hello',
+      studentNo: currentStudent.no,
+      studentName: currentStudent.name
+    });
+  }
+  updateSyncBars();
+  return true;
 }
 
 function teacherStartRoom(code) {
-  destroyPeer();
-  roomCode = code;
-  isHost = true;
-  syncReady = false;
   document.getElementById('room-code-display').textContent = code;
-  document.getElementById('room-status').textContent = '連接伺服器中…';
-  updateSyncBars();
-
-  if (typeof Peer === 'undefined') {
-    document.getElementById('room-status').textContent = 'PeerJS 未載入，可用單機／BroadcastChannel（同一部電腦分頁）。';
-    syncReady = true;
-    bcSend({ type: 'host-hello', roomCode: code });
+  document.getElementById('room-status').textContent = '連接雲端中…';
+  joinCloudRoom(code, true).then(function (ok) {
+    if (ok) {
+      document.getElementById('room-status').textContent =
+        '課堂已就緒（雲端）！請學生輸入編號 ' + code + '（任何網絡都得）';
+    } else {
+      document.getElementById('room-status').textContent = '雲端連接失敗，可重試或用單機。';
+    }
     updateSyncBars();
+  });
+}
+
+async function studentJoinRoom(code) {
+  const ok = await joinCloudRoom(code, false);
+  if (ok) {
+    // push existing local submission if any
+    const mine = getLatestByStudent().find(function (s) { return s.studentNo === currentStudent.no; });
+    if (mine) {
+      publishCloud({ type: 'submission', entry: mine });
+    }
+    toast('已加入課堂 ' + code, 'ok');
+  } else {
+    toast('未能連上雲端，可稍後再試或用單機', 'err');
+  }
+  return ok;
+}
+
+/** Compatibility wrappers used by existing UI handlers */
+function broadcastTeacher(msg) {
+  if (!msg || !msg.type) return;
+  if (!cloudState) cloudState = emptyCloudState(roomCode || '0000');
+  if (msg.type === 'focus') {
+    cloudState.focus = msg.submission;
+    cloudState.reveal = !!msg.reveal;
+    cloudState.revealArea = null;
+    publishCloudState();
     return;
   }
-
-  peer = new Peer(peerIdForRoom(code), { debug: 0 });
-  peer.on('open', (id) => {
-    syncReady = true;
-    document.getElementById('room-status').textContent = '課堂已就緒！請學生輸入編號 ' + code;
-    updateSyncBars();
-    bcSend({ type: 'host-hello', roomCode: code });
-  });
-  peer.on('connection', (conn) => {
-    setupTeacherConn(conn);
-  });
-  peer.on('error', (err) => {
-    console.warn('Peer error', err);
-    const t = (err && err.type) || '';
-    if (t === 'unavailable-id') {
-      document.getElementById('room-status').textContent = '編號已被占用，請換編號。';
-      toast('編號占用，請換一個', 'err');
-    } else {
-      document.getElementById('room-status').textContent = '連線問題：' + t + '（仍可用單機）';
-    }
-  });
-}
-
-function setupTeacherConn(conn) {
-  studentConns.set(conn.peer, conn);
-  conn.on('open', () => {
-    // send snapshot
-    conn.send({
-      type: 'welcome',
-      roomCode: roomCode,
-      submissions: getLatestByStudent(),
-      focus: focusSub,
-      reveal: revealOn
-    });
-    updateSyncBars();
-  });
-  conn.on('data', (data) => onSyncMessage(data, conn.peer));
-  conn.on('close', () => {
-    studentConns.delete(conn.peer);
-    connectedStudents = connectedStudents.filter(s => s.peerId !== conn.peer);
-    updateSyncBars();
-    broadcastTeacher({ type: 'roster', connected: connectedStudents });
-  });
-}
-
-function studentJoinRoom(code) {
-  destroyPeer();
-  roomCode = code;
-  isHost = false;
-  syncReady = false;
-  updateSyncBars();
-
-  if (typeof Peer === 'undefined') {
-    syncReady = true;
-    bcSend({ type: 'hello', studentNo: currentStudent.no, studentName: currentStudent.name, peerId: 'bc-' + currentStudent.no });
-    toast('已用本機廣播加入（測試用）', 'ok');
-    updateSyncBars();
-    return Promise.resolve(true);
+  if (msg.type === 'reveal') {
+    cloudState.reveal = true;
+    cloudState.revealArea = msg.area;
+    publishCloudState();
+    return;
   }
-
-  return new Promise((resolve) => {
-    peer = new Peer({ debug: 0 });
-    let settled = false;
-    const failTimer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        toast('連接逾時，可稍後再試或用單機', 'err');
-        resolve(false);
-      }
-    }, 12000);
-
-    peer.on('open', () => {
-      const conn = peer.connect(peerIdForRoom(code), { reliable: true });
-      hostConn = conn;
-      conn.on('open', () => {
-        syncReady = true;
-        conn.send({
-          type: 'hello',
-          studentNo: currentStudent.no,
-          studentName: currentStudent.name
-        });
-        // push any existing local submission
-        const mine = getLatestByStudent().find(s => s.studentNo === currentStudent.no);
-        if (mine) conn.send({ type: 'submission', entry: mine });
-        clearTimeout(failTimer);
-        if (!settled) { settled = true; resolve(true); }
-        updateSyncBars();
-        toast('已加入課堂 ' + code, 'ok');
-      });
-      conn.on('data', (data) => onSyncMessage(data, 'host'));
-      conn.on('close', () => {
-        syncReady = false;
-        updateSyncBars();
-        toast('同老師斷線咗', 'err');
-      });
-      conn.on('error', () => {
-        if (!settled) { settled = true; clearTimeout(failTimer); resolve(false); }
-      });
-    });
-    peer.on('error', (err) => {
-      console.warn(err);
-      if (!settled) { settled = true; clearTimeout(failTimer); resolve(false); }
-      toast('無法加入：請確認老師已開課堂', 'err');
-    });
-  });
-}
-
-function broadcastTeacher(msg) {
-  studentConns.forEach((conn) => {
-    try { if (conn.open) conn.send(msg); } catch (e) {}
-  });
-  bcSend(msg);
+  if (msg.type === 'unreveal') {
+    cloudState.reveal = false;
+    cloudState.revealArea = null;
+    publishCloudState();
+    return;
+  }
+  if (msg.type === 'new-round') {
+    const stamp = Date.now();
+    cloudState.submissions = [];
+    cloudState.answers = [];
+    cloudState.focus = null;
+    cloudState.reveal = false;
+    cloudState.revealArea = null;
+    cloudState.roundId = 'r' + stamp;
+    cloudState.updatedAt = stamp;
+    publishCloudState();
+    return;
+  }
+  if (msg.type === 'submissions') {
+    cloudState.submissions = msg.list || [];
+    publishCloudState();
+    return;
+  }
+  // generic
+  publishCloud(msg);
 }
 
 function sendToHost(msg) {
-  if (hostConn && hostConn.open) {
-    try { hostConn.send(msg); } catch (e) {}
+  if (!msg) return;
+  if (msg.type === 'submission' && msg.entry) {
+    mergeRemoteSubmission(msg.entry);
+    if (!cloudState) cloudState = emptyCloudState(roomCode || '0000');
+    const idx = cloudState.submissions.findIndex(function (s) { return s.studentNo === msg.entry.studentNo; });
+    if (idx >= 0) cloudState.submissions[idx] = msg.entry;
+    else cloudState.submissions.push(msg.entry);
+    publishCloud({ type: 'submission', entry: msg.entry });
+    // also push full state so late joiners see it even if teacher offline briefly
+    cloudState.updatedAt = Date.now();
+    publishCloudState();
+    return;
   }
-  bcSend(msg);
+  if (msg.type === 'answer') {
+    publishCloud(msg);
+    return;
+  }
+  publishCloud(msg);
 }
 
-function onSyncMessage(data, from) {
-  if (!data || !data.type) return;
-  // ignore other rooms on broadcast
-  if (data.room && roomCode && data.room !== roomCode && data.type !== 'host-hello') return;
-
-  if (isHost) {
-    if (data.type === 'hello') {
-      const peerId = from === 'broadcast' ? (data.peerId || ('bc-' + data.studentNo)) : from;
-      connectedStudents = connectedStudents.filter(s => s.studentNo !== data.studentNo);
-      connectedStudents.push({ peerId: peerId, studentNo: data.studentNo, studentName: data.studentName });
-      updateSyncBars();
-      broadcastTeacher({ type: 'roster', connected: connectedStudents });
-      toast(data.studentName + ' 已加入', 'ok');
-    } else if (data.type === 'submission') {
-      mergeRemoteSubmission(data.entry);
-      renderGallery();
-      toast(data.entry.studentName + ' 提交咗圖案', 'ok');
-    } else if (data.type === 'answer') {
-      const did = data.designId;
-      if (!studentGuesses[did]) studentGuesses[did] = {};
-      studentGuesses[did][data.studentNo] = {
-        name: data.studentName, guess: data.guess, at: data.at || new Date().toISOString()
-      };
-      upsertAnswer({
-        studentNo: data.studentNo, studentName: data.studentName,
-        designId: did, guess: data.guess, at: data.at
-      });
-      if (focusSub && focusSub.id === did) renderStudentAnswers();
-      toast(data.studentName + ' 交咗答案：' + data.guess, 'ok');
-    }
-  } else {
-    // student receiving from teacher
-    if (data.type === 'welcome') {
-      // Teacher snapshot = current round truth (handles reconnect after 開新一輪)
-      if (Array.isArray(data.submissions)) {
-        const store = loadStore();
-        store.submissions = data.submissions.map(s => Object.assign({}, s));
-        saveStore(store);
-      }
-      if (data.focus) {
-        enterCalcMode(data.focus, { asStudent: true, reveal: !!data.reveal });
-      } else {
-        focusSub = null;
-        revealOn = false;
-      }
-      updateSyncBars();
-    } else if (data.type === 'focus') {
-      enterCalcMode(data.submission, { asStudent: true, reveal: !!data.reveal });
-      toast('老師揀咗「' + data.submission.studentName + '」嘅圖，一齊計！', 'ok');
-    } else if (data.type === 'reveal') {
-      revealOn = true;
-      showAnswerBox(data.area, data.picksHtml);
-    } else if (data.type === 'unreveal') {
-      revealOn = false;
-      document.getElementById('answer-box').classList.remove('show');
-    } else if (data.type === 'unfocus') {
-      // optional: stay or go back
-    } else if (data.type === 'submissions') {
-      (data.list || []).forEach(mergeRemoteSubmission);
-    } else if (data.type === 'new-round') {
-      applyNewRoundAsStudent();
-    }
-  }
-}
+function destroyPeer() { leaveCloudRoom(); }
 
 function applyNewRoundAsStudent() {
   clearCurrentRoundLocal();
@@ -950,7 +1180,6 @@ function applyNewRoundAsStudent() {
   if (box) box.classList.remove('show');
   const guess = document.getElementById('area-guess');
   if (guess) guess.value = '';
-  // Back to design board if student has picked a name
   if (currentStudent && role === 'student') {
     document.getElementById('student-badge').textContent =
       currentStudent.no + ' ' + currentStudent.name;
@@ -1589,21 +1818,18 @@ document.getElementById('btn-submit-guess').addEventListener('click', () => {
   toast('已提交答案：' + guess + ' cm²', 'ok');
 });
 
-function showAnswerBox(areaStr, picksHtml) {
-  document.getElementById('answer-area').textContent = '面積 = ' + areaStr + ' cm²';
-  document.getElementById('answer-picks').innerHTML = picksHtml || '';
+function showAnswerBox(areaValue) {
+  const parts = (typeof areaValue === 'object' && areaValue && areaValue.kind)
+    ? areaValue
+    : areaToMixedParts(areaValue);
+  const el = document.getElementById('answer-area');
+  el.innerHTML = '<span>面積 = </span><span class="mixed-num">' + mixedPartsToHtml(parts) +
+    '</span><span> cm²</span>';
   document.getElementById('answer-box').classList.add('show');
 }
 
-function computeAnswerHtml(sub) {
-  const A = shoelaceArea(sub.points);
-  const B = boundaryPoints(sub.points);
-  const I = pickInterior(A, B);
-  return {
-    area: formatAreaNice(A),
-    picksHtml: 'Pick\'s 定理：I = ' + formatAreaNice(I) + '，B = ' + B +
-      '<br>A = I + B/2 − 1 = ' + formatAreaNice(I) + ' + ' + B + '/2 − 1'
-  };
+function computeAnswerArea(sub) {
+  return shoelaceArea(sub.points);
 }
 
 function renderStudentAnswers() {
@@ -1646,8 +1872,7 @@ function enterCalcMode(sub, opts) {
     renderStudentAnswers();
   }
   if (revealOn) {
-    const a = computeAnswerHtml(sub);
-    showAnswerBox(a.area, a.picksHtml);
+    showAnswerBox(computeAnswerArea(sub));
   }
 
   showScreen('screen-calc');
@@ -1817,18 +2042,33 @@ document.getElementById('btn-room-regen').addEventListener('click', () => {
 document.getElementById('btn-room-enter').addEventListener('click', () => {
   renderGallery(); showScreen('screen-gallery');
 });
+document.getElementById('btn-room-rejoin').addEventListener('click', async () => {
+  const code = document.getElementById('teacher-rejoin-code').value.trim();
+  if (!/^\d{4,6}$/.test(code)) { toast('請輸入 4–6 位舊編號', 'err'); return; }
+  document.getElementById('room-code-display').textContent = code;
+  document.getElementById('room-status').textContent = '重開課堂中…';
+  const ok = await joinCloudRoom(code, true);
+  if (ok) {
+    document.getElementById('room-status').textContent = '已重開課堂 ' + code + '（已載入雲端資料）';
+    renderGallery();
+    showScreen('screen-gallery');
+    toast('已重開課堂 ' + code, 'ok');
+  } else {
+    document.getElementById('room-status').textContent = '重開失敗，請檢查網絡';
+  }
+});
 document.getElementById('btn-gallery-home').addEventListener('click', () => {
-  destroyPeer(); roomCode = null; showScreen('screen-landing');
+  leaveCloudRoom(); roomCode = null; showScreen('screen-landing');
 });
 
 document.getElementById('btn-reveal').addEventListener('click', () => {
   if (!focusSub) return;
   revealOn = true;
-  const a = computeAnswerHtml(focusSub);
-  showAnswerBox(a.area, a.picksHtml);
+  const area = computeAnswerArea(focusSub);
+  showAnswerBox(area);
   document.getElementById('btn-reveal').style.display = 'none';
   document.getElementById('btn-hide-answer').style.display = '';
-  broadcastTeacher({ type: 'reveal', area: a.area, picksHtml: a.picksHtml, designId: focusSub.id });
+  broadcastTeacher({ type: 'reveal', area: area, designId: focusSub.id });
 });
 document.getElementById('btn-hide-answer').addEventListener('click', () => {
   revealOn = false;
@@ -1850,13 +2090,6 @@ window.addEventListener('resize', () => {
   if (document.getElementById('screen-calc').classList.contains('active')) resizeCalc();
 });
 
-// Init BroadcastChannel listener early for same-browser testing
-try {
-  if (typeof BroadcastChannel !== 'undefined') {
-    bc = new BroadcastChannel('hyt-geoboard-room');
-    bc.onmessage = (ev) => onSyncMessage(ev.data, 'broadcast');
-  }
-} catch (e) {}
 </script>
 </body>
 </html>
