@@ -68,31 +68,26 @@ window.__pubnubLoadPromise = (function () {
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
-    height: 100%;
     width: 100%;
     max-width: 100%;
+    min-height: 100%;
     font-family: "PingFang HK", "Noto Sans TC", "Microsoft JhengHei", "Helvetica Neue", Arial, sans-serif;
     background: var(--bg);
     color: var(--text);
     -webkit-tap-highlight-color: transparent;
-    overscroll-behavior: none;
     overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  body { min-height: 100vh; overflow-x: hidden; }
-  /* Lock page scroll while finger is drawing on a geoboard */
+  body { min-height: 100vh; }
+  /* Soft lock ONLY while a finger is actively drawing on the canvas */
   html.drawing-lock, body.drawing-lock {
     overflow: hidden !important;
     overscroll-behavior: none !important;
-    touch-action: none;
-    position: relative;
-    height: 100%;
   }
   body.drawing-lock {
-    /* freeze scroll position on iOS */
-    position: fixed;
-    width: 100%;
-    left: 0;
-    right: 0;
+    /* avoid position:fixed (causes iPad scroll jank / stuck teacher console) */
+    touch-action: none;
   }
   .screen {
     display: none;
@@ -102,6 +97,13 @@ window.__pubnubLoadPromise = (function () {
     max-width: 100%;
     box-sizing: border-box;
     overflow-x: hidden;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Teacher console / progress: never trap scroll */
+  #screen-gallery.active, #screen-progress.active, #screen-teacher-room.active {
+    touch-action: manipulation;
+    overscroll-behavior: auto;
   }
   .screen.active { display: flex; flex-direction: column; align-items: center; }
   #screen-landing { justify-content: center; }
@@ -169,7 +171,7 @@ window.__pubnubLoadPromise = (function () {
     margin: 0 auto;
     position: relative;
     box-sizing: border-box;
-    touch-action: none; -webkit-user-select: none; user-select: none;
+    -webkit-user-select: none; user-select: none;
   }
   .board-cm-label {
     text-align: center; font-size: 1rem; font-weight: 800; color: var(--primary-dark);
@@ -183,7 +185,6 @@ window.__pubnubLoadPromise = (function () {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    touch-action: none; overscroll-behavior: none;
     -webkit-user-select: none; user-select: none;
     overflow: hidden;
   }
@@ -202,10 +203,12 @@ window.__pubnubLoadPromise = (function () {
     overscroll-behavior: none;
     -webkit-touch-callout: none;
   }
-  /* Board / calc screens: reduce iOS rubber-band scroll */
+  /* Page scroll stays normal; only the canvas itself uses touch-action: none */
   #screen-board.active, #screen-calc.active {
-    overscroll-behavior: none;
-    -webkit-overflow-scrolling: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .answers-list, .progress-list, .gallery-grid, .online-names {
+    touch-action: pan-y;
   }
   .board-under-label {
     position: absolute; left: 0; right: 0; bottom: 6px; text-align: center;
@@ -709,8 +712,9 @@ window.__pubnubLoadPromise = (function () {
 
   <!-- Teacher tools -->
   <div id="calc-teacher-tools" style="width:100%;max-width:720px;display:none;">
+    <div id="broadcast-status" style="text-align:center;font-weight:800;color:var(--primary-dark);margin:6px 0 4px;">廣播全班（不用顯示答案）</div>
     <div class="btn-row" style="max-width:100%;">
-      <button class="btn btn-success" id="btn-reveal">顯示答案（廣播全班）</button>
+      <button class="btn btn-success" id="btn-reveal">顯示答案</button>
       <button class="btn btn-ghost" id="btn-hide-answer" style="display:none;">隱藏答案</button>
       <button class="btn btn-ghost" id="btn-calc-back">返回圖庫</button>
     </div>
@@ -1057,8 +1061,21 @@ function syncGuessHiddenFromMixed() {
 
 /* ---------- UI helpers ---------- */
 function showScreen(id) {
+  // Leaving a board must never leave body scroll stuck
+  while (typeof scrollLockCount === 'number' && scrollLockCount > 0) {
+    try { unlockPageScroll(); } catch (e) { scrollLockCount = 0; break; }
+  }
+  try {
+    document.documentElement.classList.remove('drawing-lock');
+    document.body.classList.remove('drawing-lock');
+    document.body.style.top = '';
+  } catch (e) {}
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  // Teacher / list screens: ensure window can scroll from top
+  if (id === 'screen-gallery' || id === 'screen-progress' || id === 'screen-calc') {
+    try { window.scrollTo(0, 0); } catch (e2) {}
+  }
 }
 function toast(msg, type) {
   const el = document.getElementById('toast');
@@ -1838,29 +1855,38 @@ async function probeRestReachable() {
   }
 }
 
-async function joinCloudRoomViaRest(code, asTeacher) {
+async function joinCloudRoomViaRest(code, asTeacher, opts) {
+  opts = opts || {};
+  const fresh = !!opts.fresh;
   const okNet = await probeRestReachable();
   if (!okNet) return false;
   syncBackend = 'rest';
   syncReady = true;
   updateSyncBars();
 
-  const boot = await restFetchHistory(code, { count: 50 });
-  (boot.messages || []).forEach(function (m) {
-    const msg = (m && m.message) ? m.message : m;
-    restMarkSeen(restMsgKey(msg));
-  });
-  if (boot.end) restHistoryEnd = String(boot.end);
-
-  const latest = pickBestStateFromMessages(boot.messages || []);
-  if (latest) {
-    applyCloudState(latest, { force: true, silent: true });
-  } else if (asTeacher) {
+  if (fresh && asTeacher) {
+    restSeenKeys = {};
+    restHistoryEnd = null;
     cloudState = emptyCloudState(code);
-    cloudState.submissions = getLatestByStudent();
     await publishCloudState();
   } else {
-    cloudState = emptyCloudState(code);
+    const boot = await restFetchHistory(code, { count: 50 });
+    (boot.messages || []).forEach(function (m) {
+      const msg = (m && m.message) ? m.message : m;
+      restMarkSeen(restMsgKey(msg));
+    });
+    if (boot.end) restHistoryEnd = String(boot.end);
+
+    const latest = pickBestStateFromMessages(boot.messages || []);
+    if (latest) {
+      applyCloudState(latest, { force: true, silent: true });
+    } else if (asTeacher) {
+      cloudState = emptyCloudState(code);
+      cloudState.submissions = getLatestByStudent();
+      await publishCloudState();
+    } else {
+      cloudState = emptyCloudState(code);
+    }
   }
 
   startRestPolling();
@@ -1881,7 +1907,9 @@ async function joinCloudRoomViaRest(code, asTeacher) {
   return true;
 }
 
-async function joinCloudRoom(code, asTeacher) {
+async function joinCloudRoom(code, asTeacher, opts) {
+  opts = opts || {};
+  const fresh = !!opts.fresh;
   leaveCloudRoom();
   roomCode = code;
   isHost = !!asTeacher;
@@ -1903,12 +1931,17 @@ async function joinCloudRoom(code, asTeacher) {
           updateSyncBars();
 
           let latest = null;
-          try {
-            latest = await fetchLatestCloudState(code);
-          } catch (e) {
-            latest = null; // soft: history failure must not fail join
+          if (!(fresh && asTeacher)) {
+            try {
+              latest = await fetchLatestCloudState(code);
+            } catch (e) {
+              latest = null; // soft: history failure must not fail join
+            }
           }
-          if (latest) {
+          if (fresh && asTeacher) {
+            cloudState = emptyCloudState(code);
+            await publishCloudState();
+          } else if (latest) {
             applyCloudState(latest, { force: true, silent: true });
           } else if (asTeacher) {
             cloudState = emptyCloudState(code);
@@ -1951,7 +1984,7 @@ async function joinCloudRoom(code, asTeacher) {
   }
 
   // Fallback: HTTP polling via PubNub REST (no SDK / no websocket)
-  const restOk = await joinCloudRoomViaRest(code, asTeacher);
+  const restOk = await joinCloudRoomViaRest(code, asTeacher, opts);
   if (!restOk) {
     toast('連線失敗，請檢查網絡後重試', 'err');
     leaveCloudRoom();
@@ -1962,12 +1995,20 @@ async function joinCloudRoom(code, asTeacher) {
 }
 
 function teacherStartRoom(code) {
+  // NEW room: wipe previous class work locally + publish empty cloud state
+  clearCurrentRoundLocal();
+  studentGuesses = {};
+  focusSub = null;
+  revealOn = false;
+  onlineRoster = {};
+  splitSegs = [];
   document.getElementById('room-code-display').textContent = code;
   document.getElementById('room-status').textContent = '連接雲端中…';
-  joinCloudRoom(code, true).then(function (ok) {
+  joinCloudRoom(code, true, { fresh: true }).then(function (ok) {
     if (ok) {
       document.getElementById('room-status').textContent =
-        '課堂已就緒！請學生輸入編號 ' + code;
+        '新課堂已就緒！請學生輸入編號 ' + code;
+      try { renderGallery(); } catch (e) {}
     } else {
       document.getElementById('room-status').textContent =
         '雲端連接失敗，請稍後重試。';
@@ -1996,7 +2037,7 @@ function broadcastTeacher(msg) {
   if (!cloudState) cloudState = emptyCloudState(roomCode || '0000');
   if (msg.type === 'focus') {
     cloudState.focus = msg.submission;
-    cloudState.reveal = !!msg.reveal;
+    cloudState.reveal = false; // opening a design never shows answer
     cloudState.revealArea = null;
     publishCloudState();
     return;
@@ -2419,14 +2460,18 @@ function getPointerPos(e) { return getPointerPosOn(canvas, e); }
 let scrollLockCount = 0;
 let savedScrollY = 0;
 function onDocTouchMoveWhileDrawing(e) {
-  if (scrollLockCount > 0) e.preventDefault();
+  // Only block page pan while actively drawing; allow if target is not canvas
+  if (scrollLockCount <= 0) return;
+  const t = e.target;
+  if (t && (t.id === 'geoboard' || t.id === 'calc-canvas' || (t.closest && (t.closest('#geoboard') || t.closest('#calc-canvas'))))) {
+    e.preventDefault();
+  }
 }
 function lockPageScroll() {
   if (scrollLockCount === 0) {
     savedScrollY = window.scrollY || window.pageYOffset || 0;
     document.documentElement.classList.add('drawing-lock');
     document.body.classList.add('drawing-lock');
-    document.body.style.top = '-' + savedScrollY + 'px';
     document.addEventListener('touchmove', onDocTouchMoveWhileDrawing, { passive: false });
   }
   scrollLockCount++;
@@ -2439,19 +2484,26 @@ function unlockPageScroll() {
     document.documentElement.classList.remove('drawing-lock');
     document.body.classList.remove('drawing-lock');
     document.body.style.top = '';
-    window.scrollTo(0, savedScrollY);
+    // do not force scrollTo — preserves teacher console position
   }
+}
+function forceUnlockPageScroll() {
+  scrollLockCount = 0;
+  try { document.removeEventListener('touchmove', onDocTouchMoveWhileDrawing); } catch (e) {}
+  document.documentElement.classList.remove('drawing-lock');
+  document.body.classList.remove('drawing-lock');
+  document.body.style.top = '';
 }
 
 function onPointerDown(e) {
   if (e.button != null && e.button !== 0) return;
-  e.preventDefault();
-  // Always lock scroll when touching the board (even if closed / miss peg)
-  lockPageScroll();
-  if (closed) { toast('已經封閉，請清除後再畫', 'err'); unlockPageScroll(); return; }
+  if (closed) { toast('已經封閉，請清除後再畫', 'err'); return; }
   const pos = getPointerPos(e);
   const peg = pixelToNearestPeg(pos.x, pos.y, 0.45);
-  if (!peg && points.length === 0) { unlockPageScroll(); return; }
+  // Only lock page scroll once we are actually drawing on the canvas pegs
+  if (!peg && points.length === 0) return;
+  e.preventDefault();
+  lockPageScroll();
   isDrawing = true; pointerIdActive = e.pointerId;
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
   if (peg) tryLockPeg(peg);
@@ -2484,8 +2536,9 @@ function endDesignStroke(e) {
 }
 function onPointerUp(e) { endDesignStroke(e); }
 function onPointerCancel(e) {
+  const was = isDrawing || pointerIdActive != null;
   isDrawing = false; rubberTip = null; pointerIdActive = null;
-  unlockPageScroll();
+  if (was) unlockPageScroll();
   drawBoard();
 }
 canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
@@ -2493,8 +2546,10 @@ canvas.addEventListener('pointermove', onPointerMove, { passive: false });
 canvas.addEventListener('pointerup', onPointerUp, { passive: false });
 canvas.addEventListener('pointercancel', onPointerCancel, { passive: false });
 canvas.addEventListener('lostpointercapture', onPointerCancel);
-// Block pan/zoom gestures on the board while finger moves (iOS)
-canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+// Block pan/zoom on canvas only while actively drawing
+canvas.addEventListener('touchmove', (e) => {
+  if (isDrawing || scrollLockCount > 0) e.preventDefault();
+}, { passive: false });
 
 document.getElementById('btn-undo').addEventListener('click', () => {
   isDrawing = false; rubberTip = null; pointerIdActive = null;
@@ -2715,7 +2770,9 @@ calcCanvas.addEventListener('pointermove', onCalcPointerMove, { passive: false }
 calcCanvas.addEventListener('pointerup', onCalcPointerUp, { passive: false });
 calcCanvas.addEventListener('pointercancel', endSplitStroke, { passive: false });
 calcCanvas.addEventListener('lostpointercapture', endSplitStroke);
-calcCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+calcCanvas.addEventListener('touchmove', (e) => {
+  if (splitDrawing || scrollLockCount > 0) e.preventDefault();
+}, { passive: false });
 
 document.getElementById('btn-split-undo').addEventListener('click', () => {
   splitSegs.pop(); drawCalc(); publishStudentWorkLive();
@@ -3408,12 +3465,21 @@ function enterCalcMode(sub, opts) {
     document.getElementById('btn-hide-answer').style.display = revealOn ? '' : 'none';
     renderStudentAnswers();
   }
-  // Students: correct area only after 核對 (solo), own submit check path, or teacher reveal
+  // Correct area only after explicit teacher「顯示答案」, solo 核對, etc.
   if (revealOn && (role === 'teacher' || studentMaySeeCorrectArea())) {
     showAnswerBox(computeAnswerArea(sub));
-  } else if (!(role === 'teacher' && !isSolo)) {
+  } else {
     document.getElementById('answer-box').classList.remove('show');
     hideAreaTeachBlock();
+  }
+  const bStat = document.getElementById('broadcast-status');
+  if (bStat) {
+    if (!asStudent && !isSolo) {
+      bStat.style.display = '';
+      bStat.textContent = revealOn ? '已顯示答案俾全班' : '廣播全班（不用顯示答案）';
+    } else {
+      bStat.style.display = 'none';
+    }
   }
 
   showScreen('screen-calc');
@@ -3441,9 +3507,18 @@ function openSoloCalcFromBoard() {
 
 function teacherOpenDesign(sub) {
   role = 'teacher';
+  revealOn = false;
+  // Force no-answer broadcast
   enterCalcMode(sub, { asStudent: false, reveal: false });
+  document.getElementById('answer-box').classList.remove('show');
+  hideAreaTeachBlock();
   broadcastTeacher({ type: 'focus', submission: sub, reveal: false });
-  toast('已廣播俾全班一齊計', 'ok');
+  const bStat = document.getElementById('broadcast-status');
+  if (bStat) {
+    bStat.style.display = '';
+    bStat.textContent = '廣播全班（不用顯示答案）';
+  }
+  toast('已廣播全班（不用顯示答案）', 'ok');
 }
 
 /* ---------- Gallery ---------- */
@@ -3633,13 +3708,18 @@ document.getElementById('btn-reveal').addEventListener('click', () => {
   showAnswerBox(area);
   document.getElementById('btn-reveal').style.display = 'none';
   document.getElementById('btn-hide-answer').style.display = '';
+  const bStat = document.getElementById('broadcast-status');
+  if (bStat) bStat.textContent = '已顯示答案俾全班';
   broadcastTeacher({ type: 'reveal', area: area, designId: focusSub.id });
 });
 document.getElementById('btn-hide-answer').addEventListener('click', () => {
   revealOn = false;
   document.getElementById('answer-box').classList.remove('show');
+  hideAreaTeachBlock();
   document.getElementById('btn-reveal').style.display = '';
   document.getElementById('btn-hide-answer').style.display = 'none';
+  const bStat = document.getElementById('broadcast-status');
+  if (bStat) bStat.textContent = '廣播全班（不用顯示答案）';
   broadcastTeacher({ type: 'unreveal' });
 });
 document.getElementById('btn-calc-back').addEventListener('click', () => {
