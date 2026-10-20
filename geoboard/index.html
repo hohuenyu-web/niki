@@ -434,6 +434,25 @@ window.__pubnubLoadPromise = (function () {
   .monitor-stats .stat.ok { color: var(--success); }
   .monitor-stats .stat.bad { color: var(--danger); }
   .monitor-stats .stat.muted { color: var(--muted); }
+  .monitor-stats .stat.clickable {
+    border: none; cursor: pointer; font: inherit; font-weight: 800;
+  }
+  .monitor-stats .stat.clickable:hover { outline: 2px solid var(--primary); }
+  .monitor-stats .stat.clickable.active {
+    outline: 2px solid var(--primary-dark);
+    box-shadow: 0 0 0 3px rgba(230,126,34,0.25);
+  }
+  .monitor-roster {
+    width: 100%; max-width: 720px; margin: 0 auto 10px;
+    padding: 10px 12px; border-radius: 12px; background: #fff;
+    box-shadow: var(--shadow); font-size: 0.92rem; line-height: 1.5;
+    display: none;
+  }
+  .monitor-roster.show { display: block; }
+  .monitor-roster .roster-title { font-weight: 800; margin-bottom: 4px; }
+  .monitor-roster.ok .roster-title { color: var(--success); }
+  .monitor-roster.bad .roster-title { color: var(--danger); }
+  .monitor-roster .roster-names { color: var(--text); }
   .monitor-card {
     display: grid;
     grid-template-columns: 72px 1fr auto;
@@ -712,14 +731,16 @@ window.__pubnubLoadPromise = (function () {
 
   <!-- Teacher tools -->
   <div id="calc-teacher-tools" style="width:100%;max-width:720px;display:none;">
-    <div id="broadcast-status" style="text-align:center;font-weight:800;color:var(--primary-dark);margin:6px 0 4px;">廣播全班（不用顯示答案）</div>
     <div class="btn-row" style="max-width:100%;">
+      <button class="btn btn-primary" id="btn-broadcast" type="button">廣播全班</button>
       <button class="btn btn-success" id="btn-reveal">顯示答案</button>
       <button class="btn btn-ghost" id="btn-hide-answer" style="display:none;">隱藏答案</button>
       <button class="btn btn-ghost" id="btn-calc-back">返回圖庫</button>
     </div>
+    <div id="broadcast-status" style="text-align:center;font-weight:800;color:var(--primary-dark);margin:6px 0 4px;">尚未廣播（同學仲未見到呢幅圖）</div>
     <div class="gallery-section-title" style="margin-top:12px;">課堂監察</div>
     <div class="monitor-stats" id="monitor-stats"></div>
+    <div class="monitor-roster" id="monitor-roster" aria-live="polite"></div>
     <div class="answers-list" id="student-answers-list"></div>
   </div>
 
@@ -1110,6 +1131,7 @@ let rubberTip = null;
 let pointerIdActive = null;
 
 let focusSub = null;       // shared design being calculated
+let monitorFilter = null;  // null | 'ok' | 'bad' — teacher 答對/答錯 list filter
 let revealOn = false;
 let myAnswerSubmittedFor = null; // designId after classroom guess submit
 let soloChecked = false;
@@ -1565,14 +1587,24 @@ function applyCloudState(state, opts) {
           toast('老師揀咗「' + state.focus.studentName + '」嘅圖，一齊計！', 'ok');
         }
       } else if (state.reveal && state.revealArea != null && studentMaySeeCorrectArea()) {
-        showAnswerBox(state.revealArea);
+        showAnswerBox(state.revealArea, {
+          teachPoints: state.focus.points,
+          teachSplits: []
+        });
       } else if (!state.reveal && !studentMaySeeCorrectArea()) {
         document.getElementById('answer-box').classList.remove('show');
         hideAreaTeachBlock();
       }
     } else if (role === 'teacher' && document.getElementById('screen-calc').classList.contains('active')) {
-      if (state.reveal && state.revealArea != null) showAnswerBox(state.revealArea);
-      else if (!state.reveal) document.getElementById('answer-box').classList.remove('show');
+      if (state.reveal && state.revealArea != null) {
+        showAnswerBox(state.revealArea, {
+          teachPoints: state.focus.points,
+          teachSplits: []
+        });
+      } else if (!state.reveal) {
+        document.getElementById('answer-box').classList.remove('show');
+        hideAreaTeachBlock();
+      }
       renderStudentAnswers();
     }
   } else {
@@ -3280,10 +3312,16 @@ function parseGuessToNumber(guess, guessValue) {
 function renderStudentAnswers() {
   const el = document.getElementById('student-answers-list');
   const statsEl = document.getElementById('monitor-stats');
+  const rosterEl = document.getElementById('monitor-roster');
   if (!el) return;
   if (!focusSub) {
     el.innerHTML = '';
     if (statsEl) statsEl.innerHTML = '';
+    if (rosterEl) {
+      rosterEl.className = 'monitor-roster';
+      rosterEl.innerHTML = '';
+    }
+    monitorFilter = null;
     return;
   }
   const correctArea = computeAnswerArea(focusSub);
@@ -3306,50 +3344,90 @@ function renderStudentAnswers() {
 
   const rows = Object.keys(map).map(function (k) {
     const r = map[k];
+    const val = parseGuessToNumber(r.guess, r.guessValue);
+    let verdict = 'pending';
+    if (val != null) {
+      verdict = Math.abs(val - correctArea) < 1e-6 ? 'ok' : 'bad';
+    }
     return {
       studentNo: r.studentNo != null ? r.studentNo : Number(k),
       name: r.name || ('學生' + k),
       guess: r.guess,
       guessValue: r.guessValue,
       splits: r.splits || [],
-      at: r.at
+      at: r.at,
+      verdict: verdict
     };
   }).sort(function (a, b) { return a.studentNo - b.studentNo; });
 
-  let answered = 0, correctN = 0, wrongN = 0;
-  rows.forEach(function (r) {
-    const val = parseGuessToNumber(r.guess, r.guessValue);
-    if (val == null) return;
-    answered++;
-    if (Math.abs(val - correctArea) < 1e-6) correctN++;
-    else wrongN++;
-  });
+  const correctRows = rows.filter(function (r) { return r.verdict === 'ok'; });
+  const wrongRows = rows.filter(function (r) { return r.verdict === 'bad'; });
+  const answered = correctRows.length + wrongRows.length;
+  const correctN = correctRows.length;
+  const wrongN = wrongRows.length;
   const pct = function (n) {
     if (!answered) return '—';
     return Math.round(n * 1000 / answered) / 10 + '%';
   };
+  const nameList = function (list) {
+    if (!list.length) return '（未有）';
+    return list.map(function (r) {
+      return r.studentNo + ' ' + r.name;
+    }).join('、');
+  };
+
   if (statsEl) {
     statsEl.innerHTML =
       '<div class="stat muted">已交答案 ' + answered + ' 人</div>' +
-      '<div class="stat ok">答對 ' + correctN + '（' + pct(correctN) + '）</div>' +
-      '<div class="stat bad">答錯 ' + wrongN + '（' + pct(wrongN) + '）</div>';
+      '<button type="button" class="stat ok clickable' + (monitorFilter === 'ok' ? ' active' : '') + '" data-filter="ok">答對 ' + correctN + '（' + pct(correctN) + '）</button>' +
+      '<button type="button" class="stat bad clickable' + (monitorFilter === 'bad' ? ' active' : '') + '" data-filter="bad">答錯 ' + wrongN + '（' + pct(wrongN) + '）</button>';
+    statsEl.querySelectorAll('[data-filter]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const f = btn.getAttribute('data-filter');
+        monitorFilter = (monitorFilter === f) ? null : f;
+        renderStudentAnswers();
+      });
+    });
   }
+
+  if (rosterEl) {
+    if (monitorFilter === 'ok') {
+      rosterEl.className = 'monitor-roster show ok';
+      rosterEl.innerHTML =
+        '<div class="roster-title">答對名單（' + correctN + ' 人）</div>' +
+        '<div class="roster-names">' + nameList(correctRows) + '</div>';
+    } else if (monitorFilter === 'bad') {
+      rosterEl.className = 'monitor-roster show bad';
+      rosterEl.innerHTML =
+        '<div class="roster-title">答錯名單（' + wrongN + ' 人）</div>' +
+        '<div class="roster-names">' + nameList(wrongRows) + '</div>';
+    } else {
+      rosterEl.className = 'monitor-roster';
+      rosterEl.innerHTML = '';
+    }
+  }
+
+  const visible = rows.filter(function (r) {
+    if (!monitorFilter) return true;
+    return r.verdict === monitorFilter;
+  });
 
   if (!rows.length) {
     el.innerHTML = '<div class="monitor-empty">暫時未有學生交答案或分割線</div>';
     return;
   }
+  if (!visible.length) {
+    el.innerHTML = '<div class="monitor-empty">' +
+      (monitorFilter === 'ok' ? '暫時未有答對嘅學生' : '暫時未有答錯嘅學生') +
+      '</div>';
+    return;
+  }
 
   el.innerHTML = '';
-  rows.forEach(function (r) {
-    const val = parseGuessToNumber(r.guess, r.guessValue);
-    let status = 'pending', badge = '未交答案', cls = 'pending';
-    if (val != null) {
-      const ok = Math.abs(val - correctArea) < 1e-6;
-      status = ok ? 'ok' : 'bad';
-      badge = ok ? '✓ 答對' : '✗ 答錯';
-      cls = ok ? 'ok' : 'bad';
-    }
+  visible.forEach(function (r) {
+    const status = r.verdict;
+    const badge = status === 'ok' ? '✓ 答對' : (status === 'bad' ? '✗ 答錯' : '未交答案');
+    const cls = status;
     const card = document.createElement('div');
     card.className = 'monitor-card ' + cls;
     const thumb = document.createElement('canvas');
@@ -3362,13 +3440,9 @@ function renderStudentAnswers() {
     const guessText = r.guess != null && r.guess !== ''
       ? ('作答：<strong>' + r.guess + '</strong>（cm²）')
       : '作答：尚未提交';
-    const splitNote = (r.splits && r.splits.length)
-      ? ('分割線：' + r.splits.length + ' 條')
-      : '未見分割線';
     meta.innerHTML =
       '<div class="name">' + r.studentNo + ' ' + r.name + '</div>' +
-      '<div class="guess">' + guessText + '</div>' +
-      '<div class="splits-note">' + splitNote + '</div>';
+      '<div class="guess">' + guessText + '</div>';
     const badgeEl = document.createElement('div');
     badgeEl.className = 'badge ' + status;
     badgeEl.textContent = badge;
@@ -3389,19 +3463,18 @@ function openStudentInspect(row) {
   const canvas = document.getElementById('inspect-canvas');
   const meta = document.getElementById('inspect-meta');
   if (!modal || !canvas) return;
-  title.textContent = row.studentNo + ' ' + row.name + '・分割檢視';
-  const guessText = row.guess != null && row.guess !== ''
-    ? ('作答 ' + row.guess + '（cm²）')
-    : '尚未提交答案';
-  const splitN = (row.splits && row.splits.length) ? row.splits.length : 0;
-  meta.textContent = guessText + '　｜　紫線 ' + splitN + ' 條　｜　撳圖可睇分割';
-  // Hi-res draw
+  title.textContent = row.studentNo + ' ' + row.name;
+  // Hi-res draw: polygon WITH that student's split lines
   const size = 480;
   canvas.width = size;
   canvas.height = size;
   drawPolygonScene(canvas, canvas.getContext('2d'), focusSub, {
     tiny: false, bg: '#faf6f1', splits: row.splits || []
   });
+  const ans = (row.guess != null && row.guess !== '')
+    ? (String(row.guess) + '（cm²）')
+    : '尚未提交';
+  meta.textContent = '多邊形的面積是：' + ans;
   modal.classList.add('show');
 }
 
@@ -3467,7 +3540,10 @@ function enterCalcMode(sub, opts) {
   }
   // Correct area only after explicit teacher「顯示答案」, solo 核對, etc.
   if (revealOn && (role === 'teacher' || studentMaySeeCorrectArea())) {
-    showAnswerBox(computeAnswerArea(sub));
+    showAnswerBox(computeAnswerArea(sub), {
+      teachPoints: sub.points,
+      teachSplits: []
+    });
   } else {
     document.getElementById('answer-box').classList.remove('show');
     hideAreaTeachBlock();
@@ -3476,7 +3552,15 @@ function enterCalcMode(sub, opts) {
   if (bStat) {
     if (!asStudent && !isSolo) {
       bStat.style.display = '';
-      bStat.textContent = revealOn ? '已顯示答案俾全班' : '廣播全班（不用顯示答案）';
+      const focusedCloud = cloudState && cloudState.focus && focusSub &&
+        cloudState.focus.id === focusSub.id;
+      if (revealOn) {
+        bStat.textContent = '已顯示答案俾全班';
+      } else if (focusedCloud) {
+        bStat.textContent = '已廣播全班（不用顯示答案）';
+      } else {
+        bStat.textContent = '尚未廣播（同學仲未見到呢幅圖）';
+      }
     } else {
       bStat.style.display = 'none';
     }
@@ -3508,15 +3592,38 @@ function openSoloCalcFromBoard() {
 function teacherOpenDesign(sub) {
   role = 'teacher';
   revealOn = false;
-  // Force no-answer broadcast
+  monitorFilter = null;
+  // Open for teacher inspect only — do NOT auto-broadcast; use 「廣播全班」button
   enterCalcMode(sub, { asStudent: false, reveal: false });
   document.getElementById('answer-box').classList.remove('show');
   hideAreaTeachBlock();
-  broadcastTeacher({ type: 'focus', submission: sub, reveal: false });
   const bStat = document.getElementById('broadcast-status');
   if (bStat) {
     bStat.style.display = '';
-    bStat.textContent = '廣播全班（不用顯示答案）';
+    const focusedCloud = cloudState && cloudState.focus && sub &&
+      cloudState.focus.id === sub.id;
+    bStat.textContent = focusedCloud
+      ? '已廣播全班（不用顯示答案）'
+      : '尚未廣播（同學仲未見到呢幅圖）';
+  }
+}
+
+/** Publish currently focused student design to whole class WITHOUT revealing the answer. */
+function teacherBroadcastFocus() {
+  if (!focusSub) {
+    toast('請先喺圖庫揀一幅學生設計', 'err');
+    return;
+  }
+  revealOn = false;
+  document.getElementById('answer-box').classList.remove('show');
+  hideAreaTeachBlock();
+  document.getElementById('btn-reveal').style.display = '';
+  document.getElementById('btn-hide-answer').style.display = 'none';
+  broadcastTeacher({ type: 'focus', submission: focusSub, reveal: false });
+  const bStat = document.getElementById('broadcast-status');
+  if (bStat) {
+    bStat.style.display = '';
+    bStat.textContent = '已廣播全班（不用顯示答案）';
   }
   toast('已廣播全班（不用顯示答案）', 'ok');
 }
@@ -3701,11 +3808,15 @@ document.getElementById('btn-gallery-home').addEventListener('click', () => {
   leaveCloudRoom(); roomCode = null; showScreen('screen-landing');
 });
 
+document.getElementById('btn-broadcast').addEventListener('click', () => {
+  teacherBroadcastFocus();
+});
 document.getElementById('btn-reveal').addEventListener('click', () => {
   if (!focusSub) return;
   revealOn = true;
   const area = computeAnswerArea(focusSub);
-  showAnswerBox(area);
+  // Show correct area + worked 列式 (fewest 平行四邊形／三角形／長方形／正方形／梯形)
+  showAnswerBox(area, { teachPoints: focusSub.points, teachSplits: [] });
   document.getElementById('btn-reveal').style.display = 'none';
   document.getElementById('btn-hide-answer').style.display = '';
   const bStat = document.getElementById('broadcast-status');
@@ -3719,11 +3830,11 @@ document.getElementById('btn-hide-answer').addEventListener('click', () => {
   document.getElementById('btn-reveal').style.display = '';
   document.getElementById('btn-hide-answer').style.display = 'none';
   const bStat = document.getElementById('broadcast-status');
-  if (bStat) bStat.textContent = '廣播全班（不用顯示答案）';
+  if (bStat) bStat.textContent = '已廣播全班（不用顯示答案）';
   broadcastTeacher({ type: 'unreveal' });
 });
 document.getElementById('btn-calc-back').addEventListener('click', () => {
-  focusSub = null; revealOn = false;
+  focusSub = null; revealOn = false; monitorFilter = null;
   renderGallery(); showScreen('screen-gallery');
 });
 document.getElementById('btn-calc-student-back').addEventListener('click', () => {
