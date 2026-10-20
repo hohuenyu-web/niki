@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>數學釘板・多邊形面積｜順德聯誼總會何日東小學— 何老師設計</title>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.6.3.min.js"></script>
 <style>
   :root {
     --bg: #fff8f0;
@@ -250,8 +250,97 @@
     text-align: center; display: none; width: 100%; max-width: 560px;
   }
   .answer-box.show { display: block; }
-  .answer-box .area { font-size: 1.6rem; font-weight: 800; color: var(--success); }
-  .answer-box .picks { margin-top: 8px; font-size: 0.95rem; }
+  .answer-box .area {
+    font-size: 1.6rem; font-weight: 800; color: var(--success);
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.35em;
+  }
+  .mixed-num {
+    display: inline-flex; align-items: center; gap: 0.28em;
+    line-height: 1; vertical-align: middle;
+  }
+  .mixed-num .whole { font-size: 1.15em; font-weight: 800; }
+  .mixed-num .frac {
+    display: inline-flex; flex-direction: column; align-items: center;
+    justify-content: center; font-size: 0.58em; font-weight: 800;
+    line-height: 1.05; min-width: 1.2em;
+  }
+  .mixed-num .frac .num {
+    border-bottom: 2.5px solid currentColor;
+    padding: 0 0.28em 0.08em; min-width: 1em; text-align: center;
+  }
+  .mixed-num .frac .den { padding: 0.08em 0.28em 0; min-width: 1em; text-align: center; }
+  .area-unit { font-weight: 700; margin-left: 0.15em; }
+  .answer-mode-row {
+    display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px;
+  }
+  .answer-mode-btn {
+    font-family: inherit; font-weight: 800; font-size: 0.95rem;
+    padding: 8px 16px; border-radius: 999px; cursor: pointer;
+    border: 2px solid var(--border); background: #fff; color: var(--muted);
+  }
+  .answer-mode-btn.active {
+    border-color: var(--primary); background: var(--primary); color: #fff;
+  }
+  .frac-kind-row {
+    display: none; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 2px;
+  }
+  .frac-kind-row.show { display: flex; }
+  .frac-kind-btn {
+    font-family: inherit; font-weight: 700; font-size: 0.85rem;
+    padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    border: 2px solid var(--border); background: #faf6f1; color: var(--text);
+  }
+  .frac-kind-btn.active {
+    border-color: #8e44ad; background: #f3e8fa; color: #6c3483;
+  }
+  .mixed-input {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin: 10px auto; flex-wrap: wrap;
+  }
+  .mixed-input input {
+    font-family: inherit; font-weight: 700; font-size: 1.25rem;
+    text-align: center; border: 2px solid var(--border); border-radius: 10px;
+    padding: 8px; width: 4.2em; background: #fff;
+  }
+  .mixed-input .frac-inputs {
+    display: inline-flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .mixed-input .frac-inputs input { width: 3.6em; font-size: 1.05rem; padding: 6px; }
+  .mixed-input .frac-bar {
+    width: 100%; height: 2.5px; background: var(--text); border-radius: 1px;
+  }
+  .mixed-input .unit { font-weight: 700; color: var(--muted); }
+  .guess-whole-wrap { display: none; }
+  .guess-whole-wrap.show { display: inline-flex; }
+  .guess-frac-wrap { display: none; }
+  .guess-frac-wrap.show { display: inline-flex; }
+  .solo-check-msg {
+    margin-top: 10px; font-weight: 700; font-size: 1rem; min-height: 1.4em;
+  }
+  .solo-check-msg.ok { color: var(--success); }
+  .solo-check-msg.bad { color: var(--danger); }
+  .teach-block {
+    display: none; margin-top: 14px; text-align: left;
+    background: #fffdf7; border: 2px solid #f0e0c0; border-radius: 12px;
+    padding: 12px 14px; color: var(--text); font-size: 0.95rem; line-height: 1.55;
+  }
+  .teach-block.show { display: block; }
+  .teach-block h4 {
+    margin: 0 0 8px; color: var(--primary-dark); font-size: 1.05rem; text-align: center;
+  }
+  .teach-block ol { margin: 0 0 8px 1.2em; padding: 0; }
+  .teach-block li { margin: 6px 0; }
+  .teach-block .eq {
+    font-weight: 700; background: #fff; border-radius: 8px;
+    padding: 6px 10px; margin: 4px 0 8px; display: inline-block;
+  }
+  .teach-block .total {
+    margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0d0b0;
+    font-weight: 800; text-align: center; font-size: 1.05rem; color: var(--success);
+  }
+  .teach-block .hint {
+    margin-top: 6px; font-size: 0.85rem; color: var(--muted); text-align: center;
+  }
 
   .toolbar-top {
     display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between;
@@ -286,12 +375,43 @@
   .modal h3 { margin-bottom: 10px; color: var(--primary-dark); }
   .modal p { color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
   .answers-list {
-    width: 100%; max-width: 560px; margin-top: 10px; font-size: 0.9rem;
+    width: 100%; max-width: 720px; margin-top: 10px; font-size: 0.9rem;
   }
-  .answers-list div {
-    display: flex; justify-content: space-between; padding: 8px 12px;
-    background: #fff; border-radius: 8px; margin-bottom: 6px; box-shadow: var(--shadow);
+  .monitor-stats {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 8px 0 12px;
   }
+  .monitor-stats .stat {
+    background: #fff; border-radius: 20px; padding: 8px 14px; font-weight: 800;
+    box-shadow: var(--shadow); font-size: 0.95rem;
+  }
+  .monitor-stats .stat.ok { color: var(--success); }
+  .monitor-stats .stat.bad { color: var(--danger); }
+  .monitor-stats .stat.muted { color: var(--muted); }
+  .monitor-card {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    gap: 10px; align-items: center;
+    background: #fff; border-radius: 12px; padding: 10px;
+    margin-bottom: 8px; box-shadow: var(--shadow);
+    border: 2px solid transparent;
+  }
+  .monitor-card.ok { border-color: #a8e6c1; background: #e8f8ef; }
+  .monitor-card.bad { border-color: #f5d0c8; background: #fff5f3; }
+  .monitor-card.pending { border-color: #e8e0d5; }
+  .monitor-card canvas {
+    width: 72px; height: 72px; border-radius: 8px; background: #faf6f1; display: block;
+  }
+  .monitor-card .meta .name { font-weight: 800; }
+  .monitor-card .meta .guess { font-size: 0.9rem; margin-top: 2px; }
+  .monitor-card .meta .splits-note { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .monitor-card .badge {
+    font-weight: 800; font-size: 0.85rem; white-space: nowrap;
+    padding: 4px 8px; border-radius: 999px;
+  }
+  .monitor-card .badge.ok { background: #d4f5e2; color: var(--success); }
+  .monitor-card .badge.bad { background: #fde0dc; color: var(--danger); }
+  .monitor-card .badge.pending { background: #f0ebe4; color: var(--muted); }
+  .monitor-empty { text-align: center; color: var(--muted); padding: 12px; }
 </style>
 </head>
 <body>
@@ -336,10 +456,12 @@
     <p style="text-align:center;color:var(--muted);">輸入老師顯示嘅<strong>課堂編號</strong></p>
     <input class="code-input" id="join-code" type="text" inputmode="numeric" maxlength="6" placeholder="例如 4821" autocomplete="off">
     <div class="btn-row" style="max-width:100%;">
-      <button class="btn btn-ghost" id="btn-join-skip">稍後加入／單機用</button>
-      <button class="btn btn-primary" id="btn-join-go">加入</button>
+      <button class="btn btn-primary" id="btn-join-go">加入課堂</button>
     </div>
-    <p style="margin-top:10px;font-size:0.8rem;color:var(--muted);text-align:center;">建議同老師同一個 Wi‑Fi。老師頁面要保持開啟。</p>
+    <div class="btn-row" style="max-width:100%;">
+      <button class="btn btn-accent btn-block" id="btn-join-skip">單機練習／自己溫習</button>
+    </div>
+    <p style="margin-top:10px;font-size:0.8rem;color:var(--muted);text-align:center;">單機練習唔使網絡，畫完可以自己計面積核對。加入課堂先會同步俾老師。</p>
   </div>
 </div>
 
@@ -365,7 +487,10 @@
     <button class="btn btn-accent" id="btn-close-poly">封閉多邊形</button>
   </div>
   <div class="btn-row">
-    <button class="btn btn-success btn-block" id="btn-submit" disabled>提交圖案</button>
+    <button class="btn btn-accent btn-block" id="btn-self-calc" disabled>自己計算</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-success btn-block" id="btn-submit" disabled>提交圖案（課堂）</button>
   </div>
   <div class="btn-row">
     <button class="btn btn-ghost" id="btn-board-progress">全班進度</button>
@@ -408,16 +533,22 @@
 <div id="screen-teacher-room" class="screen">
   <div class="card" style="max-width:480px;">
     <div class="header">
-      <h1>建立課堂</h1>
-      <div class="school">請學生輸入同一個編號加入</div>
+      <h1>建立／重開課堂</h1>
+      <div class="school">學生用同一個編號，任何網絡都得</div>
     </div>
     <div class="room-code-big" id="room-code-display">----</div>
     <p id="room-status" style="text-align:center;color:var(--muted);">準備中…</p>
     <div class="btn-row" style="max-width:100%;">
-      <button class="btn btn-ghost" id="btn-room-regen">換編號</button>
+      <button class="btn btn-ghost" id="btn-room-regen">新編號</button>
       <button class="btn btn-primary" id="btn-room-enter">進入控制台</button>
     </div>
-    <p style="margin-top:12px;font-size:0.8rem;color:var(--muted);text-align:center;">課堂期間請唔好關閉呢個分頁，否則學生會斷線。</p>
+    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
+    <p style="text-align:center;color:var(--muted);font-size:0.9rem;margin-bottom:6px;">已經有編號？重開同一個課堂：</p>
+    <input class="code-input" id="teacher-rejoin-code" type="text" inputmode="numeric" maxlength="6" placeholder="輸入舊編號" autocomplete="off">
+    <div class="btn-row" style="max-width:100%;">
+      <button class="btn btn-accent btn-block" id="btn-room-rejoin">重開呢個課堂</button>
+    </div>
+    <p style="margin-top:12px;font-size:0.8rem;color:var(--muted);text-align:center;">課堂資料存喺雲端；關閉分頁後用同一個編號就可以重開。</p>
   </div>
 </div>
 
@@ -473,39 +604,68 @@
     </div>
   </div>
 
-  <!-- Student tools -->
+  <!-- Student tools (classroom + solo) -->
   <div id="calc-student-tools" style="width:100%;max-width:560px;display:none;">
-    <div class="board-hint">喺釘板畫<strong>分割線</strong>（紫線）將圖分成簡單圖形，再填面積</div>
+    <div class="board-hint" id="calc-student-hint">喺釘板畫<strong>分割線</strong>（紫線）將圖分成簡單圖形，再填面積</div>
     <div class="btn-row">
       <button class="btn btn-ghost" id="btn-split-undo">撤銷分割</button>
       <button class="btn btn-ghost" id="btn-split-clear">清除分割</button>
     </div>
     <div class="guess-box">
-      <label for="area-guess">我計嘅面積（cm²）</label>
-      <input class="area-input" id="area-guess" type="text" inputmode="decimal" placeholder="例如 12 或 7.5">
-      <div class="btn-row" style="max-width:100%;">
+      <label id="guess-area-label">多邊形的面積是</label>
+      <div class="answer-mode-row" role="group" aria-label="答案形式">
+        <button type="button" class="answer-mode-btn active" id="mode-int" data-mode="int">整數</button>
+        <button type="button" class="answer-mode-btn" id="mode-frac" data-mode="frac">分數</button>
+      </div>
+      <div class="frac-kind-row" id="frac-kind-row" role="group" aria-label="分數種類">
+        <button type="button" class="frac-kind-btn active" id="kind-proper" data-kind="proper">真分數</button>
+        <button type="button" class="frac-kind-btn" id="kind-mixed" data-kind="mixed">帶分數</button>
+      </div>
+      <div class="mixed-input" id="guess-mixed" aria-label="面積輸入">
+        <span class="guess-whole-wrap show" id="guess-whole-wrap">
+          <input id="guess-whole" type="text" inputmode="numeric" placeholder="整數" autocomplete="off" aria-label="整數">
+        </span>
+        <span class="guess-frac-wrap" id="guess-frac-wrap">
+          <span class="frac-inputs">
+            <input id="guess-num" type="text" inputmode="numeric" placeholder="分子" autocomplete="off" aria-label="分子">
+            <span class="frac-bar" aria-hidden="true"></span>
+            <input id="guess-den" type="text" inputmode="numeric" placeholder="分母" autocomplete="off" aria-label="分母">
+          </span>
+        </span>
+        <span class="unit">（cm²）</span>
+      </div>
+      <!-- kept for compatibility; hidden -->
+      <input class="area-input" id="area-guess" type="hidden" value="">
+      <div class="solo-check-msg" id="solo-check-msg"></div>
+      <div class="btn-row" style="max-width:100%;" id="calc-class-guess-row">
         <button class="btn btn-split btn-block" id="btn-submit-guess">提交答案俾老師</button>
+      </div>
+      <div class="btn-row" style="max-width:100%;display:none;" id="calc-solo-actions">
+        <button class="btn btn-success" id="btn-solo-check">核對答案</button>
+        <button class="btn btn-ghost" id="btn-solo-redraw">再畫一幅</button>
       </div>
     </div>
   </div>
 
   <!-- Teacher tools -->
-  <div id="calc-teacher-tools" style="width:100%;max-width:560px;display:none;">
-    <div class="btn-row">
+  <div id="calc-teacher-tools" style="width:100%;max-width:720px;display:none;">
+    <div class="btn-row" style="max-width:100%;">
       <button class="btn btn-success" id="btn-reveal">顯示答案（廣播全班）</button>
       <button class="btn btn-ghost" id="btn-hide-answer" style="display:none;">隱藏答案</button>
       <button class="btn btn-ghost" id="btn-calc-back">返回圖庫</button>
     </div>
+    <div class="gallery-section-title" style="margin-top:12px;">課堂監察</div>
+    <div class="monitor-stats" id="monitor-stats"></div>
     <div class="answers-list" id="student-answers-list"></div>
   </div>
 
   <div class="answer-box" id="answer-box">
     <div class="area" id="answer-area"></div>
-    <div class="picks" id="answer-picks"></div>
+    <div class="teach-block" id="area-teach-block" aria-live="polite"></div>
   </div>
 
   <div class="btn-row" id="calc-student-nav" style="display:none;">
-    <button class="btn btn-ghost btn-block" id="btn-calc-student-back">返回設計／進度</button>
+    <button class="btn btn-ghost btn-block" id="btn-calc-student-back">返回設計</button>
   </div>
 </div>
 
@@ -522,7 +682,7 @@
 
 <script>
 /* ============================================================
-   數學釘板・多邊形面積 + 課堂同步（PeerJS）
+   數學釘板・多邊形面積 + 課堂雲端同步（PubNub）
    順德聯誼總會何日東小學— 何老師設計
    TEACHER_PIN default 1234
    Board: 11×11 pegs = 10 cm × 10 cm
@@ -530,7 +690,9 @@
 const TEACHER_PIN = '1234';
 const STORAGE_KEY = 'hyt-geoboard-v1';
 const GRID_SIZE = 11;
-const PEER_PREFIX = 'hytgb'; // peer id = hytgb{roomCode}
+const PUBNUB_PUBLISH_KEY = 'demo';
+const PUBNUB_SUBSCRIBE_KEY = 'demo';
+const CLOUD_CHANNEL_PREFIX = 'hyt-geoboard-v2-'; // room channel = prefix + code
 const SNAP_FRAC = 0.38;
 
 const STUDENTS = [
@@ -612,23 +774,212 @@ function shoelaceArea(points) {
   return Math.abs(sum) / 2;
 }
 function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { const t = b; b = a % b; a = t; } return a; }
-function boundaryPoints(points) {
-  let B = 0; const n = points.length;
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
-    B += gcd(points[j].x - points[i].x, points[j].y - points[i].y);
+
+/**
+ * Convert area to display parts.
+ * - Whole numbers stay integers (42), never forced into mixed form
+ * - .5 / .25 / etc → proper or mixed fraction (½、3½)
+ * - Improper like 7/2 → mixed 3½
+ */
+function areaToMixedParts(a) {
+  const x = Math.round(Number(a) * 1e9) / 1e9;
+  if (!isFinite(x)) return { kind: 'whole', whole: 0 };
+
+  // Exact integer → never mixed
+  if (Math.abs(x - Math.round(x)) < 1e-9) {
+    return { kind: 'whole', whole: Math.round(x) };
   }
-  return B;
+
+  const dens = [2, 4, 8, 3, 5, 6, 10, 12, 16];
+  for (let di = 0; di < dens.length; di++) {
+    const den = dens[di];
+    const total = Math.round(x * den);
+    if (Math.abs(total / den - x) > 1e-7) continue;
+    let g = gcd(Math.abs(total), den);
+    let num = total / g;
+    let d = den / g;
+    const sign = num < 0 ? -1 : 1;
+    num = Math.abs(num);
+    if (num % d === 0) {
+      return { kind: 'whole', whole: sign * (num / d) };
+    }
+    const whole = Math.floor(num / d);
+    const rem = num % d;
+    g = gcd(rem, d);
+    const rn = rem / g;
+    const rd = d / g;
+    if (whole === 0) return { kind: 'frac', num: sign * rn, den: rd };
+    return { kind: 'mixed', whole: sign * whole, num: rn, den: rd };
+  }
+
+  // Best fraction with den ≤ 32
+  let bestN = Math.round(x), bestD = 1, bestErr = Math.abs(x - bestN);
+  for (let d = 2; d <= 32; d++) {
+    const n = Math.round(x * d);
+    const err = Math.abs(x - n / d);
+    if (err < bestErr - 1e-12 || (Math.abs(err - bestErr) < 1e-12 && d < bestD)) {
+      bestErr = err; bestN = n; bestD = d;
+    }
+  }
+  if (bestErr < 1e-6) {
+    let g = gcd(Math.abs(bestN), bestD);
+    let num = bestN / g, d = bestD / g;
+    const sign = num < 0 ? -1 : 1;
+    num = Math.abs(num);
+    if (num % d === 0) return { kind: 'whole', whole: sign * (num / d) };
+    const whole = Math.floor(num / d);
+    const rem = num % d;
+    g = gcd(rem, d);
+    const rn = rem / g, rd = d / g;
+    if (whole === 0) return { kind: 'frac', num: sign * rn, den: rd };
+    return { kind: 'mixed', whole: sign * whole, num: rn, den: rd };
+  }
+
+  return { kind: 'text', text: (Math.round(x * 1000) / 1000).toString() };
 }
-function pickInterior(area, B) { return area - B / 2 + 1; }
-function formatAreaNice(a) {
-  if (Math.abs(a - Math.round(a)) < 1e-9) return String(Math.round(a));
-  if (Math.abs(a * 2 - Math.round(a * 2)) < 1e-9) {
-    const num = Math.round(a * 2);
-    if (num % 2 === 0) return String(num / 2);
-    return num + '/2';
+
+function mixedPartsToHtml(parts) {
+  if (!parts) return '<span class="whole">—</span>';
+  if (parts.kind === 'text') {
+    return '<span class="whole">' + parts.text + '</span>';
   }
-  return (Math.round(a * 1000) / 1000).toString();
+  if (parts.kind === 'whole') {
+    return '<span class="whole">' + parts.whole + '</span>';
+  }
+  const frac = '<span class="frac"><span class="num">' + parts.num +
+    '</span><span class="den">' + parts.den + '</span></span>';
+  if (parts.kind === 'frac') return frac;
+  return '<span class="whole">' + parts.whole + '</span>' + frac;
+}
+
+/** Plain-text: 42、½、3½ — integers never forced to mixed */
+function formatAreaNice(a) {
+  const p = areaToMixedParts(a);
+  if (p.kind === 'whole') return String(p.whole);
+  if (p.kind === 'text') return p.text;
+  if (p.kind === 'frac') {
+    if (p.num === 1 && p.den === 2) return '½';
+    if (p.num === 1 && p.den === 4) return '¼';
+    if (p.num === 3 && p.den === 4) return '¾';
+    return p.num + '/' + p.den;
+  }
+  if (p.num === 1 && p.den === 2) return p.whole + '½';
+  if (p.num === 1 && p.den === 4) return p.whole + '¼';
+  if (p.num === 3 && p.den === 4) return p.whole + '¾';
+  return p.whole + ' ' + p.num + '/' + p.den;
+}
+
+function formatAreaWithUnit(a) {
+  return formatAreaNice(a) + '（cm²）';
+}
+
+function areaDisplayHtml(a) {
+  const parts = (typeof a === 'object' && a && a.kind) ? a : areaToMixedParts(a);
+  return '<span class="mixed-num">' + mixedPartsToHtml(parts) +
+    '</span><span class="area-unit">（cm²）</span>';
+}
+
+let guessAnswerMode = 'int';   // 'int' | 'frac'
+let guessFracKind = 'proper';  // 'proper' | 'mixed' (only when frac)
+
+function applyGuessInputVisibility() {
+  const wholeWrap = document.getElementById('guess-whole-wrap');
+  const fracWrap = document.getElementById('guess-frac-wrap');
+  const kindRow = document.getElementById('frac-kind-row');
+  const btnInt = document.getElementById('mode-int');
+  const btnFrac = document.getElementById('mode-frac');
+  const btnProper = document.getElementById('kind-proper');
+  const btnMixed = document.getElementById('kind-mixed');
+  if (btnInt) btnInt.classList.toggle('active', guessAnswerMode === 'int');
+  if (btnFrac) btnFrac.classList.toggle('active', guessAnswerMode === 'frac');
+  if (kindRow) kindRow.classList.toggle('show', guessAnswerMode === 'frac');
+  if (btnProper) btnProper.classList.toggle('active', guessFracKind === 'proper');
+  if (btnMixed) btnMixed.classList.toggle('active', guessFracKind === 'mixed');
+
+  if (guessAnswerMode === 'int') {
+    if (wholeWrap) wholeWrap.classList.add('show');
+    if (fracWrap) fracWrap.classList.remove('show');
+  } else {
+    if (fracWrap) fracWrap.classList.add('show');
+    if (wholeWrap) {
+      if (guessFracKind === 'mixed') wholeWrap.classList.add('show');
+      else wholeWrap.classList.remove('show');
+    }
+  }
+}
+
+function setGuessAnswerMode(mode) {
+  if (mode !== 'int' && mode !== 'frac') return;
+  guessAnswerMode = mode;
+  applyGuessInputVisibility();
+  syncGuessHiddenFromMixed();
+}
+
+function setGuessFracKind(kind) {
+  if (kind !== 'proper' && kind !== 'mixed') return;
+  guessFracKind = kind;
+  applyGuessInputVisibility();
+  syncGuessHiddenFromMixed();
+}
+
+function clearGuessMixed() {
+  const w = document.getElementById('guess-whole');
+  const n = document.getElementById('guess-num');
+  const d = document.getElementById('guess-den');
+  if (w) w.value = '';
+  if (n) n.value = '';
+  if (d) d.value = '';
+  const hidden = document.getElementById('area-guess');
+  if (hidden) hidden.value = '';
+  const msg = document.getElementById('solo-check-msg');
+  if (msg) { msg.textContent = ''; msg.className = 'solo-check-msg'; }
+  hideAreaTeachBlock();
+  // default to integer mode for a fresh prompt
+  guessAnswerMode = 'int';
+  guessFracKind = 'proper';
+  applyGuessInputVisibility();
+}
+
+function readGuessMixedValue() {
+  const wEl = document.getElementById('guess-whole');
+  const nEl = document.getElementById('guess-num');
+  const dEl = document.getElementById('guess-den');
+  const wRaw = (wEl && wEl.value || '').trim();
+  const nRaw = (nEl && nEl.value || '').trim();
+  const dRaw = (dEl && dEl.value || '').trim();
+
+  if (guessAnswerMode === 'int') {
+    if (!wRaw) return { ok: false, reason: 'empty' };
+    const whole = Number(wRaw);
+    if (!isFinite(whole)) return { ok: false, reason: 'bad' };
+    return { ok: true, value: whole };
+  }
+
+  // fraction mode
+  if (guessFracKind === 'proper') {
+    if (!nRaw && !dRaw) return { ok: false, reason: 'empty' };
+    const num = Number(nRaw);
+    const den = Number(dRaw);
+    if (!isFinite(num) || !isFinite(den) || den === 0) return { ok: false, reason: 'bad' };
+    return { ok: true, value: num / den };
+  }
+
+  // mixed: optional whole + required fraction
+  if (!wRaw && !nRaw && !dRaw) return { ok: false, reason: 'empty' };
+  const whole = wRaw === '' ? 0 : Number(wRaw);
+  if (wRaw !== '' && !isFinite(whole)) return { ok: false, reason: 'bad' };
+  if (!nRaw || !dRaw) return { ok: false, reason: 'bad' };
+  const num = Number(nRaw);
+  const den = Number(dRaw);
+  if (!isFinite(num) || !isFinite(den) || den === 0) return { ok: false, reason: 'bad' };
+  return { ok: true, value: whole + (num / den) };
+}
+
+function syncGuessHiddenFromMixed() {
+  const r = readGuessMixedValue();
+  const hidden = document.getElementById('area-guess');
+  if (!hidden) return;
+  hidden.value = r.ok ? String(r.value) : '';
 }
 
 /* ---------- UI helpers ---------- */
@@ -678,265 +1029,517 @@ let splitPointerId = null;
 let studentGuesses = {};   // teacher: designId -> { studentNo: {name, guess, at} }
 
 let progressBackTarget = 'screen-board';
+let soloPractice = false; // offline self-quiz (no classroom)
 
-/* ---------- PeerJS Sync ---------- */
-let peer = null;
+/* ---------- Cloud Sync (PubNub) ---------- */
+let pubnub = null;
 let roomCode = null;
 let isHost = false;
-const studentConns = new Map(); // peerId -> DataConnection (teacher)
-let hostConn = null;            // student → teacher
-let connectedStudents = [];     // [{peerId, studentNo, studentName}]
 let syncReady = false;
-let bc = null; // BroadcastChannel fallback same-browser
+let connectedCount = 0;
+let cloudState = null; // canonical room snapshot
+let applyingCloud = false;
+let presenceTimer = null;
 
-function peerIdForRoom(code) { return PEER_PREFIX + code; }
+function cloudChannel(code) { return CLOUD_CHANNEL_PREFIX + code; }
+
+function emptyCloudState(code) {
+  return {
+    code: code,
+    submissions: [],
+    answers: [],
+    studentWork: {}, // studentNo -> { studentName, designId, splits, guess, guessValue, at }
+    focus: null,
+    reveal: false,
+    revealArea: null,
+    updatedAt: Date.now(),
+    roundId: 'r' + Date.now()
+  };
+}
 
 function updateSyncBars() {
   const st = document.getElementById('student-sync-bar');
   if (st) {
     if (roomCode && syncReady) {
-      st.innerHTML = '<div class="sync-pill on">已加入課堂 ' + roomCode + '</div>';
+      st.innerHTML = '<div class="sync-pill on">已加入課堂 ' + roomCode + '（雲端）</div>';
     } else if (roomCode && !syncReady) {
-      st.innerHTML = '<div class="sync-pill off">連接中… ' + roomCode + '</div>';
+      st.innerHTML = '<div class="sync-pill off">連接雲端中… ' + roomCode + '</div>';
     } else {
-      st.innerHTML = '<div class="sync-pill off">未加入課堂（單機）</div>';
+      st.innerHTML = soloPractice
+        ? '<div class="sync-pill">單機溫習</div>'
+        : '<div class="sync-pill off">未加入課堂（單機）</div>';
     }
   }
   const pill = document.getElementById('teacher-room-pill');
   const conn = document.getElementById('teacher-conn-pill');
   if (pill) pill.textContent = '課堂：' + (roomCode || '----');
   if (conn) {
-    conn.textContent = '連線：' + connectedStudents.length + ' 人';
-    conn.className = 'sync-pill ' + (connectedStudents.length ? 'on' : 'off');
+    conn.textContent = '在線約：' + connectedCount + ' 人';
+    conn.className = 'sync-pill ' + (connectedCount ? 'on' : 'off');
   }
   const calcBar = document.getElementById('calc-sync-bar');
   if (calcBar) {
     calcBar.innerHTML = roomCode
-      ? '<div class="sync-pill on">課堂 ' + roomCode + '</div>'
+      ? '<div class="sync-pill on">課堂 ' + roomCode + '（雲端）</div>'
       : '<div class="sync-pill off">單機模式</div>';
   }
 }
 
-function bcSend(msg) {
-  try {
-    if (!bc && typeof BroadcastChannel !== 'undefined') {
-      bc = new BroadcastChannel('hyt-geoboard-room');
-      bc.onmessage = (ev) => onSyncMessage(ev.data, 'broadcast');
-    }
-    if (bc) bc.postMessage(Object.assign({ room: roomCode }, msg));
-  } catch (e) { /* ignore */ }
+function ensurePubNub() {
+  if (pubnub) return pubnub;
+  if (typeof PubNub === 'undefined') {
+    toast('雲端同步庫未載入，請檢查網絡後重新整理', 'err');
+    return null;
+  }
+  pubnub = new PubNub({
+    publishKey: PUBNUB_PUBLISH_KEY,
+    subscribeKey: PUBNUB_SUBSCRIBE_KEY,
+    uuid: 'hyt-' + Math.random().toString(36).slice(2, 10) + '-' + Date.now().toString(36),
+    heartbeatInterval: 30,
+    presenceTimeout: 60
+  });
+  pubnub.addListener({
+    message: function (ev) {
+      try { onCloudMessage(ev.message); } catch (err) { console.warn(err); }
+    },
+    status: function (st) {
+      if (st.category === 'PNConnectedCategory' || st.category === 'PNNetworkUpCategory') {
+        syncReady = true;
+        updateSyncBars();
+      }
+    },
+    presence: function () { refreshPresence(); }
+  });
+  return pubnub;
 }
 
-function destroyPeer() {
-  try { if (peer) peer.destroy(); } catch (e) {}
-  peer = null;
-  hostConn = null;
-  studentConns.clear();
-  connectedStudents = [];
+function leaveCloudRoom() {
+  if (presenceTimer) { clearInterval(presenceTimer); presenceTimer = null; }
+  if (pubnub && roomCode) {
+    try { pubnub.unsubscribe({ channels: [cloudChannel(roomCode)] }); } catch (e) {}
+  }
   syncReady = false;
+  connectedCount = 0;
+  cloudState = null;
+}
+
+function publishCloud(msg) {
+  if (!pubnub || !roomCode) return Promise.resolve(false);
+  return pubnub.publish({
+    channel: cloudChannel(roomCode),
+    message: msg,
+    storeInHistory: true
+  }).then(function () { return true; }).catch(function (e) {
+    console.warn('publish fail', e);
+    return false;
+  });
+}
+
+function publishCloudState() {
+  if (!cloudState || !roomCode) return Promise.resolve(false);
+  cloudState.updatedAt = Date.now();
+  cloudState.code = roomCode;
+  return publishCloud({ type: 'state', state: cloudState });
+}
+
+function applyCloudState(state, opts) {
+  opts = opts || {};
+  if (!state) return;
+  if (cloudState && state.updatedAt && cloudState.updatedAt && state.updatedAt < cloudState.updatedAt && !opts.force) {
+    return;
+  }
+  applyingCloud = true;
+  if (!state.studentWork) state.studentWork = {};
+  if (!state.answers) state.answers = [];
+  cloudState = state;
+  roomCode = state.code || roomCode;
+
+  // sync submissions into localStorage
+  const store = loadStore();
+  store.submissions = Array.isArray(state.submissions) ? state.submissions.map(function (s) { return Object.assign({}, s); }) : [];
+  if (Array.isArray(state.answers)) {
+    store.answers = state.answers.map(function (a) { return Object.assign({}, a); });
+  }
+  saveStore(store);
+
+  // rebuild teacher guess map (answers + live studentWork)
+  studentGuesses = {};
+  function putGuess(a) {
+    if (!a || a.designId == null || a.studentNo == null) return;
+    if (!studentGuesses[a.designId]) studentGuesses[a.designId] = {};
+    const prev = studentGuesses[a.designId][a.studentNo] || {};
+    const nextSplits = (a.splits && a.splits.length) ? a.splits
+      : (prev.splits && prev.splits.length) ? prev.splits : (a.splits || prev.splits || []);
+    studentGuesses[a.designId][a.studentNo] = {
+      name: a.studentName || a.name || prev.name || '',
+      guess: a.guess != null && a.guess !== '' ? a.guess : prev.guess,
+      guessValue: a.guessValue != null ? a.guessValue : prev.guessValue,
+      splits: nextSplits,
+      at: a.at || prev.at,
+      studentNo: a.studentNo
+    };
+  }
+  (state.answers || []).forEach(putGuess);
+  const sw = state.studentWork || {};
+  Object.keys(sw).forEach(function (k) {
+    const w = sw[k];
+    if (!w) return;
+    putGuess({
+      studentNo: Number(k),
+      studentName: w.studentName,
+      designId: w.designId,
+      guess: w.guess,
+      guessValue: w.guessValue,
+      splits: w.splits || [],
+      at: w.at
+    });
+  });
+
+  const hadFocus = !!focusSub;
+  const prevReveal = revealOn;
+
+  if (state.focus) {
+    const same = focusSub && focusSub.id === state.focus.id;
+    focusSub = state.focus;
+    revealOn = !!state.reveal;
+    if (role === 'student') {
+      if (!same || document.getElementById('screen-calc').classList.contains('active') === false) {
+        enterCalcMode(state.focus, { asStudent: true, reveal: !!state.reveal });
+        if (!opts.silent && !same) {
+          toast('老師揀咗「' + state.focus.studentName + '」嘅圖，一齊計！', 'ok');
+        }
+      } else if (state.reveal && state.revealArea != null) {
+        showAnswerBox(state.revealArea);
+      } else if (!state.reveal) {
+        document.getElementById('answer-box').classList.remove('show');
+      }
+    } else if (role === 'teacher' && document.getElementById('screen-calc').classList.contains('active')) {
+      if (state.reveal && state.revealArea != null) showAnswerBox(state.revealArea);
+      else if (!state.reveal) document.getElementById('answer-box').classList.remove('show');
+      renderStudentAnswers();
+    }
+  } else {
+    // no focus — if student was in calc because of previous focus, bounce back on new-round etc.
+    if (opts.fromNewRound) {
+      // handled by caller
+    } else if (role === 'student' && hadFocus && !state.focus) {
+      focusSub = null;
+      revealOn = false;
+    } else {
+      focusSub = null;
+      revealOn = false;
+    }
+  }
+
+  if (isHost || role === 'teacher') {
+    if (document.getElementById('screen-gallery').classList.contains('active') ||
+        document.getElementById('screen-calc').classList.contains('active')) {
+      renderGallery();
+    }
+  }
+  updateSyncBars();
+  applyingCloud = false;
+}
+
+function onCloudMessage(data) {
+  if (!data || !data.type) return;
+  if (data.type === 'state' && data.state) {
+    const prevRound = cloudState && cloudState.roundId;
+    const nextRound = data.state.roundId;
+    applyCloudState(data.state);
+    if (role === 'student' && prevRound && nextRound && prevRound !== nextRound) {
+      // new round detected via roundId change
+      resetDrawing();
+      splitSegs = [];
+      const box = document.getElementById('answer-box');
+      if (box) box.classList.remove('show');
+      const guess = document.getElementById('area-guess');
+      if (guess) guess.value = '';
+      if (currentStudent) {
+        showScreen('screen-board');
+        resizeBoard();
+        drawBoard();
+      }
+      toast('老師已開新一輪，請再畫一個多邊形', 'ok');
+    }
+    return;
+  }
+  if (data.type === 'submission' && data.entry) {
+    mergeRemoteSubmission(data.entry);
+    if (!cloudState) cloudState = emptyCloudState(roomCode);
+    const idx = cloudState.submissions.findIndex(function (s) { return s.studentNo === data.entry.studentNo; });
+    if (idx >= 0) cloudState.submissions[idx] = data.entry;
+    else cloudState.submissions.push(data.entry);
+    cloudState.updatedAt = Date.now();
+    if (isHost) {
+      publishCloudState();
+      renderGallery();
+      toast(data.entry.studentName + ' 提交咗圖案', 'ok');
+    } else if (role === 'teacher') {
+      renderGallery();
+    }
+    return;
+  }
+  if (data.type === 'answer' && data.designId != null) {
+    const ans = {
+      studentNo: data.studentNo,
+      studentName: data.studentName,
+      designId: data.designId,
+      guess: data.guess,
+      guessValue: data.guessValue,
+      splits: Array.isArray(data.splits) ? data.splits : [],
+      at: data.at || new Date().toISOString()
+    };
+    upsertAnswer(ans);
+    if (!cloudState) cloudState = emptyCloudState(roomCode);
+    if (!cloudState.answers) cloudState.answers = [];
+    if (!cloudState.studentWork) cloudState.studentWork = {};
+    const ai = cloudState.answers.findIndex(function (a) {
+      return a.studentNo === ans.studentNo && a.designId === ans.designId;
+    });
+    if (ai >= 0) cloudState.answers[ai] = ans; else cloudState.answers.push(ans);
+    cloudState.studentWork[ans.studentNo] = {
+      studentName: ans.studentName,
+      designId: ans.designId,
+      splits: ans.splits,
+      guess: ans.guess,
+      guessValue: ans.guessValue,
+      at: ans.at
+    };
+    if (!studentGuesses[ans.designId]) studentGuesses[ans.designId] = {};
+    studentGuesses[ans.designId][ans.studentNo] = {
+      name: ans.studentName, guess: ans.guess, guessValue: ans.guessValue,
+      splits: ans.splits, at: ans.at, studentNo: ans.studentNo
+    };
+    if (isHost) publishCloudState();
+    if (focusSub && focusSub.id === ans.designId) renderStudentAnswers();
+    if (role === 'teacher') toast(ans.studentName + ' 交咗答案：' + ans.guess, 'ok');
+    return;
+  }
+  if (data.type === 'student-work' && data.studentNo != null) {
+    if (!cloudState) cloudState = emptyCloudState(roomCode);
+    if (!cloudState.studentWork) cloudState.studentWork = {};
+    const prev = cloudState.studentWork[data.studentNo] || {};
+    const work = {
+      studentName: data.studentName || prev.studentName || '',
+      designId: data.designId != null ? data.designId : prev.designId,
+      splits: Array.isArray(data.splits) ? data.splits : (prev.splits || []),
+      guess: data.guess != null ? data.guess : prev.guess,
+      guessValue: data.guessValue != null ? data.guessValue : prev.guessValue,
+      at: data.at || new Date().toISOString()
+    };
+    cloudState.studentWork[data.studentNo] = work;
+    if (work.designId != null) {
+      if (!studentGuesses[work.designId]) studentGuesses[work.designId] = {};
+      const gprev = studentGuesses[work.designId][data.studentNo] || {};
+      studentGuesses[work.designId][data.studentNo] = {
+        name: work.studentName || gprev.name,
+        guess: work.guess != null ? work.guess : gprev.guess,
+        guessValue: work.guessValue != null ? work.guessValue : gprev.guessValue,
+        splits: work.splits,
+        at: work.at,
+        studentNo: data.studentNo
+      };
+    }
+    if (isHost) {
+      cloudState.updatedAt = Date.now();
+      if (window.__workPublishTimer) clearTimeout(window.__workPublishTimer);
+      window.__workPublishTimer = setTimeout(function () { publishCloudState(); }, 400);
+    }
+    if (role === 'teacher' && focusSub && work.designId === focusSub.id) {
+      renderStudentAnswers();
+    }
+    return;
+  }
+  if (data.type === 'hello' && isHost) {
+    refreshPresence();
+    // push latest state so late joiners catch up quickly
+    publishCloudState();
+  }
+}
+
+function refreshPresence() {
+  if (!pubnub || !roomCode) return;
+  pubnub.hereNow({ channels: [cloudChannel(roomCode)], includeUUIDs: true }, function (status, response) {
+    if (status.error || !response || !response.channels) return;
+    const ch = response.channels[cloudChannel(roomCode)];
+    connectedCount = ch && typeof ch.occupancy === 'number' ? ch.occupancy : 0;
+    updateSyncBars();
+  });
+}
+
+function fetchLatestCloudState(code) {
+  return new Promise(function (resolve) {
+    const pn = ensurePubNub();
+    if (!pn) { resolve(null); return; }
+    const ch = cloudChannel(code);
+    function pickBest(messages) {
+      let best = null;
+      (messages || []).forEach(function (m) {
+        const msg = (m && (m.entry || m.message || m)) || null;
+        if (msg && msg.type === 'state' && msg.state) {
+          if (!best || (msg.state.updatedAt || 0) >= (best.updatedAt || 0)) best = msg.state;
+        }
+      });
+      return best;
+    }
+    // PubNub v7+: prefer fetchMessages; fall back to history
+    if (typeof pn.fetchMessages === 'function') {
+      pn.fetchMessages({ channels: [ch], count: 40 }, function (status, response) {
+        if (status.error || !response || !response.channels) {
+          // fallback
+          pn.history({ channel: ch, count: 40, stringifiedTimeToken: true }, function (st2, res2) {
+            if (st2.error || !res2) { resolve(null); return; }
+            resolve(pickBest(res2.messages));
+          });
+          return;
+        }
+        resolve(pickBest(response.channels[ch]));
+      });
+    } else {
+      pn.history({ channel: ch, count: 40, stringifiedTimeToken: true }, function (status, response) {
+        if (status.error || !response) { resolve(null); return; }
+        resolve(pickBest(response.messages));
+      });
+    }
+  });
+}
+
+async function joinCloudRoom(code, asTeacher) {
+  leaveCloudRoom();
+  roomCode = code;
+  isHost = !!asTeacher;
+  syncReady = false;
+  updateSyncBars();
+  const pn = ensurePubNub();
+  if (!pn) return false;
+
+  pn.subscribe({ channels: [cloudChannel(code)], withPresence: true });
+  syncReady = true;
+
+  const latest = await fetchLatestCloudState(code);
+  if (latest) {
+    applyCloudState(latest, { force: true, silent: true });
+  } else if (asTeacher) {
+    cloudState = emptyCloudState(code);
+    // seed from local if any
+    cloudState.submissions = getLatestByStudent();
+    await publishCloudState();
+  } else {
+    cloudState = emptyCloudState(code);
+  }
+
+  refreshPresence();
+  if (presenceTimer) clearInterval(presenceTimer);
+  presenceTimer = setInterval(refreshPresence, 8000);
+
+  if (!asTeacher && currentStudent) {
+    publishCloud({
+      type: 'hello',
+      studentNo: currentStudent.no,
+      studentName: currentStudent.name
+    });
+  }
+  updateSyncBars();
+  return true;
 }
 
 function teacherStartRoom(code) {
-  destroyPeer();
-  roomCode = code;
-  isHost = true;
-  syncReady = false;
   document.getElementById('room-code-display').textContent = code;
-  document.getElementById('room-status').textContent = '連接伺服器中…';
-  updateSyncBars();
-
-  if (typeof Peer === 'undefined') {
-    document.getElementById('room-status').textContent = 'PeerJS 未載入，可用單機／BroadcastChannel（同一部電腦分頁）。';
-    syncReady = true;
-    bcSend({ type: 'host-hello', roomCode: code });
+  document.getElementById('room-status').textContent = '連接雲端中…';
+  joinCloudRoom(code, true).then(function (ok) {
+    if (ok) {
+      document.getElementById('room-status').textContent =
+        '課堂已就緒（雲端）！請學生輸入編號 ' + code + '（任何網絡都得）';
+    } else {
+      document.getElementById('room-status').textContent = '雲端連接失敗，可重試或用單機。';
+    }
     updateSyncBars();
+  });
+}
+
+async function studentJoinRoom(code) {
+  const ok = await joinCloudRoom(code, false);
+  if (ok) {
+    // push existing local submission if any
+    const mine = getLatestByStudent().find(function (s) { return s.studentNo === currentStudent.no; });
+    if (mine) {
+      publishCloud({ type: 'submission', entry: mine });
+    }
+    toast('已加入課堂 ' + code, 'ok');
+  } else {
+    toast('未能連上雲端，可稍後再試或用單機', 'err');
+  }
+  return ok;
+}
+
+/** Compatibility wrappers used by existing UI handlers */
+function broadcastTeacher(msg) {
+  if (!msg || !msg.type) return;
+  if (!cloudState) cloudState = emptyCloudState(roomCode || '0000');
+  if (msg.type === 'focus') {
+    cloudState.focus = msg.submission;
+    cloudState.reveal = !!msg.reveal;
+    cloudState.revealArea = null;
+    publishCloudState();
     return;
   }
-
-  peer = new Peer(peerIdForRoom(code), { debug: 0 });
-  peer.on('open', (id) => {
-    syncReady = true;
-    document.getElementById('room-status').textContent = '課堂已就緒！請學生輸入編號 ' + code;
-    updateSyncBars();
-    bcSend({ type: 'host-hello', roomCode: code });
-  });
-  peer.on('connection', (conn) => {
-    setupTeacherConn(conn);
-  });
-  peer.on('error', (err) => {
-    console.warn('Peer error', err);
-    const t = (err && err.type) || '';
-    if (t === 'unavailable-id') {
-      document.getElementById('room-status').textContent = '編號已被占用，請換編號。';
-      toast('編號占用，請換一個', 'err');
-    } else {
-      document.getElementById('room-status').textContent = '連線問題：' + t + '（仍可用單機）';
-    }
-  });
-}
-
-function setupTeacherConn(conn) {
-  studentConns.set(conn.peer, conn);
-  conn.on('open', () => {
-    // send snapshot
-    conn.send({
-      type: 'welcome',
-      roomCode: roomCode,
-      submissions: getLatestByStudent(),
-      focus: focusSub,
-      reveal: revealOn
-    });
-    updateSyncBars();
-  });
-  conn.on('data', (data) => onSyncMessage(data, conn.peer));
-  conn.on('close', () => {
-    studentConns.delete(conn.peer);
-    connectedStudents = connectedStudents.filter(s => s.peerId !== conn.peer);
-    updateSyncBars();
-    broadcastTeacher({ type: 'roster', connected: connectedStudents });
-  });
-}
-
-function studentJoinRoom(code) {
-  destroyPeer();
-  roomCode = code;
-  isHost = false;
-  syncReady = false;
-  updateSyncBars();
-
-  if (typeof Peer === 'undefined') {
-    syncReady = true;
-    bcSend({ type: 'hello', studentNo: currentStudent.no, studentName: currentStudent.name, peerId: 'bc-' + currentStudent.no });
-    toast('已用本機廣播加入（測試用）', 'ok');
-    updateSyncBars();
-    return Promise.resolve(true);
+  if (msg.type === 'reveal') {
+    cloudState.reveal = true;
+    cloudState.revealArea = msg.area;
+    publishCloudState();
+    return;
   }
-
-  return new Promise((resolve) => {
-    peer = new Peer({ debug: 0 });
-    let settled = false;
-    const failTimer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        toast('連接逾時，可稍後再試或用單機', 'err');
-        resolve(false);
-      }
-    }, 12000);
-
-    peer.on('open', () => {
-      const conn = peer.connect(peerIdForRoom(code), { reliable: true });
-      hostConn = conn;
-      conn.on('open', () => {
-        syncReady = true;
-        conn.send({
-          type: 'hello',
-          studentNo: currentStudent.no,
-          studentName: currentStudent.name
-        });
-        // push any existing local submission
-        const mine = getLatestByStudent().find(s => s.studentNo === currentStudent.no);
-        if (mine) conn.send({ type: 'submission', entry: mine });
-        clearTimeout(failTimer);
-        if (!settled) { settled = true; resolve(true); }
-        updateSyncBars();
-        toast('已加入課堂 ' + code, 'ok');
-      });
-      conn.on('data', (data) => onSyncMessage(data, 'host'));
-      conn.on('close', () => {
-        syncReady = false;
-        updateSyncBars();
-        toast('同老師斷線咗', 'err');
-      });
-      conn.on('error', () => {
-        if (!settled) { settled = true; clearTimeout(failTimer); resolve(false); }
-      });
-    });
-    peer.on('error', (err) => {
-      console.warn(err);
-      if (!settled) { settled = true; clearTimeout(failTimer); resolve(false); }
-      toast('無法加入：請確認老師已開課堂', 'err');
-    });
-  });
-}
-
-function broadcastTeacher(msg) {
-  studentConns.forEach((conn) => {
-    try { if (conn.open) conn.send(msg); } catch (e) {}
-  });
-  bcSend(msg);
+  if (msg.type === 'unreveal') {
+    cloudState.reveal = false;
+    cloudState.revealArea = null;
+    publishCloudState();
+    return;
+  }
+  if (msg.type === 'new-round') {
+    const stamp = Date.now();
+    cloudState.submissions = [];
+    cloudState.answers = [];
+    cloudState.studentWork = {};
+    cloudState.focus = null;
+    cloudState.reveal = false;
+    cloudState.revealArea = null;
+    cloudState.roundId = 'r' + stamp;
+    cloudState.updatedAt = stamp;
+    publishCloudState();
+    return;
+  }
+  if (msg.type === 'submissions') {
+    cloudState.submissions = msg.list || [];
+    publishCloudState();
+    return;
+  }
+  // generic
+  publishCloud(msg);
 }
 
 function sendToHost(msg) {
-  if (hostConn && hostConn.open) {
-    try { hostConn.send(msg); } catch (e) {}
+  if (!msg) return;
+  if (msg.type === 'submission' && msg.entry) {
+    mergeRemoteSubmission(msg.entry);
+    if (!cloudState) cloudState = emptyCloudState(roomCode || '0000');
+    const idx = cloudState.submissions.findIndex(function (s) { return s.studentNo === msg.entry.studentNo; });
+    if (idx >= 0) cloudState.submissions[idx] = msg.entry;
+    else cloudState.submissions.push(msg.entry);
+    publishCloud({ type: 'submission', entry: msg.entry });
+    // also push full state so late joiners see it even if teacher offline briefly
+    cloudState.updatedAt = Date.now();
+    publishCloudState();
+    return;
   }
-  bcSend(msg);
+  if (msg.type === 'answer') {
+    publishCloud(msg);
+    return;
+  }
+  publishCloud(msg);
 }
 
-function onSyncMessage(data, from) {
-  if (!data || !data.type) return;
-  // ignore other rooms on broadcast
-  if (data.room && roomCode && data.room !== roomCode && data.type !== 'host-hello') return;
-
-  if (isHost) {
-    if (data.type === 'hello') {
-      const peerId = from === 'broadcast' ? (data.peerId || ('bc-' + data.studentNo)) : from;
-      connectedStudents = connectedStudents.filter(s => s.studentNo !== data.studentNo);
-      connectedStudents.push({ peerId: peerId, studentNo: data.studentNo, studentName: data.studentName });
-      updateSyncBars();
-      broadcastTeacher({ type: 'roster', connected: connectedStudents });
-      toast(data.studentName + ' 已加入', 'ok');
-    } else if (data.type === 'submission') {
-      mergeRemoteSubmission(data.entry);
-      renderGallery();
-      toast(data.entry.studentName + ' 提交咗圖案', 'ok');
-    } else if (data.type === 'answer') {
-      const did = data.designId;
-      if (!studentGuesses[did]) studentGuesses[did] = {};
-      studentGuesses[did][data.studentNo] = {
-        name: data.studentName, guess: data.guess, at: data.at || new Date().toISOString()
-      };
-      upsertAnswer({
-        studentNo: data.studentNo, studentName: data.studentName,
-        designId: did, guess: data.guess, at: data.at
-      });
-      if (focusSub && focusSub.id === did) renderStudentAnswers();
-      toast(data.studentName + ' 交咗答案：' + data.guess, 'ok');
-    }
-  } else {
-    // student receiving from teacher
-    if (data.type === 'welcome') {
-      // Teacher snapshot = current round truth (handles reconnect after 開新一輪)
-      if (Array.isArray(data.submissions)) {
-        const store = loadStore();
-        store.submissions = data.submissions.map(s => Object.assign({}, s));
-        saveStore(store);
-      }
-      if (data.focus) {
-        enterCalcMode(data.focus, { asStudent: true, reveal: !!data.reveal });
-      } else {
-        focusSub = null;
-        revealOn = false;
-      }
-      updateSyncBars();
-    } else if (data.type === 'focus') {
-      enterCalcMode(data.submission, { asStudent: true, reveal: !!data.reveal });
-      toast('老師揀咗「' + data.submission.studentName + '」嘅圖，一齊計！', 'ok');
-    } else if (data.type === 'reveal') {
-      revealOn = true;
-      showAnswerBox(data.area, data.picksHtml);
-    } else if (data.type === 'unreveal') {
-      revealOn = false;
-      document.getElementById('answer-box').classList.remove('show');
-    } else if (data.type === 'unfocus') {
-      // optional: stay or go back
-    } else if (data.type === 'submissions') {
-      (data.list || []).forEach(mergeRemoteSubmission);
-    } else if (data.type === 'new-round') {
-      applyNewRoundAsStudent();
-    }
-  }
-}
+function destroyPeer() { leaveCloudRoom(); }
 
 function applyNewRoundAsStudent() {
   clearCurrentRoundLocal();
@@ -950,7 +1553,6 @@ function applyNewRoundAsStudent() {
   if (box) box.classList.remove('show');
   const guess = document.getElementById('area-guess');
   if (guess) guess.value = '';
-  // Back to design board if student has picked a name
   if (currentStudent && role === 'student') {
     document.getElementById('student-badge').textContent =
       currentStudent.no + ' ' + currentStudent.name;
@@ -1171,7 +1773,7 @@ function tryLockPeg(peg) {
   }
   if (check.closing) {
     closed = true; isDrawing = false; rubberTip = null; invalidFlash = null;
-    updateSubmitBtn(); toast('多邊形已封閉！可以提交', 'ok'); return true;
+    updateSubmitBtn(); toast(soloPractice || !syncReady ? '多邊形已封閉！可以「自己計算」' : '多邊形已封閉！可以提交', 'ok'); return true;
   }
   if (!points.length) {
     points.push({ x: peg.x, y: peg.y });
@@ -1279,7 +1881,10 @@ function resizeBoard() {
   drawBoard();
 }
 function updateSubmitBtn() {
-  document.getElementById('btn-submit').disabled = !(closed && points.length >= 3);
+  const ready = !!(closed && points.length >= 3);
+  document.getElementById('btn-submit').disabled = !ready;
+  const selfBtn = document.getElementById('btn-self-calc');
+  if (selfBtn) selfBtn.disabled = !ready;
 }
 function getPointerPosOn(c, e) {
   const rect = c.getBoundingClientRect();
@@ -1392,7 +1997,8 @@ document.getElementById('btn-close-poly').addEventListener('click', () => {
     return;
   }
   closed = true; isDrawing = false; rubberTip = null; invalidFlash = null;
-  drawBoard(); updateSubmitBtn(); toast('多邊形已封閉！可以提交', 'ok');
+  drawBoard(); updateSubmitBtn();
+  toast(soloPractice || !syncReady ? '多邊形已封閉！可以「自己計算」' : '多邊形已封閉！可以提交', 'ok');
 });
 
 document.getElementById('btn-submit').addEventListener('click', () => {
@@ -1496,6 +2102,30 @@ function resizeCalc() {
   drawCalc();
 }
 
+
+let splitSyncTimer = null;
+function publishStudentWorkLive(extra) {
+  if (soloPractice || role !== 'student' || !currentStudent || !focusSub || !syncReady) return;
+  extra = extra || {};
+  const payload = {
+    type: 'student-work',
+    studentNo: currentStudent.no,
+    studentName: currentStudent.name,
+    designId: focusSub.id,
+    splits: splitSegs.map(function (s) {
+      return { a: { x: s.a.x, y: s.a.y }, b: { x: s.b.x, y: s.b.y } };
+    }),
+    at: new Date().toISOString()
+  };
+  if (extra.guess != null) payload.guess = extra.guess;
+  if (extra.guessValue != null) payload.guessValue = extra.guessValue;
+  // debounce burst while drawing
+  if (splitSyncTimer) clearTimeout(splitSyncTimer);
+  splitSyncTimer = setTimeout(function () {
+    publishCloud(payload);
+  }, 280);
+}
+
 /* Split drawing on calc canvas (students; teacher can also doodle but tools focus on reveal) */
 function tryAddSplitEndpoint(peg) {
   if (!peg) return;
@@ -1517,6 +2147,7 @@ function endSplitStroke(e) {
   splitDrawing = false; splitRubber = null; splitDraft = null; splitPointerId = null;
   if (was) unlockPageScroll();
   drawCalc();
+  if (was) publishStudentWorkLive();
 }
 
 function onCalcPointerDown(e) {
@@ -1557,6 +2188,7 @@ function onCalcPointerUp(e) {
   splitDrawing = false; splitRubber = null; splitDraft = null; splitPointerId = null;
   if (was) unlockPageScroll();
   drawCalc();
+  if (was) publishStudentWorkLive();
 }
 calcCanvas.addEventListener('pointerdown', onCalcPointerDown, { passive: false });
 calcCanvas.addEventListener('pointermove', onCalcPointerMove, { passive: false });
@@ -1566,93 +2198,668 @@ calcCanvas.addEventListener('lostpointercapture', endSplitStroke);
 calcCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
 
 document.getElementById('btn-split-undo').addEventListener('click', () => {
-  splitSegs.pop(); drawCalc();
+  splitSegs.pop(); drawCalc(); publishStudentWorkLive();
 });
 document.getElementById('btn-split-clear').addEventListener('click', () => {
-  splitSegs = []; splitDraft = null; splitRubber = null; drawCalc();
+  splitSegs = []; splitDraft = null; splitRubber = null; drawCalc(); publishStudentWorkLive();
 });
+
+(function wireGuessAnswerMode() {
+  const bi = document.getElementById('mode-int');
+  const bf = document.getElementById('mode-frac');
+  const bp = document.getElementById('kind-proper');
+  const bm = document.getElementById('kind-mixed');
+  if (bi) bi.addEventListener('click', function () { setGuessAnswerMode('int'); });
+  if (bf) bf.addEventListener('click', function () { setGuessAnswerMode('frac'); });
+  if (bp) bp.addEventListener('click', function () { setGuessFracKind('proper'); });
+  if (bm) bm.addEventListener('click', function () { setGuessFracKind('mixed'); });
+  applyGuessInputVisibility();
+})();
 
 document.getElementById('btn-submit-guess').addEventListener('click', () => {
   if (!currentStudent || !focusSub) return;
-  const guess = document.getElementById('area-guess').value.trim();
-  if (!guess) { toast('請先輸入面積', 'err'); return; }
+  syncGuessHiddenFromMixed();
+  const parsed = readGuessMixedValue();
+  if (!parsed.ok) { toast('請按所選形式填寫面積（整數或分數）', 'err'); return; }
+  const guess = formatAreaNice(parsed.value);
   const ans = {
     type: 'answer',
     studentNo: currentStudent.no,
     studentName: currentStudent.name,
     designId: focusSub.id,
     guess: guess,
+    guessValue: parsed.value,
+    splits: splitSegs.map(function (s) {
+      return { a: { x: s.a.x, y: s.a.y }, b: { x: s.b.x, y: s.b.y } };
+    }),
     at: new Date().toISOString()
   };
   upsertAnswer(ans);
   sendToHost(ans);
-  toast('已提交答案：' + guess + ' cm²', 'ok');
+  toast('已提交答案：' + formatAreaWithUnit(parsed.value), 'ok');
 });
 
-function showAnswerBox(areaStr, picksHtml) {
-  document.getElementById('answer-area').textContent = '面積 = ' + areaStr + ' cm²';
-  document.getElementById('answer-picks').innerHTML = picksHtml || '';
-  document.getElementById('answer-box').classList.add('show');
+
+/** Format a number inline in 列式 using flexible area style (no unit). */
+function areaInline(a) { return formatAreaNice(a); }
+
+function isNiceMeasure(x) {
+  if (!isFinite(x) || x <= 0) return false;
+  const r2 = Math.round(x * 2) / 2;
+  const r4 = Math.round(x * 4) / 4;
+  return Math.abs(x - Math.round(x)) < 1e-6 ||
+    Math.abs(x - r2) < 1e-6 ||
+    Math.abs(x - r4) < 1e-6;
 }
 
-function computeAnswerHtml(sub) {
-  const A = shoelaceArea(sub.points);
-  const B = boundaryPoints(sub.points);
-  const I = pickInterior(A, B);
-  return {
-    area: formatAreaNice(A),
-    picksHtml: 'Pick\'s 定理：I = ' + formatAreaNice(I) + '，B = ' + B +
-      '<br>A = I + B/2 − 1 = ' + formatAreaNice(I) + ' + ' + B + '/2 − 1'
-  };
+function vec(a, b) { return { x: b.x - a.x, y: b.y - a.y }; }
+function nearly(a, b) { return Math.abs(a - b) < 1e-6; }
+function cross(u, v) { return u.x * v.y - u.y * v.x; }
+function dot(u, v) { return u.x * v.x + u.y * v.y; }
+
+function triangleBaseHeight(A, B, C) {
+  const area = shoelaceArea([A, B, C]);
+  if (area < 1e-9) return null;
+  const edges = [[A, B, C], [B, C, A], [C, A, B]];
+  for (let i = 0; i < edges.length; i++) {
+    const P = edges[i][0], Q = edges[i][1], R = edges[i][2];
+    if (P.y === Q.y) {
+      const base = Math.abs(Q.x - P.x);
+      const height = Math.abs(R.y - P.y);
+      if (base > 0 && height > 0 && Math.abs(base * height / 2 - area) < 1e-6) {
+        return { base: base, height: height, area: area, nice: true };
+      }
+    }
+    if (P.x === Q.x) {
+      const base = Math.abs(Q.y - P.y);
+      const height = Math.abs(R.x - P.x);
+      if (base > 0 && height > 0 && Math.abs(base * height / 2 - area) < 1e-6) {
+        return { base: base, height: height, area: area, nice: true };
+      }
+    }
+  }
+  return { base: null, height: null, area: area, nice: false };
+}
+
+function triangleEquationHtml(th, label) {
+  const aStr = formatAreaWithUnit(th.area);
+  if (th.nice && th.base != null && th.height != null) {
+    const b = areaInline(th.base);
+    const h = areaInline(th.height);
+    return (label ? label + '：' : '') + '底 = ' + b + ' cm，高 = ' + h + ' cm<br>' +
+      '<span class="eq">面積 = 底 × 高 ÷ 2 = ' + b + ' × ' + h + ' ÷ 2 = ' + aStr + '</span>';
+  }
+  return (label ? label + '：' : '') +
+    '<span class="eq">面積 = ' + aStr + '</span>';
+}
+
+function isAxisAlignedRectangle(pts) {
+  if (!pts || pts.length !== 4) return null;
+  const xs = pts.map(function (p) { return p.x; });
+  const ys = pts.map(function (p) { return p.y; });
+  const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+  const minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+  if (maxX === minX || maxY === minY) return null;
+  const need = {};
+  [[minX, minY], [minX, maxY], [maxX, minY], [maxX, maxY]].forEach(function (c) {
+    need[c[0] + ',' + c[1]] = true;
+  });
+  for (let i = 0; i < 4; i++) {
+    if (!need[pts[i].x + ',' + pts[i].y]) return null;
+  }
+  for (let i = 0; i < 4; i++) {
+    const a = pts[i], b = pts[(i + 1) % 4];
+    if (a.x !== b.x && a.y !== b.y) return null;
+  }
+  const w = maxX - minX, h = maxY - minY;
+  return { w: w, h: h, area: w * h, square: nearly(w, h) };
+}
+
+/** 平行四邊形：對邊平行且相等（格子向量） */
+function isParallelogram(pts) {
+  if (!pts || pts.length !== 4) return null;
+  // order around boundary
+  const v01 = vec(pts[0], pts[1]);
+  const v12 = vec(pts[1], pts[2]);
+  const v23 = vec(pts[2], pts[3]);
+  const v30 = vec(pts[3], pts[0]);
+  const opp1 = nearly(v01.x, -v23.x) && nearly(v01.y, -v23.y);
+  const opp2 = nearly(v12.x, -v30.x) && nearly(v12.y, -v30.y);
+  if (!opp1 || !opp2) return null;
+  const area = shoelaceArea(pts);
+  // base/height if one side horizontal
+  let base = null, height = null;
+  if (pts[0].y === pts[1].y) {
+    base = Math.abs(pts[1].x - pts[0].x);
+    height = Math.abs(pts[3].y - pts[0].y);
+  } else if (pts[1].y === pts[2].y) {
+    base = Math.abs(pts[2].x - pts[1].x);
+    height = Math.abs(pts[0].y - pts[1].y);
+  }
+  return { area: area, base: base, height: height };
+}
+
+/** 梯形：恰好一組對邊平行（優先水平／垂直底） */
+function isTrapezoid(pts) {
+  if (!pts || pts.length !== 4) return null;
+  const sides = [];
+  for (let i = 0; i < 4; i++) {
+    sides.push(vec(pts[i], pts[(i + 1) % 4]));
+  }
+  function parallel(u, v) { return Math.abs(cross(u, v)) < 1e-9; }
+  const pairs = [];
+  if (parallel(sides[0], sides[2])) pairs.push([0, 2]);
+  if (parallel(sides[1], sides[3])) pairs.push([1, 3]);
+  if (pairs.length !== 1) return null; // parallelogram has 2; skip here
+  const area = shoelaceArea(pts);
+  // horizontal bases?
+  const ys = pts.map(function (p) { return p.y; });
+  const uniqY = Array.from(new Set(ys)).sort(function (a, b) { return a - b; });
+  if (uniqY.length === 2) {
+    const y0 = uniqY[0], y1 = uniqY[1];
+    const top = pts.filter(function (p) { return p.y === y1; }).map(function (p) { return p.x; });
+    const bot = pts.filter(function (p) { return p.y === y0; }).map(function (p) { return p.x; });
+    if (top.length >= 1 && bot.length >= 1) {
+      const a = Math.max.apply(null, top) - Math.min.apply(null, top);
+      const b = Math.max.apply(null, bot) - Math.min.apply(null, bot);
+      const h = y1 - y0;
+      // if only one point on a level, width 0 — not a proper trapezoid strip
+      if (top.length === 1) { /* apex */ }
+      return {
+        area: area,
+        a: Math.max(a, 0),
+        b: Math.max(b, 0),
+        h: h,
+        horizontal: true
+      };
+    }
+  }
+  return { area: area, a: null, b: null, h: null, horizontal: false };
+}
+
+/** X-span of polygon along horizontal line y (outermost for simple polygons). */
+function polygonXSpanAtY(points, y) {
+  const xs = [];
+  const n = points.length;
+  for (let i = 0; i < n; i++) {
+    const a = points[i], b = points[(i + 1) % n];
+    if (nearly(a.y, y)) xs.push(a.x);
+    if (nearly(a.y, b.y)) continue;
+    const ymin = Math.min(a.y, b.y), ymax = Math.max(a.y, b.y);
+    if (y < ymin - 1e-9 || y > ymax + 1e-9) continue;
+    const t = (y - a.y) / (b.y - a.y);
+    if (t >= -1e-9 && t <= 1 + 1e-9) xs.push(a.x + t * (b.x - a.x));
+  }
+  if (xs.length < 2) return null;
+  const lo = Math.min.apply(null, xs);
+  const hi = Math.max.apply(null, xs);
+  if (hi - lo < 1e-9) return null;
+  return { left: lo, right: hi, width: hi - lo };
+}
+
+function collectStripYs(points, segs) {
+  const ys = {};
+  points.forEach(function (p) { ys[p.y] = true; });
+  (segs || []).forEach(function (s) {
+    if (!s || !s.a || !s.b) return;
+    // horizontal purple split lines
+    if (nearly(s.a.y, s.b.y)) ys[s.a.y] = true;
+  });
+  return Object.keys(ys).map(Number).sort(function (a, b) { return a - b; });
+}
+
+/**
+ * Split polygon into horizontal strips (梯形／長方形／正方形).
+ * Uses vertex y-levels + student purple horizontal split lines.
+ */
+function decomposeHorizontalStrips(points, segs) {
+  const ys = collectStripYs(points, segs);
+  if (ys.length < 2) return null;
+  const strips = [];
+  for (let i = 0; i < ys.length - 1; i++) {
+    const y0 = ys[i], y1 = ys[i + 1];
+    const h = y1 - y0;
+    if (h < 1e-9) continue;
+    const top = polygonXSpanAtY(points, y1);
+    const bot = polygonXSpanAtY(points, y0);
+    if (!top || !bot) continue;
+    const a = top.width;  // 上底
+    const b = bot.width;  // 下底
+    const area = (a + b) / 2 * h;
+    if (area < 1e-9) continue;
+    let kind = '梯形';
+    if (nearly(a, b)) {
+      kind = nearly(a, h) ? '正方形' : '長方形';
+    }
+    strips.push({ y0: y0, y1: y1, a: a, b: b, h: h, area: area, kind: kind });
+  }
+  if (!strips.length) return null;
+  const sum = strips.reduce(function (s, t) { return s + t.area; }, 0);
+  const total = shoelaceArea(points);
+  // Accept if close to true area (convex / simple monotone in y)
+  if (Math.abs(sum - total) > 0.05) return null;
+  return { strips: strips, sum: sum };
+}
+
+function decomposeVerticalStrips(points, segs) {
+  // rotate logic: treat x as "y"
+  const rot = points.map(function (p) { return { x: p.y, y: p.x }; });
+  const rotSegs = (segs || []).map(function (s) {
+    return { a: { x: s.a.y, y: s.a.x }, b: { x: s.b.y, y: s.b.x } };
+  }).filter(function (s) { return nearly(s.a.y, s.b.y); }); // vertical originals → horizontal in rot
+  // also include original vertical splits
+  (segs || []).forEach(function (s) {
+    if (nearly(s.a.x, s.b.x)) {
+      rotSegs.push({ a: { x: s.a.y, y: s.a.x }, b: { x: s.b.y, y: s.b.x } });
+    }
+  });
+  const d = decomposeHorizontalStrips(rot, rotSegs);
+  return d;
+}
+
+function stripEquationHtml(strip, idx) {
+  const a = areaInline(strip.a);
+  const b = areaInline(strip.b);
+  const h = areaInline(strip.h);
+  const aStr = formatAreaWithUnit(strip.area);
+  if (strip.kind === '長方形' || strip.kind === '正方形') {
+    return '第 ' + idx + ' 條：<strong>' + strip.kind + '</strong>——長 = ' + a +
+      ' cm，闊 = ' + h + ' cm<br>' +
+      '<span class="eq">面積 = 長 × 闊 = ' + a + ' × ' + h + ' = ' + aStr + '</span>';
+  }
+  return '第 ' + idx + ' 條：<strong>梯形</strong>——上底 = ' + a +
+    ' cm，下底 = ' + b + ' cm，高 = ' + h + ' cm<br>' +
+    '<span class="eq">面積 =（上底 + 下底）× 高 ÷ 2 =（' + a + ' + ' + b +
+    '）× ' + h + ' ÷ 2 = ' + aStr + '</span>';
+}
+
+function boundingRectFillHtml(points, total) {
+  const xs = points.map(function (p) { return p.x; });
+  const ys = points.map(function (p) { return p.y; });
+  const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+  const minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+  const rw = maxX - minX, rh = maxY - minY;
+  if (rw <= 0 || rh <= 0) return null;
+  const rectArea = rw * rh;
+  if (rectArea + 1e-9 < total) return null;
+  const extra = rectArea - total;
+  const steps = [];
+  steps.push('可以先<strong>填補成一個長方形</strong>，再減去多餘部分。');
+  steps.push(
+    '長方形：長 = ' + areaInline(rw) + ' cm，闊 = ' + areaInline(rh) + ' cm<br>' +
+    '<span class="eq">長方形面積 = 長 × 闊 = ' + areaInline(rw) + ' × ' +
+    areaInline(rh) + ' = ' + formatAreaWithUnit(rectArea) + '</span>'
+  );
+  if (extra > 1e-9) {
+    steps.push('多餘部分（外面三角形／梯形）面積 = ' + formatAreaWithUnit(extra));
+    steps.push(
+      '<span class="eq">多邊形面積 = 長方形 − 多餘 = ' +
+      areaInline(rectArea) + ' − ' + areaInline(extra) + ' = ' +
+      formatAreaWithUnit(total) + '</span>'
+    );
+  } else {
+    steps.push('<span class="eq">多邊形面積 = ' + formatAreaWithUnit(total) + '</span>');
+  }
+  return steps;
+}
+
+/**
+ * HK-primary 列式：優先少數 正方形／長方形／平行四邊形／梯形／三角形。
+ * 善用學生紫線（水平／垂直分割）做「一條條」計。
+ */
+function buildAreaTeachingHtml(points, segs) {
+  if (!points || points.length < 3) return '';
+  const total = shoelaceArea(points);
+  const steps = [];
+
+  // --- Whole-shape recognition (fewest pieces = 1) ---
+  const rect = isAxisAlignedRectangle(points);
+  if (rect) {
+    const name = rect.square ? '正方形' : '長方形';
+    steps.push('呢個係<strong>' + name + '</strong>。');
+    steps.push('長 = ' + areaInline(rect.w) + ' cm，闊 = ' + areaInline(rect.h) + ' cm');
+    steps.push(
+      '<span class="eq">面積 = 長 × 闊 = ' + areaInline(rect.w) + ' × ' +
+      areaInline(rect.h) + ' = ' + formatAreaWithUnit(rect.area) + '</span>'
+    );
+  } else if (points.length === 3) {
+    steps.push('呢個係<strong>三角形</strong>。');
+    steps.push(triangleEquationHtml(triangleBaseHeight(points[0], points[1], points[2]) || { area: total, nice: false }, ''));
+  } else {
+    const para = isParallelogram(points);
+    const trap = !para ? isTrapezoid(points) : null;
+    if (para && points.length === 4) {
+      steps.push('呢個係<strong>平行四邊形</strong>。');
+      if (para.base != null && para.height != null && para.base > 0 && para.height > 0) {
+        steps.push('底 = ' + areaInline(para.base) + ' cm，高 = ' + areaInline(para.height) + ' cm');
+        steps.push(
+          '<span class="eq">面積 = 底 × 高 = ' + areaInline(para.base) + ' × ' +
+          areaInline(para.height) + ' = ' + formatAreaWithUnit(para.area) + '</span>'
+        );
+      } else {
+        steps.push('<span class="eq">面積 = 底 × 高 = ' + formatAreaWithUnit(para.area) + '</span>');
+      }
+    } else if (trap && trap.horizontal && trap.a != null && trap.b != null && trap.h > 0) {
+      steps.push('呢個係<strong>梯形</strong>。');
+      steps.push(
+        '上底 = ' + areaInline(trap.a) + ' cm，下底 = ' + areaInline(trap.b) +
+        ' cm，高 = ' + areaInline(trap.h) + ' cm'
+      );
+      steps.push(
+        '<span class="eq">面積 =（上底 + 下底）× 高 ÷ 2 =（' + areaInline(trap.a) +
+        ' + ' + areaInline(trap.b) + '）× ' + areaInline(trap.h) + ' ÷ 2 = ' +
+        formatAreaWithUnit(trap.area) + '</span>'
+      );
+    } else {
+      // --- Prefer strip decomposition (like purple horizontal cuts) ---
+      let strips = decomposeHorizontalStrips(points, segs);
+      let stripAxis = '横';
+      const vstrips = decomposeVerticalStrips(points, segs);
+      // Choose fewer pieces; prefer ≤ 6 strips
+      if (vstrips && (!strips || vstrips.strips.length < strips.strips.length)) {
+        strips = vstrips;
+        stripAxis = '直';
+      }
+      if (strips && strips.strips.length >= 1 && strips.strips.length <= 8) {
+        const usedSplits = (segs || []).some(function (s) {
+          return nearly(s.a.y, s.b.y) || nearly(s.a.x, s.b.x);
+        });
+        steps.push(
+          (usedSplits
+            ? '跟住你畫嘅<strong>紫線分割</strong>，'
+            : '沿著圖形嘅高度／闊度，') +
+          '將多邊形分成 <strong>' + strips.strips.length + ' 條</strong>' +
+          (stripAxis === '横' ? '横' : '直') +
+          '嘅<strong>長方形／正方形／梯形</strong>，逐條計完再加埋。'
+        );
+        const sumParts = [];
+        strips.strips.forEach(function (s, idx) {
+          steps.push(stripEquationHtml(s, idx + 1));
+          sumParts.push(areaInline(s.area));
+        });
+        steps.push(
+          '<span class="eq">總面積 = ' + sumParts.join(' + ') + ' = ' +
+          formatAreaWithUnit(strips.sum) + '</span>'
+        );
+        if (Math.abs(strips.sum - total) > 1e-6) {
+          steps.push('核對：多邊形面積 = ' + formatAreaWithUnit(total));
+        }
+      } else {
+        // --- Fill to rectangle then subtract (2-step) ---
+        const fill = boundingRectFillHtml(points, total);
+        if (fill) {
+          fill.forEach(function (s) { steps.push(s); });
+        } else if (points.length <= 5) {
+          // Last resort: at most a few triangles (ear from vertex 0), only if ≤ 3 pieces
+          const parts = [];
+          for (let i = 1; i < points.length - 1; i++) {
+            const th = triangleBaseHeight(points[0], points[i], points[i + 1]);
+            if (!th || th.area < 1e-9) continue;
+            parts.push(th);
+          }
+          if (parts.length >= 1 && parts.length <= 3) {
+            steps.push('將多邊形<strong>分割成 ' + parts.length + ' 個三角形</strong>再加埋。');
+            const sumParts = [];
+            parts.forEach(function (th, idx) {
+              steps.push(triangleEquationHtml(th, '三角形 ' + (idx + 1)));
+              sumParts.push(areaInline(th.area));
+            });
+            steps.push(
+              '<span class="eq">總面積 = ' + sumParts.join(' + ') + ' = ' +
+              formatAreaWithUnit(total) + '</span>'
+            );
+          } else {
+            steps.push(
+              '試下用<strong>紫線</strong>將圖分割成少少<strong>長方形、正方形、梯形、平行四邊形或三角形</strong>，再逐塊計。'
+            );
+            steps.push('<span class="eq">面積 = ' + formatAreaWithUnit(total) + '</span>');
+          }
+        } else {
+          steps.push(
+            '試下用<strong>紫線</strong>將圖分割成少少<strong>長方形、梯形或三角形</strong>（唔好切成好多細塊），再逐塊計。'
+          );
+          steps.push('<span class="eq">面積 = ' + formatAreaWithUnit(total) + '</span>');
+        }
+      }
+    }
+  }
+
+  let html = '<h4>【列式】點樣計面積</h4><ol>';
+  steps.forEach(function (s) { html += '<li>' + s + '</li>'; });
+  html += '</ol>';
+  html += '<div class="total">正確面積 = ' + areaDisplayHtml(total) + '</div>';
+  html += '<div class="hint">小提示：長方形／正方形用「長 × 闊」；平行四邊形用「底 × 高」；' +
+    '三角形用「底 × 高 ÷ 2」；梯形用「（上底＋下底）× 高 ÷ 2」。可用紫線分成幾大塊再加。</div>';
+  return html;
+}
+
+function hideAreaTeachBlock() {
+  const box = document.getElementById('area-teach-block');
+  if (!box) return;
+  box.classList.remove('show');
+  box.innerHTML = '';
+}
+
+function showAreaTeachBlock(points, segs) {
+  const box = document.getElementById('area-teach-block');
+  if (!box) return;
+  box.innerHTML = buildAreaTeachingHtml(points, segs || []);
+  box.classList.add('show');
+}
+
+function showAnswerBox(areaValue, opts) {
+  opts = opts || {};
+  const el = document.getElementById('answer-area');
+  el.innerHTML = '<span>面積 = </span>' + areaDisplayHtml(areaValue);
+  document.getElementById('answer-box').classList.add('show');
+  if (opts.teachPoints && opts.teachPoints.length >= 3) {
+    showAreaTeachBlock(opts.teachPoints, opts.teachSplits || []);
+  } else {
+    hideAreaTeachBlock();
+  }
+}
+
+function computeAnswerArea(sub) {
+  return shoelaceArea(sub.points);
+}
+
+function parseGuessToNumber(guess, guessValue) {
+  if (typeof guessValue === 'number' && isFinite(guessValue)) return guessValue;
+  if (guess == null || guess === '') return null;
+  if (typeof guess === 'number') return guess;
+  const s = String(guess).trim().replace(/（cm²）|cm²/g, '').trim();
+  // 3½ or 3 1/2 or 1/2 or 3.5
+  const mixedUni = s.match(/^(-?\d+)\s*([½¼¾])$/);
+  if (mixedUni) {
+    const map = { '½': 0.5, '¼': 0.25, '¾': 0.75 };
+    return Number(mixedUni[1]) + map[mixedUni[2]];
+  }
+  if (s === '½') return 0.5;
+  if (s === '¼') return 0.25;
+  if (s === '¾') return 0.75;
+  const mixed = s.match(/^(-?\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  if (mixed) return Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3]);
+  const frac = s.match(/^(-?\d+)\s*\/\s*(\d+)$/);
+  if (frac) return Number(frac[1]) / Number(frac[2]);
+  const n = Number(s);
+  return isFinite(n) ? n : null;
 }
 
 function renderStudentAnswers() {
   const el = document.getElementById('student-answers-list');
-  if (!focusSub) { el.innerHTML = ''; return; }
-  const map = studentGuesses[focusSub.id] || {};
-  const rows = Object.keys(map).map(k => map[k]).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-HK'));
-  if (!rows.length) {
-    el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:8px;">暫時未有學生交答案</div>';
+  const statsEl = document.getElementById('monitor-stats');
+  if (!el) return;
+  if (!focusSub) {
+    el.innerHTML = '';
+    if (statsEl) statsEl.innerHTML = '';
     return;
   }
-  el.innerHTML = rows.map(r =>
-    '<div><span>' + r.name + '</span><span><strong>' + r.guess + '</strong> cm²</span></div>'
-  ).join('');
+  const correctArea = computeAnswerArea(focusSub);
+  const map = studentGuesses[focusSub.id] || {};
+  // Also merge any studentWork for this design even without guess yet
+  if (cloudState && cloudState.studentWork) {
+    Object.keys(cloudState.studentWork).forEach(function (k) {
+      const w = cloudState.studentWork[k];
+      if (!w || w.designId !== focusSub.id) return;
+      if (!map[k]) {
+        map[k] = {
+          name: w.studentName, guess: w.guess, guessValue: w.guessValue,
+          splits: w.splits || [], at: w.at, studentNo: Number(k)
+        };
+      } else if ((!map[k].splits || !map[k].splits.length) && w.splits) {
+        map[k].splits = w.splits;
+      }
+    });
+  }
+
+  const rows = Object.keys(map).map(function (k) {
+    const r = map[k];
+    return {
+      studentNo: r.studentNo != null ? r.studentNo : Number(k),
+      name: r.name || ('學生' + k),
+      guess: r.guess,
+      guessValue: r.guessValue,
+      splits: r.splits || [],
+      at: r.at
+    };
+  }).sort(function (a, b) { return a.studentNo - b.studentNo; });
+
+  let answered = 0, correctN = 0, wrongN = 0;
+  rows.forEach(function (r) {
+    const val = parseGuessToNumber(r.guess, r.guessValue);
+    if (val == null) return;
+    answered++;
+    if (Math.abs(val - correctArea) < 1e-6) correctN++;
+    else wrongN++;
+  });
+  const pct = function (n) {
+    if (!answered) return '—';
+    return Math.round(n * 1000 / answered) / 10 + '%';
+  };
+  if (statsEl) {
+    statsEl.innerHTML =
+      '<div class="stat muted">已交答案 ' + answered + ' 人</div>' +
+      '<div class="stat ok">答對 ' + correctN + '（' + pct(correctN) + '）</div>' +
+      '<div class="stat bad">答錯 ' + wrongN + '（' + pct(wrongN) + '）</div>';
+  }
+
+  if (!rows.length) {
+    el.innerHTML = '<div class="monitor-empty">暫時未有學生交答案或分割線。<br>學生畫紫線／提交答案後會即時喺度顯示。</div>';
+    return;
+  }
+
+  el.innerHTML = '';
+  rows.forEach(function (r) {
+    const val = parseGuessToNumber(r.guess, r.guessValue);
+    let status = 'pending', badge = '未交答案', cls = 'pending';
+    if (val != null) {
+      const ok = Math.abs(val - correctArea) < 1e-6;
+      status = ok ? 'ok' : 'bad';
+      badge = ok ? '✓ 答對' : '✗ 答錯';
+      cls = ok ? 'ok' : 'bad';
+    }
+    const card = document.createElement('div');
+    card.className = 'monitor-card ' + cls;
+    const thumb = document.createElement('canvas');
+    thumb.width = 144; thumb.height = 144;
+    drawPolygonScene(thumb, thumb.getContext('2d'), focusSub, {
+      tiny: true, bg: '#faf6f1', splits: r.splits || []
+    });
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const guessText = r.guess != null && r.guess !== ''
+      ? ('作答：<strong>' + r.guess + '</strong>（cm²）')
+      : '作答：尚未提交';
+    const splitNote = (r.splits && r.splits.length)
+      ? ('分割線：' + r.splits.length + ' 條')
+      : '未見分割線';
+    meta.innerHTML =
+      '<div class="name">' + r.studentNo + ' ' + r.name + '</div>' +
+      '<div class="guess">' + guessText + '</div>' +
+      '<div class="splits-note">' + splitNote + '</div>';
+    const badgeEl = document.createElement('div');
+    badgeEl.className = 'badge ' + status;
+    badgeEl.textContent = badge;
+    card.appendChild(thumb);
+    card.appendChild(meta);
+    card.appendChild(badgeEl);
+    el.appendChild(card);
+  });
 }
 
 function enterCalcMode(sub, opts) {
   opts = opts || {};
   focusSub = sub;
   revealOn = !!opts.reveal;
+  const isSolo = !!opts.solo;
   splitSegs = [];
   splitDraft = null;
   splitRubber = null;
-  document.getElementById('calc-badge').textContent = '設計者：' + sub.studentNo + ' ' + sub.studentName;
-  document.getElementById('area-guess').value = '';
+  document.getElementById('calc-badge').textContent =
+    (isSolo ? '單機溫習：' : '設計者：') + sub.studentNo + ' ' + sub.studentName;
+  clearGuessMixed();
   document.getElementById('answer-box').classList.remove('show');
+  hideAreaTeachBlock();
 
-  const asStudent = !!opts.asStudent || role === 'student';
+  const asStudent = !!opts.asStudent || role === 'student' || isSolo;
   document.getElementById('calc-student-tools').style.display = asStudent ? '' : 'none';
-  document.getElementById('calc-teacher-tools').style.display = asStudent ? 'none' : '';
+  document.getElementById('calc-teacher-tools').style.display = (!asStudent && !isSolo) ? '' : 'none';
   document.getElementById('calc-student-nav').style.display = asStudent ? '' : 'none';
-  document.getElementById('calc-title').textContent = asStudent ? '一起計算面積' : '課堂計算（老師）';
-  document.getElementById('calc-subtitle').textContent = asStudent
-    ? '畫紫線分割，再填你計到嘅面積'
-    : '撳「顯示答案」會同步晒全班';
 
-  if (!asStudent) {
+  const classRow = document.getElementById('calc-class-guess-row');
+  const soloRow = document.getElementById('calc-solo-actions');
+  if (classRow) classRow.style.display = (asStudent && !isSolo && syncReady) ? '' : (asStudent && !isSolo ? '' : 'none');
+  // Classroom: always show submit-to-teacher when not solo; solo: show check/redraw
+  if (classRow) classRow.style.display = (asStudent && !isSolo) ? '' : 'none';
+  if (soloRow) soloRow.style.display = (asStudent && isSolo) ? '' : 'none';
+
+  if (isSolo) {
+    document.getElementById('calc-title').textContent = '自己溫習・計算面積';
+    document.getElementById('calc-subtitle').textContent = '畫紫線分割，揀整數或分數填答案，再核對';
+    document.getElementById('calc-student-hint').innerHTML =
+      '單機練習：畫<strong>分割線</strong>幫手計，揀<strong>整數</strong>或<strong>分數</strong>填「多邊形的面積是」，撳「核對答案」';
+    document.getElementById('btn-calc-student-back').textContent = '返回設計';
+  } else if (asStudent) {
+    document.getElementById('calc-title').textContent = '一起計算面積';
+    document.getElementById('calc-subtitle').textContent = '畫紫線分割，再填你計到嘅面積';
+    document.getElementById('calc-student-hint').innerHTML =
+      '喺釘板畫<strong>分割線</strong>（紫線），再揀<strong>整數</strong>或<strong>分數</strong>填「多邊形的面積是」';
+    document.getElementById('btn-calc-student-back').textContent = '返回設計';
+  } else {
+    document.getElementById('calc-title').textContent = '課堂計算（老師）';
+    document.getElementById('calc-subtitle').textContent = '下面可監察全班作答同分割線；撳「顯示答案」會同步晒全班';
+  }
+
+  if (!asStudent && !isSolo) {
     document.getElementById('btn-reveal').style.display = revealOn ? 'none' : '';
     document.getElementById('btn-hide-answer').style.display = revealOn ? '' : 'none';
     renderStudentAnswers();
   }
   if (revealOn) {
-    const a = computeAnswerHtml(sub);
-    showAnswerBox(a.area, a.picksHtml);
+    showAnswerBox(computeAnswerArea(sub));
   }
 
   showScreen('screen-calc');
   resizeCalc();
   updateSyncBars();
+}
+
+function openSoloCalcFromBoard() {
+  if (!closed || points.length < 3 || !currentStudent) {
+    toast('請先畫好並封閉多邊形', 'err');
+    return;
+  }
+  soloPractice = true;
+  const sub = {
+    id: 'solo_' + Date.now() + '_' + currentStudent.no,
+    studentNo: currentStudent.no,
+    studentName: currentStudent.name,
+    gridSize: GRID_SIZE,
+    points: points.map(function (p) { return { x: p.x, y: p.y }; }),
+    createdAt: new Date().toISOString(),
+    solo: true
+  };
+  enterCalcMode(sub, { asStudent: true, solo: true, reveal: false });
 }
 
 function teacherOpenDesign(sub) {
@@ -1770,14 +2977,17 @@ document.getElementById('btn-teacher').addEventListener('click', () => {
 document.getElementById('btn-names-back').addEventListener('click', () => showScreen('screen-landing'));
 
 document.getElementById('btn-join-skip').addEventListener('click', () => {
+  soloPractice = true;
   showScreen('screen-board'); resizeBoard(); drawBoard(); updateSyncBars();
+  toast('單機溫習模式：畫完撳「自己計算」', 'ok');
 });
 document.getElementById('btn-join-go').addEventListener('click', async () => {
   const code = document.getElementById('join-code').value.trim();
   if (!/^\d{4,6}$/.test(code)) { toast('請輸入 4–6 位數字編號', 'err'); return; }
+  soloPractice = false;
   const ok = await studentJoinRoom(code);
   showScreen('screen-board'); resizeBoard(); drawBoard(); updateSyncBars();
-  if (!ok) toast('未能連上老師，可稍後喺「課堂編號」再試', 'err');
+  if (!ok) toast('未能連上雲端，可改用「單機練習」或稍後再試', 'err');
 });
 
 document.getElementById('btn-board-back').addEventListener('click', () => {
@@ -1789,6 +2999,9 @@ document.getElementById('btn-board-join').addEventListener('click', () => {
   document.getElementById('join-student-label').textContent =
     currentStudent ? (currentStudent.no + ' ' + currentStudent.name) : '';
   showScreen('screen-join');
+});
+document.getElementById('btn-self-calc').addEventListener('click', () => {
+  openSoloCalcFromBoard();
 });
 document.getElementById('btn-progress-back').addEventListener('click', () => {
   if (progressBackTarget === 'screen-board' && currentStudent) {
@@ -1817,18 +3030,33 @@ document.getElementById('btn-room-regen').addEventListener('click', () => {
 document.getElementById('btn-room-enter').addEventListener('click', () => {
   renderGallery(); showScreen('screen-gallery');
 });
+document.getElementById('btn-room-rejoin').addEventListener('click', async () => {
+  const code = document.getElementById('teacher-rejoin-code').value.trim();
+  if (!/^\d{4,6}$/.test(code)) { toast('請輸入 4–6 位舊編號', 'err'); return; }
+  document.getElementById('room-code-display').textContent = code;
+  document.getElementById('room-status').textContent = '重開課堂中…';
+  const ok = await joinCloudRoom(code, true);
+  if (ok) {
+    document.getElementById('room-status').textContent = '已重開課堂 ' + code + '（已載入雲端資料）';
+    renderGallery();
+    showScreen('screen-gallery');
+    toast('已重開課堂 ' + code, 'ok');
+  } else {
+    document.getElementById('room-status').textContent = '重開失敗，請檢查網絡';
+  }
+});
 document.getElementById('btn-gallery-home').addEventListener('click', () => {
-  destroyPeer(); roomCode = null; showScreen('screen-landing');
+  leaveCloudRoom(); roomCode = null; showScreen('screen-landing');
 });
 
 document.getElementById('btn-reveal').addEventListener('click', () => {
   if (!focusSub) return;
   revealOn = true;
-  const a = computeAnswerHtml(focusSub);
-  showAnswerBox(a.area, a.picksHtml);
+  const area = computeAnswerArea(focusSub);
+  showAnswerBox(area);
   document.getElementById('btn-reveal').style.display = 'none';
   document.getElementById('btn-hide-answer').style.display = '';
-  broadcastTeacher({ type: 'reveal', area: a.area, picksHtml: a.picksHtml, designId: focusSub.id });
+  broadcastTeacher({ type: 'reveal', area: area, designId: focusSub.id });
 });
 document.getElementById('btn-hide-answer').addEventListener('click', () => {
   revealOn = false;
@@ -1842,7 +3070,51 @@ document.getElementById('btn-calc-back').addEventListener('click', () => {
   renderGallery(); showScreen('screen-gallery');
 });
 document.getElementById('btn-calc-student-back').addEventListener('click', () => {
+  document.getElementById('answer-box').classList.remove('show');
+  revealOn = false;
   showScreen('screen-board'); resizeBoard(); drawBoard();
+});
+
+document.getElementById('btn-solo-check').addEventListener('click', () => {
+  if (!focusSub) return;
+  const parsed = readGuessMixedValue();
+  const msg = document.getElementById('solo-check-msg');
+  if (!parsed.ok) {
+    msg.textContent = '請先填寫整數同／或分數';
+    msg.className = 'solo-check-msg bad';
+    hideAreaTeachBlock();
+    toast('請先填寫你計到嘅面積', 'err');
+    return;
+  }
+  const correct = computeAnswerArea(focusSub);
+  const ok = Math.abs(parsed.value - correct) < 1e-6;
+  revealOn = true;
+  if (ok) {
+    showAnswerBox(correct); // no 列式 when correct
+    msg.textContent = '✓ 啱晒！你嘅答案正確。';
+    msg.className = 'solo-check-msg ok';
+    toast('核對成功！', 'ok');
+  } else {
+    showAnswerBox(correct, { teachPoints: focusSub.points, teachSplits: splitSegs.slice() });
+    msg.textContent = '未啱——睇下面【列式】學點計啦！';
+    msg.className = 'solo-check-msg bad';
+    toast('睇列式溫習計面積', 'err');
+  }
+});
+
+document.getElementById('btn-solo-redraw').addEventListener('click', () => {
+  resetDrawing();
+  focusSub = null;
+  revealOn = false;
+  splitSegs = [];
+  clearGuessMixed();
+  document.getElementById('answer-box').classList.remove('show');
+  hideAreaTeachBlock();
+  updateSubmitBtn();
+  showScreen('screen-board');
+  resizeBoard();
+  drawBoard();
+  toast('再畫一幅新多邊形啦', 'ok');
 });
 
 window.addEventListener('resize', () => {
@@ -1850,13 +3122,6 @@ window.addEventListener('resize', () => {
   if (document.getElementById('screen-calc').classList.contains('active')) resizeCalc();
 });
 
-// Init BroadcastChannel listener early for same-browser testing
-try {
-  if (typeof BroadcastChannel !== 'undefined') {
-    bc = new BroadcastChannel('hyt-geoboard-room');
-    bc.onmessage = (ev) => onSyncMessage(ev.data, 'broadcast');
-  }
-} catch (e) {}
 </script>
 </body>
 </html>
