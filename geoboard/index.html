@@ -503,7 +503,9 @@ window.__pubnubLoadPromise = (function () {
   .online-names .tag.teacher { background: #f3e8fa; color: #6c3483; }
   .online-names .tag.online { background: #e8f8ef; color: var(--success); border: 1px solid #a8e6c1; }
   .monitor-stats .stat.online { color: var(--success); }
+  .monitor-stats .stat.todo { color: var(--danger); }
   .monitor-roster.online .roster-title { color: var(--success); }
+  .monitor-roster.todo .roster-title { color: var(--danger); }
   #inspect-modal .modal { max-width: min(96vw, 520px); width: 100%; }
   #inspect-canvas {
     width: 100%; aspect-ratio: 1; border-radius: 12px;
@@ -1149,7 +1151,7 @@ let rubberTip = null;
 let pointerIdActive = null;
 
 let focusSub = null;       // shared design being calculated
-let monitorFilter = null;  // null | 'ok' | 'bad' | 'online' — teacher list filter
+let monitorFilter = null;  // null | 'ok' | 'bad' | 'online' | 'todo' — teacher list filter
 let onlineNamesOpen = false; // gallery「在線」toggle
 const ONLINE_STALE_MS = 90000; // drop ghost presence older than 90s
 let revealOn = false;
@@ -3472,6 +3474,15 @@ function renderStudentAnswers() {
   const answered = correctRows.length + wrongRows.length;
   const correctN = correctRows.length;
   const wrongN = wrongRows.length;
+  const answeredNos = new Set(
+    correctRows.concat(wrongRows).map(function (r) { return r.studentNo; })
+  );
+  const todoRows = STUDENTS.filter(function (st) {
+    return !answeredNos.has(st.no);
+  }).map(function (st) {
+    return { studentNo: st.no, name: st.name };
+  });
+  const todoN = todoRows.length;
   const pct = function (n) {
     if (!answered) return '—';
     return Math.round(n * 1000 / answered) / 10 + '%';
@@ -3492,6 +3503,7 @@ function renderStudentAnswers() {
   if (statsEl) {
     statsEl.innerHTML =
       '<div class="stat muted">已交答案 ' + answered + ' 人</div>' +
+      '<button type="button" class="stat todo clickable' + (monitorFilter === 'todo' ? ' active' : '') + '" data-filter="todo">未完成 ' + todoN + ' 人</button>' +
       '<button type="button" class="stat online clickable' + (monitorFilter === 'online' ? ' active' : '') + '" data-filter="online">在線 ' + onlineN + ' 人</button>' +
       '<button type="button" class="stat ok clickable' + (monitorFilter === 'ok' ? ' active' : '') + '" data-filter="ok">答對 ' + correctN + '（' + pct(correctN) + '）</button>' +
       '<button type="button" class="stat bad clickable' + (monitorFilter === 'bad' ? ' active' : '') + '" data-filter="bad">答錯 ' + wrongN + '（' + pct(wrongN) + '）</button>';
@@ -3507,7 +3519,12 @@ function renderStudentAnswers() {
   }
 
   if (rosterEl) {
-    if (monitorFilter === 'online') {
+    if (monitorFilter === 'todo') {
+      rosterEl.className = 'monitor-roster show todo';
+      rosterEl.innerHTML =
+        '<div class="roster-title">未完成名單（' + todoN + ' 人）</div>' +
+        '<div class="roster-names">' + nameList(todoRows) + '</div>';
+    } else if (monitorFilter === 'online') {
       rosterEl.className = 'monitor-roster show online';
       rosterEl.innerHTML =
         '<div class="roster-title">在線名單（' + onlineN + ' 人）</div>' +
@@ -3528,9 +3545,9 @@ function renderStudentAnswers() {
     }
   }
 
-  // 「在線」只顯示名單，不過濾下方答題卡
+  // 「在線／未完成」只顯示名單，不過濾下方答題卡
   const visible = rows.filter(function (r) {
-    if (!monitorFilter || monitorFilter === 'online') return true;
+    if (!monitorFilter || monitorFilter === 'online' || monitorFilter === 'todo') return true;
     return r.verdict === monitorFilter;
   });
 
