@@ -4,7 +4,51 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>數學釘板・多邊形面積｜順德聯誼總會何日東小學— 何老師設計</title>
-<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.6.3.min.js"></script>
+<script>
+/* Load PubNub SDK: local vendor → jsDelivr → pubnub CDN. REST polling works even if all fail. */
+window.__pubnubLoadPromise = (function () {
+  var urls = [
+    'pubnub.min.js',
+    'https://cdn.jsdelivr.net/npm/pubnub@7.6.3/dist/web/pubnub.min.js',
+    'https://cdn.pubnub.com/sdk/javascript/pubnub.7.6.3.min.js'
+  ];
+  function loadOne(url) {
+    return new Promise(function (resolve) {
+      if (typeof PubNub !== 'undefined') { resolve(true); return; }
+      var s = document.createElement('script');
+      s.src = url;
+      s.async = true;
+      var done = false;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        try { s.remove(); } catch (e) {}
+        resolve(false);
+      }, 8000);
+      s.onload = function () {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(typeof PubNub !== 'undefined');
+      };
+      s.onerror = function () {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(false);
+      };
+      document.head.appendChild(s);
+    });
+  }
+  return (async function () {
+    if (typeof PubNub !== 'undefined') return true;
+    for (var i = 0; i < urls.length; i++) {
+      if (await loadOne(urls[i])) return true;
+    }
+    return false;
+  })();
+})();
+</script>
 <style>
   :root {
     --bg: #fff8f0;
@@ -425,6 +469,7 @@
     </div>
     <p style="text-align:center;color:var(--muted);margin-bottom:8px;">釘板 10 cm × 10 cm　每格邊長 1 cm</p>
     <p style="text-align:center;color:var(--muted);">請選擇身份開始</p>
+    <p style="text-align:center;color:var(--muted);font-size:0.78rem;margin-top:10px;line-height:1.4;">課堂同步建議<strong>直接開啟網頁</strong>；Google Sites 嵌入可能擋住連線。</p>
     <div class="role-btns">
       <button class="btn btn-primary" id="btn-student">學生</button>
       <button class="btn btn-accent" id="btn-teacher">老師</button>
@@ -693,6 +738,9 @@ const GRID_SIZE = 11;
 const PUBNUB_PUBLISH_KEY = 'demo';
 const PUBNUB_SUBSCRIBE_KEY = 'demo';
 const CLOUD_CHANNEL_PREFIX = 'hyt-geoboard-v2-'; // room channel = prefix + code
+const PUBNUB_REST_ORIGIN = 'https://ps.pndsn.com';
+const JOIN_CONNECT_TIMEOUT_MS = 10000;
+const REST_POLL_MS = 2000;
 const SNAP_FRAC = 0.38;
 
 const STUDENTS = [
@@ -1031,15 +1079,49 @@ let studentGuesses = {};   // teacher: designId -> { studentNo: {name, guess, at
 let progressBackTarget = 'screen-board';
 let soloPractice = false; // offline self-quiz (no classroom)
 
-/* ---------- Cloud Sync (PubNub) ---------- */
+/* ---------- Cloud Sync (PubNub SDK + REST polling fallback) ---------- */
 let pubnub = null;
 let roomCode = null;
 let isHost = false;
 let syncReady = false;
+let syncBackend = null; // 'pubnub' | 'rest' | null
 let connectedCount = 0;
 let cloudState = null; // canonical room snapshot
 let applyingCloud = false;
 let presenceTimer = null;
+let restPollTimer = null;
+let restHistoryEnd = null; // PubNub timetoken string for incremental history
+let restSeenKeys = {};
+let pubnubStatusHandler = null;
+
+function restMsgKey(msg) {
+  if (!msg || !msg.type) return '';
+  if (msg.type === 'state') return 'state:' + ((msg.state && msg.state.updatedAt) || '');
+  if (msg.type === 'answer') {
+    return 'a:' + msg.studentNo + ':' + msg.designId + ':' + (msg.at || '') + ':' + (msg.guess || '');
+  }
+  if (msg.type === 'submission' && msg.entry) {
+    return 's:' + (msg.entry.id || (msg.entry.studentNo + ':' + msg.entry.createdAt));
+  }
+  if (msg.type === 'student-work') {
+    return 'w:' + msg.studentNo + ':' + (msg.at || '') + ':' + ((msg.splits && msg.splits.length) || 0);
+  }
+  if (msg.type === 'hello') return 'h:' + msg.studentNo + ':' + (msg.at || msg.studentName || '');
+  return msg.type + ':' + JSON.stringify(msg).slice(0, 96);
+}
+
+function restMarkSeen(key) {
+  if (!key) return false;
+  if (restSeenKeys[key]) return true; // already seen
+  restSeenKeys[key] = Date.now();
+  // prune if large
+  const keys = Object.keys(restSeenKeys);
+  if (keys.length > 300) {
+    keys.sort(function (a, b) { return restSeenKeys[a] - restSeenKeys[b]; });
+    keys.slice(0, keys.length - 200).forEach(function (k) { delete restSeenKeys[k]; });
+  }
+  return false;
+}
 
 function cloudChannel(code) { return CLOUD_CHANNEL_PREFIX + code; }
 
@@ -1057,11 +1139,18 @@ function emptyCloudState(code) {
   };
 }
 
+function syncBackendLabel() {
+  if (!syncReady || !roomCode) return '';
+  if (syncBackend === 'rest') return '雲端·輪詢';
+  if (syncBackend === 'pubnub') return '雲端';
+  return '雲端';
+}
+
 function updateSyncBars() {
   const st = document.getElementById('student-sync-bar');
   if (st) {
     if (roomCode && syncReady) {
-      st.innerHTML = '<div class="sync-pill on">已加入課堂 ' + roomCode + '（雲端）</div>';
+      st.innerHTML = '<div class="sync-pill on">已加入課堂 ' + roomCode + '（' + syncBackendLabel() + '）</div>';
     } else if (roomCode && !syncReady) {
       st.innerHTML = '<div class="sync-pill off">連接雲端中… ' + roomCode + '</div>';
     } else {
@@ -1074,64 +1163,163 @@ function updateSyncBars() {
   const conn = document.getElementById('teacher-conn-pill');
   if (pill) pill.textContent = '課堂：' + (roomCode || '----');
   if (conn) {
-    conn.textContent = '在線約：' + connectedCount + ' 人';
-    conn.className = 'sync-pill ' + (connectedCount ? 'on' : 'off');
+    if (syncBackend === 'rest') {
+      conn.textContent = '同步：輪詢';
+      conn.className = 'sync-pill on';
+    } else {
+      conn.textContent = '在線約：' + connectedCount + ' 人';
+      conn.className = 'sync-pill ' + (connectedCount ? 'on' : (syncReady ? 'on' : 'off'));
+    }
   }
   const calcBar = document.getElementById('calc-sync-bar');
   if (calcBar) {
     calcBar.innerHTML = roomCode
-      ? '<div class="sync-pill on">課堂 ' + roomCode + '（雲端）</div>'
+      ? '<div class="sync-pill on">課堂 ' + roomCode + '（' + syncBackendLabel() + '）</div>'
       : '<div class="sync-pill off">單機模式</div>';
   }
 }
 
+function ensurePubNubSdkLoaded() {
+  if (typeof PubNub !== 'undefined') return Promise.resolve(true);
+  if (window.__pubnubLoadPromise) return window.__pubnubLoadPromise;
+  return Promise.resolve(false);
+}
+
 function ensurePubNub() {
   if (pubnub) return pubnub;
-  if (typeof PubNub === 'undefined') {
-    toast('雲端同步庫未載入，請檢查網絡後重新整理', 'err');
-    return null;
-  }
+  if (typeof PubNub === 'undefined') return null;
   pubnub = new PubNub({
     publishKey: PUBNUB_PUBLISH_KEY,
     subscribeKey: PUBNUB_SUBSCRIBE_KEY,
     uuid: 'hyt-' + Math.random().toString(36).slice(2, 10) + '-' + Date.now().toString(36),
     heartbeatInterval: 30,
-    presenceTimeout: 60
+    presenceTimeout: 60,
+    restore: true
   });
   pubnub.addListener({
     message: function (ev) {
       try { onCloudMessage(ev.message); } catch (err) { console.warn(err); }
     },
-    status: function (st) {
-      if (st.category === 'PNConnectedCategory' || st.category === 'PNNetworkUpCategory') {
-        syncReady = true;
-        updateSyncBars();
-      }
-    },
-    presence: function () { refreshPresence(); }
+    presence: function () {
+      try { refreshPresence(); } catch (e) {}
+    }
   });
   return pubnub;
 }
 
+function waitForPubNubConnected(pn, timeoutMs) {
+  return new Promise(function (resolve) {
+    var settled = false;
+    function finish(ok) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        if (pubnubStatusHandler) pn.removeListener(pubnubStatusHandler);
+      } catch (e) {}
+      pubnubStatusHandler = null;
+      resolve(ok);
+    }
+    var timer = setTimeout(function () { finish(false); }, timeoutMs || JOIN_CONNECT_TIMEOUT_MS);
+    pubnubStatusHandler = {
+      status: function (st) {
+        if (!st) return;
+        if (st.category === 'PNConnectedCategory' || st.category === 'PNNetworkUpCategory') {
+          finish(true);
+        }
+        // soft: ignore presence/history errors during connect wait
+      }
+    };
+    pn.addListener(pubnubStatusHandler);
+    // already connected?
+    try {
+      if (pn.getSubscribedChannels && pn.getSubscribedChannels().length) {
+        /* still wait for event */
+      }
+    } catch (e) {}
+  });
+}
+
 function leaveCloudRoom() {
   if (presenceTimer) { clearInterval(presenceTimer); presenceTimer = null; }
+  if (restPollTimer) { clearInterval(restPollTimer); restPollTimer = null; }
   if (pubnub && roomCode) {
     try { pubnub.unsubscribe({ channels: [cloudChannel(roomCode)] }); } catch (e) {}
   }
   syncReady = false;
+  syncBackend = null;
   connectedCount = 0;
   cloudState = null;
+  restHistoryEnd = null;
+  restSeenKeys = {};
+  roomCode = null;
+  isHost = false;
+}
+
+function restPublishMessage(msg) {
+  if (!roomCode) return Promise.resolve(false);
+  var channel = cloudChannel(roomCode);
+  var url = PUBNUB_REST_ORIGIN + '/publish/' + PUBNUB_PUBLISH_KEY + '/' + PUBNUB_SUBSCRIBE_KEY +
+    '/0/' + encodeURIComponent(channel) + '/0';
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(msg)
+  }).then(function (r) { return r.json(); }).then(function (arr) {
+    return Array.isArray(arr) && arr[0] === 1;
+  }).catch(function (e) {
+    console.warn('REST publish fail', e);
+    return false;
+  });
+}
+
+function restFetchHistory(code, opts) {
+  opts = opts || {};
+  var channel = cloudChannel(code);
+  var url = PUBNUB_REST_ORIGIN + '/v2/history/sub-key/' + PUBNUB_SUBSCRIBE_KEY +
+    '/channel/' + encodeURIComponent(channel) + '?count=' + (opts.count || 40) +
+    '&stringtoken=true&include_token=true';
+  // PubNub history goes backward from start; without start = most recent window
+  if (opts.start) url += '&start=' + encodeURIComponent(opts.start);
+  if (opts.reverse) url += '&reverse=true';
+  return fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+    var msgs = (data && data[0]) || [];
+    var startTok = data && data[1];
+    var endTok = data && data[2];
+    return { messages: msgs, start: startTok, end: endTok };
+  }).catch(function (e) {
+    console.warn('REST history fail', e);
+    return { messages: [], start: null, end: null };
+  });
+}
+
+function pickBestStateFromMessages(messages) {
+  var best = null;
+  (messages || []).forEach(function (m) {
+    var msg = m;
+    // history may wrap as { message, timetoken } when include_token
+    if (msg && msg.message) msg = msg.message;
+    if (msg && msg.type === 'state' && msg.state) {
+      if (!best || (msg.state.updatedAt || 0) >= (best.updatedAt || 0)) best = msg.state;
+    }
+  });
+  return best;
 }
 
 function publishCloud(msg) {
-  if (!pubnub || !roomCode) return Promise.resolve(false);
+  if (!msg || !roomCode || !syncReady) return Promise.resolve(false);
+  if (syncBackend === 'rest') {
+    return restPublishMessage(msg);
+  }
+  if (!pubnub) return Promise.resolve(false);
   return pubnub.publish({
     channel: cloudChannel(roomCode),
     message: msg,
     storeInHistory: true
   }).then(function () { return true; }).catch(function (e) {
     console.warn('publish fail', e);
-    return false;
+    // soft fallback: try REST once
+    return restPublishMessage(msg);
   });
 }
 
@@ -1311,7 +1499,7 @@ function onCloudMessage(data) {
       name: ans.studentName, guess: ans.guess, guessValue: ans.guessValue,
       splits: ans.splits, at: ans.at, studentNo: ans.studentNo
     };
-    if (isHost) publishCloudState();
+    if (isHost || syncBackend === 'rest') publishCloudState();
     if (focusSub && focusSub.id === ans.designId) renderStudentAnswers();
     if (role === 'teacher') toast(ans.studentName + ' 交咗答案：' + ans.guess, 'ok');
     return;
@@ -1341,7 +1529,7 @@ function onCloudMessage(data) {
         studentNo: data.studentNo
       };
     }
-    if (isHost) {
+    if (isHost || syncBackend === 'rest') {
       cloudState.updatedAt = Date.now();
       if (window.__workPublishTimer) clearTimeout(window.__workPublishTimer);
       window.__workPublishTimer = setTimeout(function () { publishCloudState(); }, 400);
@@ -1359,79 +1547,141 @@ function onCloudMessage(data) {
 }
 
 function refreshPresence() {
-  if (!pubnub || !roomCode) return;
-  pubnub.hereNow({ channels: [cloudChannel(roomCode)], includeUUIDs: true }, function (status, response) {
-    if (status.error || !response || !response.channels) return;
-    const ch = response.channels[cloudChannel(roomCode)];
-    connectedCount = ch && typeof ch.occupancy === 'number' ? ch.occupancy : 0;
-    updateSyncBars();
-  });
+  // Soft: presence is optional; never fail join/sync if hereNow errors
+  if (syncBackend !== 'pubnub' || !pubnub || !roomCode) return;
+  try {
+    pubnub.hereNow({ channels: [cloudChannel(roomCode)], includeUUIDs: true }, function (status, response) {
+      if (status && status.error) return;
+      if (!response || !response.channels) return;
+      const ch = response.channels[cloudChannel(roomCode)];
+      connectedCount = ch && typeof ch.occupancy === 'number' ? ch.occupancy : 0;
+      updateSyncBars();
+    });
+  } catch (e) {
+    /* ignore */
+  }
 }
 
 function fetchLatestCloudState(code) {
+  if (syncBackend === 'rest' || !pubnub) {
+    return restFetchHistory(code, { count: 50 }).then(function (res) {
+      if (res.end) restHistoryEnd = String(res.end);
+      return pickBestStateFromMessages(res.messages);
+    });
+  }
   return new Promise(function (resolve) {
-    const pn = ensurePubNub();
-    if (!pn) { resolve(null); return; }
+    const pn = pubnub;
+    if (!pn) {
+      restFetchHistory(code, { count: 50 }).then(function (res) {
+        resolve(pickBestStateFromMessages(res.messages));
+      });
+      return;
+    }
     const ch = cloudChannel(code);
     function pickBest(messages) {
-      let best = null;
-      (messages || []).forEach(function (m) {
-        const msg = (m && (m.entry || m.message || m)) || null;
-        if (msg && msg.type === 'state' && msg.state) {
-          if (!best || (msg.state.updatedAt || 0) >= (best.updatedAt || 0)) best = msg.state;
-        }
-      });
-      return best;
+      return pickBestStateFromMessages(messages);
     }
-    // PubNub v7+: prefer fetchMessages; fall back to history
-    if (typeof pn.fetchMessages === 'function') {
-      pn.fetchMessages({ channels: [ch], count: 40 }, function (status, response) {
-        if (status.error || !response || !response.channels) {
-          // fallback
-          pn.history({ channel: ch, count: 40, stringifiedTimeToken: true }, function (st2, res2) {
-            if (st2.error || !res2) { resolve(null); return; }
-            resolve(pickBest(res2.messages));
-          });
-          return;
-        }
-        resolve(pickBest(response.channels[ch]));
+    function failToRest() {
+      restFetchHistory(code, { count: 50 }).then(function (res) {
+        resolve(pickBestStateFromMessages(res.messages));
       });
-    } else {
-      pn.history({ channel: ch, count: 40, stringifiedTimeToken: true }, function (status, response) {
-        if (status.error || !response) { resolve(null); return; }
-        resolve(pickBest(response.messages));
-      });
+    }
+    try {
+      if (typeof pn.fetchMessages === 'function') {
+        pn.fetchMessages({ channels: [ch], count: 40 }, function (status, response) {
+          if (status && status.error || !response || !response.channels) {
+            // soft: try SDK history then REST
+            try {
+              pn.history({ channel: ch, count: 40, stringifiedTimeToken: true }, function (st2, res2) {
+                if (st2 && st2.error || !res2) { failToRest(); return; }
+                resolve(pickBest(res2.messages));
+              });
+            } catch (e) { failToRest(); }
+            return;
+          }
+          resolve(pickBest(response.channels[ch]));
+        });
+      } else {
+        pn.history({ channel: ch, count: 40, stringifiedTimeToken: true }, function (status, response) {
+          if (status && status.error || !response) { failToRest(); return; }
+          resolve(pickBest(response.messages));
+        });
+      }
+    } catch (e) {
+      failToRest();
     }
   });
 }
 
-async function joinCloudRoom(code, asTeacher) {
-  leaveCloudRoom();
-  roomCode = code;
-  isHost = !!asTeacher;
-  syncReady = false;
-  updateSyncBars();
-  const pn = ensurePubNub();
-  if (!pn) return false;
+async function restPollTick() {
+  if (!roomCode || syncBackend !== 'rest') return;
+  try {
+    const res = await restFetchHistory(roomCode, { count: 50 });
+    const msgs = res.messages || [];
+    const normalized = msgs.map(function (m) {
+      return (m && m.message) ? m.message : m;
+    });
+    // History returns oldest→newest within the window; apply in order, skip seen
+    normalized.forEach(function (msg) {
+      if (!msg || !msg.type) return;
+      const key = restMsgKey(msg);
+      if (restMarkSeen(key)) return;
+      if (msg.type === 'state') {
+        if (msg.state) applyCloudState(msg.state);
+        return;
+      }
+      // Non-state: host merges into canonical state; students ignore (state snapshot carries it)
+      if (isHost) onCloudMessage(msg);
+    });
+    if (res.end) restHistoryEnd = String(res.end);
+  } catch (e) {
+    console.warn('rest poll', e);
+  }
+}
 
-  pn.subscribe({ channels: [cloudChannel(code)], withPresence: true });
+function startRestPolling() {
+  if (restPollTimer) clearInterval(restPollTimer);
+  restPollTimer = setInterval(function () { restPollTick(); }, REST_POLL_MS);
+  restPollTick();
+}
+
+async function probeRestReachable() {
+  try {
+    const r = await fetch(PUBNUB_REST_ORIGIN + '/time/0', { method: 'GET' });
+    if (!r.ok) return false;
+    const arr = await r.json();
+    return Array.isArray(arr) && arr.length > 0;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function joinCloudRoomViaRest(code, asTeacher) {
+  const okNet = await probeRestReachable();
+  if (!okNet) return false;
+  syncBackend = 'rest';
   syncReady = true;
+  updateSyncBars();
 
-  const latest = await fetchLatestCloudState(code);
+  const boot = await restFetchHistory(code, { count: 50 });
+  (boot.messages || []).forEach(function (m) {
+    const msg = (m && m.message) ? m.message : m;
+    restMarkSeen(restMsgKey(msg));
+  });
+  if (boot.end) restHistoryEnd = String(boot.end);
+
+  const latest = pickBestStateFromMessages(boot.messages || []);
   if (latest) {
     applyCloudState(latest, { force: true, silent: true });
   } else if (asTeacher) {
     cloudState = emptyCloudState(code);
-    // seed from local if any
     cloudState.submissions = getLatestByStudent();
     await publishCloudState();
   } else {
     cloudState = emptyCloudState(code);
   }
 
-  refreshPresence();
-  if (presenceTimer) clearInterval(presenceTimer);
-  presenceTimer = setInterval(refreshPresence, 8000);
+  startRestPolling();
 
   if (!asTeacher && currentStudent) {
     publishCloud({
@@ -1444,15 +1694,92 @@ async function joinCloudRoom(code, asTeacher) {
   return true;
 }
 
+async function joinCloudRoom(code, asTeacher) {
+  leaveCloudRoom();
+  roomCode = code;
+  isHost = !!asTeacher;
+  syncReady = false;
+  syncBackend = null;
+  updateSyncBars();
+
+  // Try SDK first (local vendor / jsDelivr / pubnub CDN)
+  const sdkOk = await ensurePubNubSdkLoaded();
+  if (sdkOk) {
+    const pn = ensurePubNub();
+    if (pn) {
+      try {
+        pn.subscribe({ channels: [cloudChannel(code)], withPresence: true });
+        const connected = await waitForPubNubConnected(pn, JOIN_CONNECT_TIMEOUT_MS);
+        if (connected) {
+          syncBackend = 'pubnub';
+          syncReady = true;
+          updateSyncBars();
+
+          let latest = null;
+          try {
+            latest = await fetchLatestCloudState(code);
+          } catch (e) {
+            latest = null; // soft: history failure must not fail join
+          }
+          if (latest) {
+            applyCloudState(latest, { force: true, silent: true });
+          } else if (asTeacher) {
+            cloudState = emptyCloudState(code);
+            cloudState.submissions = getLatestByStudent();
+            await publishCloudState();
+          } else {
+            cloudState = emptyCloudState(code);
+          }
+
+          // presence optional
+          try { refreshPresence(); } catch (e) {}
+          if (presenceTimer) clearInterval(presenceTimer);
+          presenceTimer = setInterval(function () {
+            try { refreshPresence(); } catch (e) {}
+          }, 8000);
+
+          if (!asTeacher && currentStudent) {
+            publishCloud({
+              type: 'hello',
+              studentNo: currentStudent.no,
+              studentName: currentStudent.name
+            });
+          }
+          updateSyncBars();
+          return true;
+        }
+      } catch (e) {
+        console.warn('PubNub subscribe failed, falling back to REST', e);
+      }
+      // detach SDK channel before REST so we don't double-handle
+      try {
+        if (pubnub) pubnub.unsubscribe({ channels: [cloudChannel(code)] });
+      } catch (e2) {}
+    }
+  }
+
+  // Fallback: HTTP polling via PubNub REST (no SDK / no websocket)
+  const restOk = await joinCloudRoomViaRest(code, asTeacher);
+  if (!restOk) {
+    toast('連線失敗：無法連接雲端（請直接開啟網頁，唔好用 Google Sites 嵌入；或檢查網絡）', 'err');
+    leaveCloudRoom();
+    updateSyncBars();
+    return false;
+  }
+  return true;
+}
+
 function teacherStartRoom(code) {
   document.getElementById('room-code-display').textContent = code;
   document.getElementById('room-status').textContent = '連接雲端中…';
   joinCloudRoom(code, true).then(function (ok) {
     if (ok) {
       document.getElementById('room-status').textContent =
-        '課堂已就緒（雲端）！請學生輸入編號 ' + code + '（任何網絡都得）';
+        '課堂已就緒（' + syncBackendLabel() + '）！請學生輸入編號 ' + code +
+        '（建議直接開啟網頁）';
     } else {
-      document.getElementById('room-status').textContent = '雲端連接失敗，可重試或用單機。';
+      document.getElementById('room-status').textContent =
+        '雲端連接失敗。請用瀏覽器直接開啟本頁（唔好嵌入 Sites），或稍後重試。單機仍可用。';
     }
     updateSyncBars();
   });
@@ -1461,14 +1788,13 @@ function teacherStartRoom(code) {
 async function studentJoinRoom(code) {
   const ok = await joinCloudRoom(code, false);
   if (ok) {
-    // push existing local submission if any
     const mine = getLatestByStudent().find(function (s) { return s.studentNo === currentStudent.no; });
     if (mine) {
       publishCloud({ type: 'submission', entry: mine });
     }
-    toast('已加入課堂 ' + code, 'ok');
+    toast('已加入課堂 ' + code + '（' + syncBackendLabel() + '）', 'ok');
   } else {
-    toast('未能連上雲端，可稍後再試或用單機', 'err');
+    toast('連線失敗：可改用「單機練習」或直接開啟網頁再試', 'err');
   }
   return ok;
 }
@@ -1533,7 +1859,10 @@ function sendToHost(msg) {
     return;
   }
   if (msg.type === 'answer') {
-    publishCloud(msg);
+    // Locally merge so REST mode can snapshot immediately
+    onCloudMessage(msg);
+    if (syncBackend !== 'rest') publishCloud(msg);
+    // REST: onCloudMessage already publishCloudState
     return;
   }
   publishCloud(msg);
