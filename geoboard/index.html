@@ -374,29 +374,6 @@ window.__pubnubLoadPromise = (function () {
   }
   .solo-check-msg.ok { color: var(--success); }
   .solo-check-msg.bad { color: var(--danger); }
-  .teach-block {
-    display: none; margin-top: 14px; text-align: left;
-    background: #fffdf7; border: 2px solid #f0e0c0; border-radius: 12px;
-    padding: 12px 14px; color: var(--text); font-size: 0.95rem; line-height: 1.55;
-  }
-  .teach-block.show { display: block; }
-  .teach-block h4 {
-    margin: 0 0 8px; color: var(--primary-dark); font-size: 1.05rem; text-align: center;
-  }
-  .teach-block ol { margin: 0 0 8px 1.2em; padding: 0; }
-  .teach-block li { margin: 6px 0; }
-  .teach-block .eq {
-    font-weight: 700; background: #fff; border-radius: 8px;
-    padding: 6px 10px; margin: 4px 0 8px; display: inline-block;
-  }
-  .teach-block .total {
-    margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0d0b0;
-    font-weight: 800; text-align: center; font-size: 1.05rem; color: var(--success);
-  }
-  .teach-block .hint {
-    margin-top: 6px; font-size: 0.85rem; color: var(--muted); text-align: center;
-  }
-
   .toolbar-top {
     display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between;
     align-items: center; width: 100%; max-width: 900px; margin-bottom: 12px;
@@ -592,7 +569,8 @@ window.__pubnubLoadPromise = (function () {
     <button class="btn btn-success btn-block" id="btn-submit" disabled>提交圖案（課堂）</button>
   </div>
   <div class="btn-row">
-    <button class="btn btn-ghost" id="btn-board-progress">全班進度</button>
+    <!-- 全班進度／課堂監察僅老師可見 -->
+    <button class="btn btn-ghost" id="btn-board-progress" style="display:none;" aria-hidden="true" tabindex="-1">全班進度</button>
     <button class="btn btn-ghost" id="btn-board-join">課堂編號</button>
     <button class="btn btn-ghost" id="btn-board-back">返回選名</button>
   </div>
@@ -762,7 +740,6 @@ window.__pubnubLoadPromise = (function () {
 
   <div class="answer-box" id="answer-box">
     <div class="area" id="answer-area"></div>
-    <div class="teach-block" id="area-teach-block" aria-live="polite"></div>
   </div>
 
   <div class="btn-row" id="calc-student-nav" style="display:none;">
@@ -1682,20 +1659,14 @@ function applyCloudState(state, opts) {
           toast('老師已選擇「' + state.focus.studentName + '」的圖，一起計算！', 'ok');
         }
       } else if (state.reveal && state.revealArea != null && studentMaySeeCorrectArea()) {
-        showAnswerBox(state.revealArea, {
-          teachPoints: state.focus.points,
-          teachSplits: []
-        });
+        showAnswerBox(state.revealArea);
       } else if (!state.reveal && !studentMaySeeCorrectArea()) {
         document.getElementById('answer-box').classList.remove('show');
         hideAreaTeachBlock();
       }
     } else if (role === 'teacher' && document.getElementById('screen-calc').classList.contains('active')) {
       if (state.reveal && state.revealArea != null) {
-        showAnswerBox(state.revealArea, {
-          teachPoints: state.focus.points,
-          teachSplits: []
-        });
+        showAnswerBox(state.revealArea);
       } else if (!state.reveal) {
         document.getElementById('answer-box').classList.remove('show');
         hideAreaTeachBlock();
@@ -2341,6 +2312,15 @@ function renderProgressInto(summaryEl, listEl, opts) {
   });
 }
 function showStudentProgress() {
+  // 學生不可查看全班進度／課堂監察；僅老師於教師畫面使用進度列表
+  if (role === 'student') {
+    if (currentStudent) {
+      showScreen('screen-board');
+      resizeBoard();
+      drawBoard();
+    }
+    return;
+  }
   progressBackTarget = currentStudent ? 'screen-board' : 'screen-names';
   renderProgressInto(document.getElementById('progress-summary'), document.getElementById('progress-list'),
     { highlightNo: currentStudent ? currentStudent.no : null });
@@ -2777,9 +2757,10 @@ document.getElementById('btn-submit').addEventListener('click', () => {
   };
   upsertSubmission(entry);
   sendToHost({ type: 'submission', entry: entry });
-  showModal('提交成功！', currentStudent.no + ' ' + currentStudent.name + ' 的圖案已儲存' +
-    (syncReady ? '，並已傳送給老師。' : '（單機）。') + '現在可查看全班進度。', () => {
-    resetDrawing(); drawBoard(); updateSubmitBtn(); showStudentProgress();
+  showModal('提交成功', currentStudent.no + ' ' + currentStudent.name + ' 的圖案已儲存' +
+    (syncReady ? '，並已傳送給老師。' : '（單機）。') + '請等候老師廣播。', () => {
+    resetDrawing(); drawBoard(); updateSubmitBtn();
+    showScreen('screen-board'); resizeBoard(); drawBoard();
   });
 });
 
@@ -3021,375 +3002,13 @@ document.getElementById('btn-submit-guess').addEventListener('click', () => {
 });
 
 
-/** Format a number inline in 列式 using flexible area style (no unit). */
-function areaInline(a) { return formatAreaNice(a); }
+/** 列式／公式教學已移除：顯示答案時只顯示正確面積。 */
+function hideAreaTeachBlock() { /* no-op: 列式 UI 已移除 */ }
 
-function isNiceMeasure(x) {
-  if (!isFinite(x) || x <= 0) return false;
-  const r2 = Math.round(x * 2) / 2;
-  const r4 = Math.round(x * 4) / 4;
-  return Math.abs(x - Math.round(x)) < 1e-6 ||
-    Math.abs(x - r2) < 1e-6 ||
-    Math.abs(x - r4) < 1e-6;
-}
-
-function vec(a, b) { return { x: b.x - a.x, y: b.y - a.y }; }
-function nearly(a, b) { return Math.abs(a - b) < 1e-6; }
-function cross(u, v) { return u.x * v.y - u.y * v.x; }
-function dot(u, v) { return u.x * v.x + u.y * v.y; }
-
-function triangleBaseHeight(A, B, C) {
-  const area = shoelaceArea([A, B, C]);
-  if (area < 1e-9) return null;
-  const edges = [[A, B, C], [B, C, A], [C, A, B]];
-  for (let i = 0; i < edges.length; i++) {
-    const P = edges[i][0], Q = edges[i][1], R = edges[i][2];
-    if (P.y === Q.y) {
-      const base = Math.abs(Q.x - P.x);
-      const height = Math.abs(R.y - P.y);
-      if (base > 0 && height > 0 && Math.abs(base * height / 2 - area) < 1e-6) {
-        return { base: base, height: height, area: area, nice: true };
-      }
-    }
-    if (P.x === Q.x) {
-      const base = Math.abs(Q.y - P.y);
-      const height = Math.abs(R.x - P.x);
-      if (base > 0 && height > 0 && Math.abs(base * height / 2 - area) < 1e-6) {
-        return { base: base, height: height, area: area, nice: true };
-      }
-    }
-  }
-  return { base: null, height: null, area: area, nice: false };
-}
-
-function triangleEquationHtml(th, label) {
-  const aStr = formatAreaWithUnit(th.area);
-  if (th.nice && th.base != null && th.height != null) {
-    const b = areaInline(th.base);
-    const h = areaInline(th.height);
-    return (label ? label + '：' : '') + '底 = ' + b + ' cm，高 = ' + h + ' cm<br>' +
-      '<span class="eq">面積 = 底 × 高 ÷ 2 = ' + b + ' × ' + h + ' ÷ 2 = ' + aStr + '</span>';
-  }
-  return (label ? label + '：' : '') +
-    '<span class="eq">面積 = ' + aStr + '</span>';
-}
-
-function isAxisAlignedRectangle(pts) {
-  if (!pts || pts.length !== 4) return null;
-  const xs = pts.map(function (p) { return p.x; });
-  const ys = pts.map(function (p) { return p.y; });
-  const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
-  const minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
-  if (maxX === minX || maxY === minY) return null;
-  const need = {};
-  [[minX, minY], [minX, maxY], [maxX, minY], [maxX, maxY]].forEach(function (c) {
-    need[c[0] + ',' + c[1]] = true;
-  });
-  for (let i = 0; i < 4; i++) {
-    if (!need[pts[i].x + ',' + pts[i].y]) return null;
-  }
-  for (let i = 0; i < 4; i++) {
-    const a = pts[i], b = pts[(i + 1) % 4];
-    if (a.x !== b.x && a.y !== b.y) return null;
-  }
-  const w = maxX - minX, h = maxY - minY;
-  return { w: w, h: h, area: w * h, square: nearly(w, h) };
-}
-
-/** 平行四邊形：對邊平行且相等（格子向量） */
-function isParallelogram(pts) {
-  if (!pts || pts.length !== 4) return null;
-  // order around boundary
-  const v01 = vec(pts[0], pts[1]);
-  const v12 = vec(pts[1], pts[2]);
-  const v23 = vec(pts[2], pts[3]);
-  const v30 = vec(pts[3], pts[0]);
-  const opp1 = nearly(v01.x, -v23.x) && nearly(v01.y, -v23.y);
-  const opp2 = nearly(v12.x, -v30.x) && nearly(v12.y, -v30.y);
-  if (!opp1 || !opp2) return null;
-  const area = shoelaceArea(pts);
-  // base/height if one side horizontal
-  let base = null, height = null;
-  if (pts[0].y === pts[1].y) {
-    base = Math.abs(pts[1].x - pts[0].x);
-    height = Math.abs(pts[3].y - pts[0].y);
-  } else if (pts[1].y === pts[2].y) {
-    base = Math.abs(pts[2].x - pts[1].x);
-    height = Math.abs(pts[0].y - pts[1].y);
-  }
-  return { area: area, base: base, height: height };
-}
-
-/** 梯形：恰好一組對邊平行（優先水平／垂直底） */
-function isTrapezoid(pts) {
-  if (!pts || pts.length !== 4) return null;
-  const sides = [];
-  for (let i = 0; i < 4; i++) {
-    sides.push(vec(pts[i], pts[(i + 1) % 4]));
-  }
-  function parallel(u, v) { return Math.abs(cross(u, v)) < 1e-9; }
-  const pairs = [];
-  if (parallel(sides[0], sides[2])) pairs.push([0, 2]);
-  if (parallel(sides[1], sides[3])) pairs.push([1, 3]);
-  if (pairs.length !== 1) return null; // parallelogram has 2; skip here
-  const area = shoelaceArea(pts);
-  // horizontal bases?
-  const ys = pts.map(function (p) { return p.y; });
-  const uniqY = Array.from(new Set(ys)).sort(function (a, b) { return a - b; });
-  if (uniqY.length === 2) {
-    const y0 = uniqY[0], y1 = uniqY[1];
-    const top = pts.filter(function (p) { return p.y === y1; }).map(function (p) { return p.x; });
-    const bot = pts.filter(function (p) { return p.y === y0; }).map(function (p) { return p.x; });
-    if (top.length >= 1 && bot.length >= 1) {
-      const a = Math.max.apply(null, top) - Math.min.apply(null, top);
-      const b = Math.max.apply(null, bot) - Math.min.apply(null, bot);
-      const h = y1 - y0;
-      // if only one point on a level, width 0 — not a proper trapezoid strip
-      if (top.length === 1) { /* apex */ }
-      return {
-        area: area,
-        a: Math.max(a, 0),
-        b: Math.max(b, 0),
-        h: h,
-        horizontal: true
-      };
-    }
-  }
-  return { area: area, a: null, b: null, h: null, horizontal: false };
-}
-
-/** X-span of polygon along horizontal line y (outermost for simple polygons). */
-function polygonXSpanAtY(points, y) {
-  const xs = [];
-  const n = points.length;
-  for (let i = 0; i < n; i++) {
-    const a = points[i], b = points[(i + 1) % n];
-    if (nearly(a.y, y)) xs.push(a.x);
-    if (nearly(a.y, b.y)) continue;
-    const ymin = Math.min(a.y, b.y), ymax = Math.max(a.y, b.y);
-    if (y < ymin - 1e-9 || y > ymax + 1e-9) continue;
-    const t = (y - a.y) / (b.y - a.y);
-    if (t >= -1e-9 && t <= 1 + 1e-9) xs.push(a.x + t * (b.x - a.x));
-  }
-  if (xs.length < 2) return null;
-  const lo = Math.min.apply(null, xs);
-  const hi = Math.max.apply(null, xs);
-  if (hi - lo < 1e-9) return null;
-  return { left: lo, right: hi, width: hi - lo };
-}
-
-function collectStripYs(points, segs) {
-  const ys = {};
-  points.forEach(function (p) { ys[p.y] = true; });
-  (segs || []).forEach(function (s) {
-    if (!s || !s.a || !s.b) return;
-    // horizontal purple split lines
-    if (nearly(s.a.y, s.b.y)) ys[s.a.y] = true;
-  });
-  return Object.keys(ys).map(Number).sort(function (a, b) { return a - b; });
-}
-
-/**
- * Split polygon into horizontal strips (梯形／長方形／正方形).
- * Uses vertex y-levels + student purple horizontal split lines.
- */
-function decomposeHorizontalStrips(points, segs) {
-  const ys = collectStripYs(points, segs);
-  if (ys.length < 2) return null;
-  const strips = [];
-  for (let i = 0; i < ys.length - 1; i++) {
-    const y0 = ys[i], y1 = ys[i + 1];
-    const h = y1 - y0;
-    if (h < 1e-9) continue;
-    const top = polygonXSpanAtY(points, y1);
-    const bot = polygonXSpanAtY(points, y0);
-    if (!top || !bot) continue;
-    const a = top.width;  // 上底
-    const b = bot.width;  // 下底
-    const area = (a + b) / 2 * h;
-    if (area < 1e-9) continue;
-    let kind = '梯形';
-    if (nearly(a, b)) {
-      kind = nearly(a, h) ? '正方形' : '長方形';
-    }
-    strips.push({ y0: y0, y1: y1, a: a, b: b, h: h, area: area, kind: kind });
-  }
-  if (!strips.length) return null;
-  const sum = strips.reduce(function (s, t) { return s + t.area; }, 0);
-  const total = shoelaceArea(points);
-  // Accept if close to true area (convex / simple monotone in y)
-  if (Math.abs(sum - total) > 0.05) return null;
-  return { strips: strips, sum: sum };
-}
-
-function decomposeVerticalStrips(points, segs) {
-  // rotate logic: treat x as "y"
-  const rot = points.map(function (p) { return { x: p.y, y: p.x }; });
-  const rotSegs = (segs || []).map(function (s) {
-    return { a: { x: s.a.y, y: s.a.x }, b: { x: s.b.y, y: s.b.x } };
-  }).filter(function (s) { return nearly(s.a.y, s.b.y); }); // vertical originals → horizontal in rot
-  // also include original vertical splits
-  (segs || []).forEach(function (s) {
-    if (nearly(s.a.x, s.b.x)) {
-      rotSegs.push({ a: { x: s.a.y, y: s.a.x }, b: { x: s.b.y, y: s.b.x } });
-    }
-  });
-  const d = decomposeHorizontalStrips(rot, rotSegs);
-  return d;
-}
-
-function stripEquationHtml(strip, idx) {
-  const a = areaInline(strip.a);
-  const b = areaInline(strip.b);
-  const h = areaInline(strip.h);
-  const aStr = formatAreaWithUnit(strip.area);
-  if (strip.kind === '長方形' || strip.kind === '正方形') {
-    return '第 ' + idx + ' 條：<strong>' + strip.kind + '</strong>——長 = ' + a +
-      ' cm，闊 = ' + h + ' cm<br>' +
-      '<span class="eq">面積 = 長 × 闊 = ' + a + ' × ' + h + ' = ' + aStr + '</span>';
-  }
-  return '第 ' + idx + ' 條：<strong>梯形</strong>——上底 = ' + a +
-    ' cm，下底 = ' + b + ' cm，高 = ' + h + ' cm<br>' +
-    '<span class="eq">面積 =（上底 + 下底）× 高 ÷ 2 =（' + a + ' + ' + b +
-    '）× ' + h + ' ÷ 2 = ' + aStr + '</span>';
-}
-
-function boundingRectFillHtml(points, total) {
-  const xs = points.map(function (p) { return p.x; });
-  const ys = points.map(function (p) { return p.y; });
-  const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
-  const minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
-  const rw = maxX - minX, rh = maxY - minY;
-  if (rw <= 0 || rh <= 0) return null;
-  const rectArea = rw * rh;
-  if (rectArea + 1e-9 < total) return null;
-  const extra = rectArea - total;
-  const steps = [];
-  steps.push('可以先<strong>填補成一個長方形</strong>，再減去多餘部分。');
-  steps.push(
-    '長方形：長 = ' + areaInline(rw) + ' cm，闊 = ' + areaInline(rh) + ' cm<br>' +
-    '<span class="eq">長方形面積 = 長 × 闊 = ' + areaInline(rw) + ' × ' +
-    areaInline(rh) + ' = ' + formatAreaWithUnit(rectArea) + '</span>'
-  );
-  if (extra > 1e-9) {
-    steps.push('多餘部分（外面三角形／梯形）面積 = ' + formatAreaWithUnit(extra));
-    steps.push(
-      '<span class="eq">多邊形面積 = 長方形 − 多餘 = ' +
-      areaInline(rectArea) + ' − ' + areaInline(extra) + ' = ' +
-      formatAreaWithUnit(total) + '</span>'
-    );
-  } else {
-    steps.push('<span class="eq">多邊形面積 = ' + formatAreaWithUnit(total) + '</span>');
-  }
-  return steps;
-}
-
-/**
- * 【列式】：只顯示一條公式，不加解說文字。
- */
-function pickSingleAreaFormula(points, segs) {
-  if (!points || points.length < 3) return '';
-  const total = shoelaceArea(points);
-  const totalStr = formatAreaWithUnit(total);
-
-  const rect = isAxisAlignedRectangle(points);
-  if (rect) {
-    return '面積 = 長 × 闊 = ' + areaInline(rect.w) + ' × ' +
-      areaInline(rect.h) + ' = ' + totalStr;
-  }
-  if (points.length === 3) {
-    const th = triangleBaseHeight(points[0], points[1], points[2]) || { area: total, nice: false };
-    if (th.nice && th.base != null && th.height != null) {
-      return '面積 = 底 × 高 ÷ 2 = ' + areaInline(th.base) + ' × ' +
-        areaInline(th.height) + ' ÷ 2 = ' + totalStr;
-    }
-    return '面積 = ' + totalStr;
-  }
-  const para = isParallelogram(points);
-  const trap = !para ? isTrapezoid(points) : null;
-  if (para && points.length === 4) {
-    if (para.base != null && para.height != null && para.base > 0 && para.height > 0) {
-      return '面積 = 底 × 高 = ' + areaInline(para.base) + ' × ' +
-        areaInline(para.height) + ' = ' + totalStr;
-    }
-    return '面積 = 底 × 高 = ' + totalStr;
-  }
-  if (trap && trap.horizontal && trap.a != null && trap.b != null && trap.h > 0) {
-    return '面積 =（上底 + 下底）× 高 ÷ 2 =（' + areaInline(trap.a) +
-      ' + ' + areaInline(trap.b) + '）× ' + areaInline(trap.h) + ' ÷ 2 = ' + totalStr;
-  }
-
-  let strips = decomposeHorizontalStrips(points, segs);
-  const vstrips = decomposeVerticalStrips(points, segs);
-  if (vstrips && (!strips || vstrips.strips.length < strips.strips.length)) {
-    strips = vstrips;
-  }
-  if (strips && strips.strips.length >= 1 && strips.strips.length <= 8) {
-    const sumParts = strips.strips.map(function (s) { return areaInline(s.area); });
-    return '面積 = ' + sumParts.join(' + ') + ' = ' + formatAreaWithUnit(strips.sum);
-  }
-
-  // Fill to rectangle then subtract
-  const xs = points.map(function (p) { return p.x; });
-  const ys = points.map(function (p) { return p.y; });
-  const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
-  const minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
-  const rw = maxX - minX, rh = maxY - minY;
-  if (rw > 0 && rh > 0) {
-    const rectArea = rw * rh;
-    if (rectArea + 1e-9 >= total) {
-      const extra = rectArea - total;
-      if (extra > 1e-9) {
-        return '面積 = ' + areaInline(rectArea) + ' − ' + areaInline(extra) + ' = ' + totalStr;
-      }
-      return '面積 = 長 × 闊 = ' + areaInline(rw) + ' × ' + areaInline(rh) + ' = ' + totalStr;
-    }
-  }
-  if (points.length <= 5) {
-    const parts = [];
-    for (let i = 1; i < points.length - 1; i++) {
-      const th = triangleBaseHeight(points[0], points[i], points[i + 1]);
-      if (!th || th.area < 1e-9) continue;
-      parts.push(th);
-    }
-    if (parts.length >= 1 && parts.length <= 3) {
-      const sumParts = parts.map(function (th) { return areaInline(th.area); });
-      return '面積 = ' + sumParts.join(' + ') + ' = ' + totalStr;
-    }
-  }
-  return '面積 = ' + totalStr;
-}
-
-function buildAreaTeachingHtml(points, segs) {
-  const formula = pickSingleAreaFormula(points, segs || []);
-  if (!formula) return '';
-  return '<h4>【列式】</h4><div class="eq">' + formula + '</div>';
-}
-
-function hideAreaTeachBlock() {
-  const box = document.getElementById('area-teach-block');
-  if (!box) return;
-  box.classList.remove('show');
-  box.innerHTML = '';
-}
-
-function showAreaTeachBlock(points, segs) {
-  const box = document.getElementById('area-teach-block');
-  if (!box) return;
-  box.innerHTML = buildAreaTeachingHtml(points, segs || []);
-  box.classList.add('show');
-}
-
-function showAnswerBox(areaValue, opts) {
-  opts = opts || {};
+function showAnswerBox(areaValue) {
   const el = document.getElementById('answer-area');
   el.innerHTML = '<span>面積 = </span>' + areaDisplayHtml(areaValue);
   document.getElementById('answer-box').classList.add('show');
-  if (opts.teachPoints && opts.teachPoints.length >= 3) {
-    showAreaTeachBlock(opts.teachPoints, opts.teachSplits || []);
-  } else {
-    hideAreaTeachBlock();
-  }
 }
 
 function computeAnswerArea(sub) {
@@ -3644,8 +3263,10 @@ function enterCalcMode(sub, opts) {
   hideAreaTeachBlock();
 
   const asStudent = !!opts.asStudent || role === 'student' || isSolo;
+  const showTeacherMonitor = !asStudent && !isSolo && role === 'teacher';
   document.getElementById('calc-student-tools').style.display = asStudent ? '' : 'none';
-  document.getElementById('calc-teacher-tools').style.display = (!asStudent && !isSolo) ? '' : 'none';
+  // 課堂監察、統計與答題名單僅老師可見
+  document.getElementById('calc-teacher-tools').style.display = showTeacherMonitor ? '' : 'none';
   document.getElementById('calc-student-nav').style.display = asStudent ? '' : 'none';
 
   const classRow = document.getElementById('calc-class-guess-row');
@@ -3672,24 +3293,21 @@ function enterCalcMode(sub, opts) {
     document.getElementById('calc-subtitle').textContent = '順德聯誼總會何日東小學— 何老師設計';
   }
 
-  if (!asStudent && !isSolo) {
+  if (showTeacherMonitor) {
     document.getElementById('btn-reveal').style.display = revealOn ? 'none' : '';
     document.getElementById('btn-hide-answer').style.display = revealOn ? '' : 'none';
     renderStudentAnswers();
   }
   // Correct area only after explicit teacher「顯示答案」, solo 核對, etc.
   if (revealOn && (role === 'teacher' || studentMaySeeCorrectArea())) {
-    showAnswerBox(computeAnswerArea(sub), {
-      teachPoints: sub.points,
-      teachSplits: []
-    });
+    showAnswerBox(computeAnswerArea(sub));
   } else {
     document.getElementById('answer-box').classList.remove('show');
     hideAreaTeachBlock();
   }
   const bStat = document.getElementById('broadcast-status');
   if (bStat) {
-    if (!asStudent && !isSolo) {
+    if (showTeacherMonitor) {
       bStat.style.display = '';
       updateBroadcastControls();
     } else {
@@ -3923,7 +3541,10 @@ document.getElementById('btn-join-go').addEventListener('click', async () => {
 document.getElementById('btn-board-back').addEventListener('click', () => {
   renderNameGrid(); showScreen('screen-names');
 });
-document.getElementById('btn-board-progress').addEventListener('click', () => showStudentProgress());
+document.getElementById('btn-board-progress').addEventListener('click', () => {
+  if (role === 'student') return;
+  showStudentProgress();
+});
 document.getElementById('btn-board-join').addEventListener('click', () => {
   document.getElementById('join-code').value = roomCode || '';
   document.getElementById('join-student-label').textContent =
@@ -4009,8 +3630,8 @@ document.getElementById('btn-reveal').addEventListener('click', () => {
   }
   revealOn = true;
   const area = computeAnswerArea(focusSub);
-  // Show correct area + single-line 列式
-  showAnswerBox(area, { teachPoints: focusSub.points, teachSplits: [] });
+  // 只顯示正確面積（不顯示列式）
+  showAnswerBox(area);
   document.getElementById('btn-reveal').style.display = 'none';
   document.getElementById('btn-hide-answer').style.display = '';
   broadcastTeacher({ type: 'reveal', area: area, designId: focusSub.id });
@@ -4051,15 +3672,15 @@ document.getElementById('btn-solo-check').addEventListener('click', () => {
   soloChecked = true;
   revealOn = true;
   if (ok) {
-    showAnswerBox(correct); // no 列式 when correct
-    msg.textContent = '✓ 完全正確！你的答案正確。';
+    showAnswerBox(correct);
+    msg.textContent = '✓ 完全正確！';
     msg.className = 'solo-check-msg ok';
-    toast('核對成功！', 'ok');
+    toast('核對成功', 'ok');
   } else {
-    showAnswerBox(correct, { teachPoints: focusSub.points, teachSplits: splitSegs.slice() });
-    msg.textContent = '不正確——請看下方【列式】學習如何計算！';
+    showAnswerBox(correct);
+    msg.textContent = '不正確。正確面積如下。';
     msg.className = 'solo-check-msg bad';
-    toast('請參看列式溫習如何計算面積', 'err');
+    toast('答案不正確，請參看正確面積', 'err');
   }
 });
 
