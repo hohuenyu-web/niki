@@ -456,6 +456,25 @@ window.__pubnubLoadPromise = (function () {
   .monitor-card .badge.bad { background: #fde0dc; color: var(--danger); }
   .monitor-card .badge.pending { background: #f0ebe4; color: var(--muted); }
   .monitor-empty { text-align: center; color: var(--muted); padding: 12px; }
+  .monitor-card { cursor: pointer; }
+  .monitor-card:hover { outline: 2px solid var(--primary); }
+  .online-names {
+    width: 100%; max-width: 900px; text-align: center;
+    font-size: 0.85rem; color: var(--text); margin: 4px 0 10px;
+    line-height: 1.45; font-weight: 600;
+  }
+  .online-names .tag {
+    display: inline-block; background: #fff; border-radius: 999px;
+    padding: 3px 10px; margin: 3px; box-shadow: var(--shadow);
+    font-size: 0.8rem;
+  }
+  .online-names .tag.teacher { background: #f3e8fa; color: #6c3483; }
+  #inspect-modal .modal { max-width: min(96vw, 520px); width: 100%; }
+  #inspect-canvas {
+    width: 100%; aspect-ratio: 1; border-radius: 12px;
+    background: #faf6f1; display: block; margin: 8px 0;
+  }
+  #inspect-meta { text-align: center; font-size: 0.9rem; margin: 6px 0 10px; }
 </style>
 </head>
 <body>
@@ -469,7 +488,6 @@ window.__pubnubLoadPromise = (function () {
     </div>
     <p style="text-align:center;color:var(--muted);margin-bottom:8px;">釘板 10 cm × 10 cm　每格邊長 1 cm</p>
     <p style="text-align:center;color:var(--muted);">請選擇身份開始</p>
-    <p style="text-align:center;color:var(--muted);font-size:0.78rem;margin-top:10px;line-height:1.4;">課堂同步建議<strong>直接開啟網頁</strong>；Google Sites 嵌入可能擋住連線。</p>
     <div class="role-btns">
       <button class="btn btn-primary" id="btn-student">學生</button>
       <button class="btn btn-accent" id="btn-teacher">老師</button>
@@ -481,7 +499,7 @@ window.__pubnubLoadPromise = (function () {
 <div id="screen-names" class="screen">
   <div class="header">
     <h1>揀選你的姓名</h1>
-    <div class="school">揀咗名先可以開始</div>
+    <div class="school">順德聯誼總會何日東小學— 何老師設計</div>
   </div>
   <div class="card" style="max-width:720px;width:100%;">
     <div class="name-grid" id="name-grid"></div>
@@ -506,7 +524,6 @@ window.__pubnubLoadPromise = (function () {
     <div class="btn-row" style="max-width:100%;">
       <button class="btn btn-accent btn-block" id="btn-join-skip">單機練習／自己溫習</button>
     </div>
-    <p style="margin-top:10px;font-size:0.8rem;color:var(--muted);text-align:center;">單機練習唔使網絡，畫完可以自己計面積核對。加入課堂先會同步俾老師。</p>
   </div>
 </div>
 
@@ -548,7 +565,7 @@ window.__pubnubLoadPromise = (function () {
 <div id="screen-progress" class="screen">
   <div class="header">
     <h1>全班提交進度</h1>
-    <div class="school">睇下邊個已經交咗、邊個未完成</div>
+    <div class="school">順德聯誼總會何日東小學— 何老師設計</div>
   </div>
   <div class="progress-summary" id="progress-summary"></div>
   <div class="progress-list" id="progress-list"></div>
@@ -563,14 +580,13 @@ window.__pubnubLoadPromise = (function () {
   <div class="card" style="max-width:360px;">
     <div class="header">
       <h1>老師登入</h1>
-      <div class="school">請輸入 PIN</div>
+      <div class="school">順德聯誼總會何日東小學— 何老師設計</div>
     </div>
     <input class="pin-input" id="pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="••••" autocomplete="off">
     <div class="btn-row" style="max-width:100%;">
       <button class="btn btn-ghost" id="btn-pin-back">返回</button>
       <button class="btn btn-accent" id="btn-pin-ok">進入</button>
     </div>
-    <p style="margin-top:12px;font-size:0.8rem;color:var(--muted);text-align:center;">預設 PIN：1234</p>
   </div>
 </div>
 
@@ -579,7 +595,7 @@ window.__pubnubLoadPromise = (function () {
   <div class="card" style="max-width:480px;">
     <div class="header">
       <h1>建立／重開課堂</h1>
-      <div class="school">學生用同一個編號，任何網絡都得</div>
+      <div class="school">順德聯誼總會何日東小學— 何老師設計</div>
     </div>
     <div class="room-code-big" id="room-code-display">----</div>
     <p id="room-status" style="text-align:center;color:var(--muted);">準備中…</p>
@@ -593,7 +609,6 @@ window.__pubnubLoadPromise = (function () {
     <div class="btn-row" style="max-width:100%;">
       <button class="btn btn-accent btn-block" id="btn-room-rejoin">重開呢個課堂</button>
     </div>
-    <p style="margin-top:12px;font-size:0.8rem;color:var(--muted);text-align:center;">課堂資料存喺雲端；關閉分頁後用同一個編號就可以重開。</p>
   </div>
 </div>
 
@@ -602,7 +617,7 @@ window.__pubnubLoadPromise = (function () {
   <div class="toolbar-top">
     <div class="header" style="margin:0;text-align:left;width:auto;">
       <h1 style="font-size:1.35rem;">老師控制台</h1>
-      <div class="school">進度 · 同步 · 揀圖叫全班計</div>
+      <div class="school">順德聯誼總會何日東小學— 何老師設計</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-ghost" id="btn-export">匯出資料</button>
@@ -613,12 +628,12 @@ window.__pubnubLoadPromise = (function () {
   </div>
   <div class="sync-bar">
     <div class="sync-pill" id="teacher-room-pill">課堂：----</div>
-    <div class="sync-pill" id="teacher-conn-pill">連線：0</div>
+    <div class="sync-pill" id="teacher-conn-pill">在線：—</div>
   </div>
+  <div class="online-names" id="teacher-online-names"></div>
   <div class="btn-row" style="max-width:900px;margin:4px 0 8px;">
     <button class="btn btn-danger btn-block" id="btn-new-round" style="font-size:1.1rem;padding:14px 20px;">開新一輪（清除本輪提交）</button>
   </div>
-  <p style="width:100%;max-width:900px;text-align:center;font-size:0.82rem;color:var(--muted);margin-bottom:8px;">會清咗全班本輪圖案同答案，學生要重新畫。舊圖會留喺歷史備份。</p>
 
   <div class="gallery-section-title">① 全班進度</div>
   <div class="progress-summary" id="teacher-progress-summary"></div>
@@ -633,7 +648,7 @@ window.__pubnubLoadPromise = (function () {
 <div id="screen-calc" class="screen">
   <div class="header">
     <h1 id="calc-title">一起計算面積</h1>
-    <div class="school" id="calc-subtitle">用分割線幫手計</div>
+    <div class="school" id="calc-subtitle">順德聯誼總會何日東小學— 何老師設計</div>
   </div>
   <div class="student-badge" id="calc-badge"></div>
   <div class="sync-bar" id="calc-sync-bar"></div>
@@ -651,7 +666,7 @@ window.__pubnubLoadPromise = (function () {
 
   <!-- Student tools (classroom + solo) -->
   <div id="calc-student-tools" style="width:100%;max-width:560px;display:none;">
-    <div class="board-hint" id="calc-student-hint">喺釘板畫<strong>分割線</strong>（紫線）將圖分成簡單圖形，再填面積</div>
+    <div class="board-hint" id="calc-student-hint" style="display:none;"></div>
     <div class="btn-row">
       <button class="btn btn-ghost" id="btn-split-undo">撤銷分割</button>
       <button class="btn btn-ghost" id="btn-split-clear">清除分割</button>
@@ -720,6 +735,16 @@ window.__pubnubLoadPromise = (function () {
     <p id="modal-msg"></p>
     <div class="btn-row" style="max-width:100%;">
       <button class="btn btn-primary" id="modal-ok">好</button>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop" id="inspect-modal">
+  <div class="modal">
+    <h3 id="inspect-title">學生分割</h3>
+    <canvas id="inspect-canvas" width="480" height="480"></canvas>
+    <p id="inspect-meta"></p>
+    <div class="btn-row" style="max-width:100%;">
+      <button class="btn btn-primary" id="inspect-close">關閉</button>
     </div>
   </div>
 </div>
@@ -1069,6 +1094,9 @@ let pointerIdActive = null;
 
 let focusSub = null;       // shared design being calculated
 let revealOn = false;
+let myAnswerSubmittedFor = null; // designId after classroom guess submit
+let soloChecked = false;
+let onlineRoster = {}; // key -> { name, no, role, at, label }
 let splitSegs = [];        // [{a:{x,y}, b:{x,y}}]
 let splitDraft = null;     // current peg while drawing a split segment
 let splitRubber = null;
@@ -1131,12 +1159,127 @@ function emptyCloudState(code) {
     submissions: [],
     answers: [],
     studentWork: {}, // studentNo -> { studentName, designId, splits, guess, guessValue, at }
+    online: {}, // key -> { name, no, role, at }
     focus: null,
     reveal: false,
     revealArea: null,
     updatedAt: Date.now(),
     roundId: 'r' + Date.now()
   };
+}
+
+
+function onlinePersonKey(info) {
+  if (!info) return '';
+  if (info.role === 'teacher' || info.key === 'teacher') return 'teacher';
+  if (info.no != null) return 's:' + info.no;
+  if (info.key) return String(info.key);
+  return 'u:' + (info.name || 'unknown');
+}
+
+function upsertOnlinePerson(info) {
+  if (!info) return;
+  const key = onlinePersonKey(info);
+  if (!key) return;
+  const label = info.role === 'teacher'
+    ? '老師'
+    : ((info.no != null ? info.no + ' ' : '') + (info.name || '')).trim() || key;
+  onlineRoster[key] = {
+    key: key,
+    name: info.name || '',
+    no: info.no,
+    role: info.role || (key === 'teacher' ? 'teacher' : 'student'),
+    at: info.at || Date.now(),
+    label: label
+  };
+}
+
+function onlineRosterLabels() {
+  return Object.keys(onlineRoster).map(function (k) { return onlineRoster[k]; })
+    .sort(function (a, b) {
+      if (a.role === 'teacher' && b.role !== 'teacher') return -1;
+      if (b.role === 'teacher' && a.role !== 'teacher') return 1;
+      return (a.no || 0) - (b.no || 0);
+    });
+}
+
+function renderOnlineNames() {
+  const el = document.getElementById('teacher-online-names');
+  if (!el) return;
+  const list = onlineRosterLabels();
+  if (!list.length) {
+    el.innerHTML = roomCode && syncReady
+      ? '<span style="color:var(--muted);font-weight:600;">暫時未偵測到其他成員</span>'
+      : '';
+    return;
+  }
+  el.innerHTML = list.map(function (p) {
+    const cls = p.role === 'teacher' ? 'tag teacher' : 'tag';
+    return '<span class="' + cls + '">' + p.label + '</span>';
+  }).join('');
+}
+
+function syncOnlineIntoCloudState() {
+  if (!cloudState) return;
+  cloudState.online = {};
+  Object.keys(onlineRoster).forEach(function (k) {
+    const p = onlineRoster[k];
+    cloudState.online[k] = { name: p.name, no: p.no, role: p.role, at: p.at };
+  });
+}
+
+function applyOnlineFromState(state) {
+  const on = (state && state.online) || {};
+  Object.keys(on).forEach(function (k) {
+    const p = on[k];
+    if (!p) return;
+    upsertOnlinePerson({
+      key: k,
+      name: p.name,
+      no: p.no,
+      role: p.role || (k === 'teacher' ? 'teacher' : 'student'),
+      at: p.at
+    });
+  });
+}
+
+function publishMyPresence() {
+  const info = (isHost || role === 'teacher')
+    ? { role: 'teacher', name: '老師', key: 'teacher', at: Date.now() }
+    : (currentStudent
+      ? { role: 'student', name: currentStudent.name, no: currentStudent.no, at: Date.now() }
+      : null);
+  if (!info) return;
+  upsertOnlinePerson(info);
+  if (syncBackend === 'pubnub' && pubnub && roomCode) {
+    try {
+      pubnub.setState({
+        channels: [cloudChannel(roomCode)],
+        state: { role: info.role, name: info.name, no: info.no, key: onlinePersonKey(info) }
+      });
+    } catch (e) {}
+  }
+  if (cloudState) {
+    syncOnlineIntoCloudState();
+  }
+  updateSyncBars();
+}
+
+function studentMaySeeCorrectArea() {
+  if (soloPractice) return !!soloChecked;
+  if (role === 'teacher') return true;
+  // classroom student: teacher reveal OR own submit (check only uses area after reveal;
+  // correct area number shown when reveal OR after submit we show check without number —
+  // area number only if revealOn || soloChecked)
+  if (revealOn) return true;
+  return false;
+}
+
+function studentMaySeeCheck() {
+  if (soloPractice) return !!soloChecked;
+  if (role === 'teacher') return true;
+  if (revealOn) return true;
+  return !!(focusSub && myAnswerSubmittedFor === focusSub.id);
 }
 
 function syncBackendLabel() {
@@ -1163,14 +1306,20 @@ function updateSyncBars() {
   const conn = document.getElementById('teacher-conn-pill');
   if (pill) pill.textContent = '課堂：' + (roomCode || '----');
   if (conn) {
-    if (syncBackend === 'rest') {
+    const names = onlineRosterLabels();
+    const n = names.length;
+    if (n) {
+      conn.textContent = '在線：' + n + ' 人';
+      conn.className = 'sync-pill on';
+    } else if (syncBackend === 'rest' && syncReady) {
       conn.textContent = '同步：輪詢';
       conn.className = 'sync-pill on';
     } else {
-      conn.textContent = '在線約：' + connectedCount + ' 人';
+      conn.textContent = '在線：' + (connectedCount || 0) + ' 人';
       conn.className = 'sync-pill ' + (connectedCount ? 'on' : (syncReady ? 'on' : 'off'));
     }
   }
+  renderOnlineNames();
   const calcBar = document.getElementById('calc-sync-bar');
   if (calcBar) {
     calcBar.innerHTML = roomCode
@@ -1252,6 +1401,7 @@ function leaveCloudRoom() {
   cloudState = null;
   restHistoryEnd = null;
   restSeenKeys = {};
+  onlineRoster = {};
   roomCode = null;
   isHost = false;
 }
@@ -1341,6 +1491,7 @@ function applyCloudState(state, opts) {
   if (!state.answers) state.answers = [];
   cloudState = state;
   roomCode = state.code || roomCode;
+  applyOnlineFromState(state);
 
   // sync submissions into localStorage
   const store = loadStore();
@@ -1396,10 +1547,11 @@ function applyCloudState(state, opts) {
         if (!opts.silent && !same) {
           toast('老師揀咗「' + state.focus.studentName + '」嘅圖，一齊計！', 'ok');
         }
-      } else if (state.reveal && state.revealArea != null) {
+      } else if (state.reveal && state.revealArea != null && studentMaySeeCorrectArea()) {
         showAnswerBox(state.revealArea);
-      } else if (!state.reveal) {
+      } else if (!state.reveal && !studentMaySeeCorrectArea()) {
         document.getElementById('answer-box').classList.remove('show');
+        hideAreaTeachBlock();
       }
     } else if (role === 'teacher' && document.getElementById('screen-calc').classList.contains('active')) {
       if (state.reveal && state.revealArea != null) showAnswerBox(state.revealArea);
@@ -1539,10 +1691,23 @@ function onCloudMessage(data) {
     }
     return;
   }
-  if (data.type === 'hello' && isHost) {
-    refreshPresence();
-    // push latest state so late joiners catch up quickly
-    publishCloudState();
+  if (data.type === 'hello') {
+    if (data.studentNo != null) {
+      upsertOnlinePerson({
+        role: 'student',
+        name: data.studentName,
+        no: data.studentNo,
+        at: Date.now()
+      });
+    } else if (data.role === 'teacher') {
+      upsertOnlinePerson({ role: 'teacher', name: '老師', key: 'teacher', at: Date.now() });
+    }
+    updateSyncBars();
+    if (isHost) {
+      syncOnlineIntoCloudState();
+      refreshPresence();
+      publishCloudState();
+    }
   }
 }
 
@@ -1550,11 +1715,28 @@ function refreshPresence() {
   // Soft: presence is optional; never fail join/sync if hereNow errors
   if (syncBackend !== 'pubnub' || !pubnub || !roomCode) return;
   try {
-    pubnub.hereNow({ channels: [cloudChannel(roomCode)], includeUUIDs: true }, function (status, response) {
+    pubnub.hereNow({
+      channels: [cloudChannel(roomCode)],
+      includeUUIDs: true,
+      includeState: true
+    }, function (status, response) {
       if (status && status.error) return;
       if (!response || !response.channels) return;
       const ch = response.channels[cloudChannel(roomCode)];
       connectedCount = ch && typeof ch.occupancy === 'number' ? ch.occupancy : 0;
+      const occupants = (ch && ch.occupants) || [];
+      occupants.forEach(function (occ) {
+        const st = occ.state || {};
+        if (st.role || st.name || st.no != null) {
+          upsertOnlinePerson({
+            role: st.role,
+            name: st.name,
+            no: st.no,
+            key: st.key,
+            at: Date.now()
+          });
+        }
+      });
       updateSyncBars();
     });
   } catch (e) {
@@ -1682,6 +1864,7 @@ async function joinCloudRoomViaRest(code, asTeacher) {
   }
 
   startRestPolling();
+  publishMyPresence();
 
   if (!asTeacher && currentStudent) {
     publishCloud({
@@ -1689,6 +1872,10 @@ async function joinCloudRoomViaRest(code, asTeacher) {
       studentNo: currentStudent.no,
       studentName: currentStudent.name
     });
+  } else if (asTeacher) {
+    publishCloud({ type: 'hello', role: 'teacher', studentName: '老師' });
+    syncOnlineIntoCloudState();
+    publishCloudState();
   }
   updateSyncBars();
   return true;
@@ -1738,12 +1925,17 @@ async function joinCloudRoom(code, asTeacher) {
             try { refreshPresence(); } catch (e) {}
           }, 8000);
 
+          publishMyPresence();
           if (!asTeacher && currentStudent) {
             publishCloud({
               type: 'hello',
               studentNo: currentStudent.no,
               studentName: currentStudent.name
             });
+          } else if (asTeacher) {
+            publishCloud({ type: 'hello', role: 'teacher', studentName: '老師' });
+            syncOnlineIntoCloudState();
+            publishCloudState();
           }
           updateSyncBars();
           return true;
@@ -1761,7 +1953,7 @@ async function joinCloudRoom(code, asTeacher) {
   // Fallback: HTTP polling via PubNub REST (no SDK / no websocket)
   const restOk = await joinCloudRoomViaRest(code, asTeacher);
   if (!restOk) {
-    toast('連線失敗：無法連接雲端（請直接開啟網頁，唔好用 Google Sites 嵌入；或檢查網絡）', 'err');
+    toast('連線失敗，請檢查網絡後重試', 'err');
     leaveCloudRoom();
     updateSyncBars();
     return false;
@@ -1775,11 +1967,10 @@ function teacherStartRoom(code) {
   joinCloudRoom(code, true).then(function (ok) {
     if (ok) {
       document.getElementById('room-status').textContent =
-        '課堂已就緒（' + syncBackendLabel() + '）！請學生輸入編號 ' + code +
-        '（建議直接開啟網頁）';
+        '課堂已就緒！請學生輸入編號 ' + code;
     } else {
       document.getElementById('room-status').textContent =
-        '雲端連接失敗。請用瀏覽器直接開啟本頁（唔好嵌入 Sites），或稍後重試。單機仍可用。';
+        '雲端連接失敗，請稍後重試。';
     }
     updateSyncBars();
   });
@@ -1794,7 +1985,7 @@ async function studentJoinRoom(code) {
     }
     toast('已加入課堂 ' + code + '（' + syncBackendLabel() + '）', 'ok');
   } else {
-    toast('連線失敗：可改用「單機練習」或直接開啟網頁再試', 'err');
+    toast('連線失敗，可改用單機練習', 'err');
   }
   return ok;
 }
@@ -2565,7 +2756,22 @@ document.getElementById('btn-submit-guess').addEventListener('click', () => {
   };
   upsertAnswer(ans);
   sendToHost(ans);
-  toast('已提交答案：' + formatAreaWithUnit(parsed.value), 'ok');
+  myAnswerSubmittedFor = focusSub.id;
+  const correct = computeAnswerArea(focusSub);
+  const ok = Math.abs(parsed.value - correct) < 1e-6;
+  const msg = document.getElementById('solo-check-msg');
+  if (msg) {
+    msg.textContent = ok ? '✓ 已提交：答對！' : '✗ 已提交：未啱（等老師顯示答案）';
+    msg.className = 'solo-check-msg ' + (ok ? 'ok' : 'bad');
+  }
+  // Correct area number only if teacher already revealed
+  if (studentMaySeeCorrectArea()) {
+    showAnswerBox(correct);
+  } else {
+    document.getElementById('answer-box').classList.remove('show');
+    hideAreaTeachBlock();
+  }
+  toast(ok ? '已提交：答對！' : '已提交答案', 'ok');
 });
 
 
@@ -3073,7 +3279,7 @@ function renderStudentAnswers() {
   }
 
   if (!rows.length) {
-    el.innerHTML = '<div class="monitor-empty">暫時未有學生交答案或分割線。<br>學生畫紫線／提交答案後會即時喺度顯示。</div>';
+    el.innerHTML = '<div class="monitor-empty">暫時未有學生交答案或分割線</div>';
     return;
   }
 
@@ -3112,15 +3318,53 @@ function renderStudentAnswers() {
     card.appendChild(thumb);
     card.appendChild(meta);
     card.appendChild(badgeEl);
+    card.addEventListener('click', function () {
+      openStudentInspect(r);
+    });
     el.appendChild(card);
   });
 }
 
+function openStudentInspect(row) {
+  if (!focusSub || !row) return;
+  const modal = document.getElementById('inspect-modal');
+  const title = document.getElementById('inspect-title');
+  const canvas = document.getElementById('inspect-canvas');
+  const meta = document.getElementById('inspect-meta');
+  if (!modal || !canvas) return;
+  title.textContent = row.studentNo + ' ' + row.name + '・分割檢視';
+  const guessText = row.guess != null && row.guess !== ''
+    ? ('作答 ' + row.guess + '（cm²）')
+    : '尚未提交答案';
+  const splitN = (row.splits && row.splits.length) ? row.splits.length : 0;
+  meta.textContent = guessText + '　｜　紫線 ' + splitN + ' 條　｜　撳圖可睇分割';
+  // Hi-res draw
+  const size = 480;
+  canvas.width = size;
+  canvas.height = size;
+  drawPolygonScene(canvas, canvas.getContext('2d'), focusSub, {
+    tiny: false, bg: '#faf6f1', splits: row.splits || []
+  });
+  modal.classList.add('show');
+}
+
+function closeStudentInspect() {
+  const modal = document.getElementById('inspect-modal');
+  if (modal) modal.classList.remove('show');
+}
+
 function enterCalcMode(sub, opts) {
   opts = opts || {};
+  const keepSubmit = myAnswerSubmittedFor === (sub && sub.id);
   focusSub = sub;
   revealOn = !!opts.reveal;
   const isSolo = !!opts.solo;
+  if (isSolo) {
+    soloChecked = false;
+    myAnswerSubmittedFor = null;
+  } else if (!keepSubmit) {
+    myAnswerSubmittedFor = null;
+  }
   splitSegs = [];
   splitDraft = null;
   splitRubber = null;
@@ -3144,19 +3388,19 @@ function enterCalcMode(sub, opts) {
 
   if (isSolo) {
     document.getElementById('calc-title').textContent = '自己溫習・計算面積';
-    document.getElementById('calc-subtitle').textContent = '畫紫線分割，揀整數或分數填答案，再核對';
-    document.getElementById('calc-student-hint').innerHTML =
-      '單機練習：畫<strong>分割線</strong>幫手計，揀<strong>整數</strong>或<strong>分數</strong>填「多邊形的面積是」，撳「核對答案」';
+    document.getElementById('calc-subtitle').textContent = '順德聯誼總會何日東小學— 何老師設計';
+    document.getElementById('calc-student-hint').style.display = 'none';
+    document.getElementById('calc-student-hint').innerHTML = '';
     document.getElementById('btn-calc-student-back').textContent = '返回設計';
   } else if (asStudent) {
     document.getElementById('calc-title').textContent = '一起計算面積';
-    document.getElementById('calc-subtitle').textContent = '畫紫線分割，再填你計到嘅面積';
-    document.getElementById('calc-student-hint').innerHTML =
-      '喺釘板畫<strong>分割線</strong>（紫線），再揀<strong>整數</strong>或<strong>分數</strong>填「多邊形的面積是」';
+    document.getElementById('calc-subtitle').textContent = '順德聯誼總會何日東小學— 何老師設計';
+    document.getElementById('calc-student-hint').style.display = 'none';
+    document.getElementById('calc-student-hint').innerHTML = '';
     document.getElementById('btn-calc-student-back').textContent = '返回設計';
   } else {
     document.getElementById('calc-title').textContent = '課堂計算（老師）';
-    document.getElementById('calc-subtitle').textContent = '下面可監察全班作答同分割線；撳「顯示答案」會同步晒全班';
+    document.getElementById('calc-subtitle').textContent = '順德聯誼總會何日東小學— 何老師設計';
   }
 
   if (!asStudent && !isSolo) {
@@ -3164,8 +3408,12 @@ function enterCalcMode(sub, opts) {
     document.getElementById('btn-hide-answer').style.display = revealOn ? '' : 'none';
     renderStudentAnswers();
   }
-  if (revealOn) {
+  // Students: correct area only after 核對 (solo), own submit check path, or teacher reveal
+  if (revealOn && (role === 'teacher' || studentMaySeeCorrectArea())) {
     showAnswerBox(computeAnswerArea(sub));
+  } else if (!(role === 'teacher' && !isSolo)) {
+    document.getElementById('answer-box').classList.remove('show');
+    hideAreaTeachBlock();
   }
 
   showScreen('screen-calc');
@@ -3236,7 +3484,7 @@ function renderGallery() {
 function teacherStartNewRound() {
   const n = getLatestByStudent().length;
   const msg = n
-    ? ('確定開新一輪？會清除而家 ' + n + ' 份提交同所有答案，全班進度會變返「未完成」。舊資料會留喺歷史備份。')
+    ? ('確定開新一輪？會清除而家 ' + n + ' 份提交同所有答案。')
     : '確定開新一輪？會清除本輪資料，全班重新設計。';
   if (!confirm(msg)) return;
 
@@ -3417,6 +3665,7 @@ document.getElementById('btn-solo-check').addEventListener('click', () => {
   }
   const correct = computeAnswerArea(focusSub);
   const ok = Math.abs(parsed.value - correct) < 1e-6;
+  soloChecked = true;
   revealOn = true;
   if (ok) {
     showAnswerBox(correct); // no 列式 when correct
@@ -3435,6 +3684,8 @@ document.getElementById('btn-solo-redraw').addEventListener('click', () => {
   resetDrawing();
   focusSub = null;
   revealOn = false;
+  soloChecked = false;
+  myAnswerSubmittedFor = null;
   splitSegs = [];
   clearGuessMixed();
   document.getElementById('answer-box').classList.remove('show');
@@ -3444,6 +3695,11 @@ document.getElementById('btn-solo-redraw').addEventListener('click', () => {
   resizeBoard();
   drawBoard();
   toast('再畫一幅新多邊形啦', 'ok');
+});
+
+document.getElementById('inspect-close').addEventListener('click', closeStudentInspect);
+document.getElementById('inspect-modal').addEventListener('click', function (e) {
+  if (e.target.id === 'inspect-modal') closeStudentInspect();
 });
 
 window.addEventListener('resize', () => {
