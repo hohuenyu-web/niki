@@ -848,6 +848,10 @@ function clearCurrentRoundLocal() {
   store.answers = [];
   saveStore(store);
 }
+/** Wipe ALL classroom records (submissions, answers, history) — used when teacher creates a new room number */
+function wipeAllClassroomLocal() {
+  saveStore({ submissions: [], history: [], answers: [] });
+}
 function mergeRemoteSubmission(entry) {
   const store = loadStore();
   const old = store.submissions.find(s => s.studentNo === entry.studentNo);
@@ -2143,19 +2147,38 @@ async function joinCloudRoom(code, asTeacher, opts) {
 }
 
 function teacherStartRoom(code) {
-  // NEW room: wipe previous class work locally + publish empty cloud state
-  clearCurrentRoundLocal();
+  // NEW room number: wipe ALL prior classroom data (local + cloud), not just archive one round
+  wipeAllClassroomLocal();
   studentGuesses = {};
   focusSub = null;
   revealOn = false;
+  myAnswerSubmittedFor = null;
   onlineRoster = {};
+  onlineNamesOpen = false;
+  monitorFilter = null;
   splitSegs = [];
+  splitDraft = null;
+  splitRubber = null;
   document.getElementById('room-code-display').textContent = code;
-  document.getElementById('room-status').textContent = '連接雲端中…';
+  document.getElementById('room-status').textContent = '連接雲端中…（正在清除舊紀錄）';
   joinCloudRoom(code, true, { fresh: true }).then(function (ok) {
     if (ok) {
+      // fresh join already published emptyCloudState; reinforce wipe of any race leftovers
+      if (cloudState) {
+        cloudState.submissions = [];
+        cloudState.answers = [];
+        cloudState.studentWork = {};
+        cloudState.online = {};
+        cloudState.focus = null;
+        cloudState.reveal = false;
+        cloudState.revealArea = null;
+        cloudState.roundId = 'r' + Date.now();
+        cloudState.updatedAt = Date.now();
+        try { publishCloudState(); } catch (e) {}
+      }
+      onlineRoster = {};
       document.getElementById('room-status').textContent =
-        '新課堂已就緒！請學生輸入編號 ' + code;
+        '新課堂已就緒（舊紀錄已清除）！請學生輸入編號 ' + code;
       try { renderGallery(); } catch (e) {}
     } else {
       document.getElementById('room-status').textContent =
