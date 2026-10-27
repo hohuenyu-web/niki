@@ -318,6 +318,124 @@ window.__pubnubLoadPromise = (function () {
     display: flex; align-items: center; justify-content: center; min-height: 2.4em;
   }
   .frac-inline-wrap { display: inline-flex; align-items: center; gap: 0.25em; }
+
+  /* ===== 分數乘法二：面積模型探索器 ===== */
+  .exp-card {
+    width: 100%; max-width: min(960px, 100%);
+    background: #fff; border-radius: 18px; box-shadow: var(--shadow);
+    border: 2px solid #e8eef5; padding: 14px 14px 18px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .exp-title {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: clamp(1.15rem, 3.5vw, 1.45rem); font-weight: 800; color: #2c5aa0;
+  }
+  .exp-title .exp-ico {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: linear-gradient(135deg, #5dade2, #e74c3c 40%, #f1c40f 70%, #27ae60);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.5);
+    flex-shrink: 0;
+  }
+  .exp-body {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; justify-content: center;
+  }
+  .exp-canvas-wrap {
+    flex: 1 1 280px; max-width: 480px; min-width: 240px;
+    aspect-ratio: 1 / 1; width: 100%;
+    position: relative;
+  }
+  #exp-canvas {
+    width: 100%; height: 100%; display: block;
+    background: #fff; border-radius: 4px;
+    touch-action: none; -webkit-user-select: none; user-select: none;
+  }
+  .exp-right {
+    flex: 1 1 260px; max-width: 420px; min-width: 240px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    padding-top: 8px;
+  }
+  .exp-eq {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; flex-wrap: wrap; font-size: clamp(1.4rem, 4vw, 1.9rem); font-weight: 800;
+  }
+  .exp-op { color: #95a5a6; font-size: 1.3em; padding: 0 2px; user-select: none; }
+  .exp-chip {
+    display: inline-flex; flex-direction: column; align-items: center;
+    border: 2.5px solid transparent; border-radius: 12px;
+    padding: 6px 10px; min-width: 56px; cursor: pointer;
+    -webkit-user-select: none; user-select: none;
+    transition: box-shadow 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .exp-chip.blue { background: #eaf3fb; color: #2471a3; border-color: #a9cce3; }
+  .exp-chip.red { background: #fdecea; color: #c0392b; border-color: #f5b7b1; }
+  .exp-chip.purple { background: #f5eef8; color: #6c3483; border-color: #d2b4de; cursor: default; }
+  .exp-chip.empty { background: #f7f9fc; color: #b0b8c4; border-color: #d5dde8; border-style: dashed; }
+  .exp-chip.selected {
+    border-style: dashed; border-width: 3px;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
+  }
+  .exp-chip.blue.selected { border-color: #2980b9; }
+  .exp-chip.red.selected { border-color: #e74c3c; }
+  .exp-chip.purple.selected { border-color: #8e44ad; }
+  .exp-chip .exp-num, .exp-chip .exp-den {
+    min-width: 1.4em; text-align: center; line-height: 1.15;
+    padding: 2px 4px; border-radius: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .exp-chip .exp-num { border-bottom: 3px solid currentColor; margin-bottom: 3px; padding-bottom: 3px; }
+  .exp-chip .digit-hit {
+    display: inline-block; min-width: 1.6em; min-height: 1.6em;
+    line-height: 1.6em; text-align: center; border-radius: 8px;
+    padding: 4px 8px; cursor: pointer;
+  }
+  .exp-chip .digit-hit.expect {
+    outline: 2px dashed currentColor; background: rgba(255,255,255,0.85);
+  }
+  .exp-chip .digit-hit:active { background: rgba(0,0,0,0.06); }
+  .exp-chip.editing-digit .digit-hit.editing {
+    outline: 2px dashed currentColor; background: rgba(255,255,255,0.7);
+  }
+  .exp-prompt {
+    background: #eaf2fb; color: #2c5aa0; border-radius: 999px;
+    padding: 10px 16px; font-weight: 700; font-size: 0.95rem;
+    text-align: center; max-width: 100%; line-height: 1.45;
+  }
+  .exp-prompt.done { background: #f3e8fa; color: #6c3483; }
+  .exp-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
+  .exp-actions .btn { min-width: 120px; }
+
+  .exp-keypad-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 150;
+    background: rgba(0,0,0,0.18); align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .exp-keypad-backdrop.show { display: flex; }
+  .exp-keypad {
+    background: #fff; border-radius: 16px; padding: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.22);
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    width: min(280px, 90vw);
+  }
+  .exp-keypad button {
+    border: 2px solid #e8eef5; background: #f7fafc; border-radius: 12px;
+    font-size: 1.45rem; font-weight: 800; font-family: inherit;
+    min-height: 56px; cursor: pointer; color: var(--text);
+  }
+  .exp-keypad button:active { background: #eaf4fb; transform: scale(0.96); }
+  .exp-keypad button.zero { grid-column: 2; }
+  .exp-keypad-hint {
+    grid-column: 1 / -1; text-align: center; color: var(--muted);
+    font-size: 0.85rem; font-weight: 600; padding: 4px 0 2px;
+  }
+
+  #pane-tab2, #pane-teacher-tab2 {
+    width: 100%; display: none; flex-direction: column; align-items: center;
+  }
+  #pane-tab2.show, #pane-teacher-tab2.show { display: flex; }
+  #pane-teacher-tab1 { width: 100%; display: flex; flex-direction: column; align-items: center; }
+  #pane-teacher-tab1.hide { display: none; }
+  #pane-tab1.hide { display: none !important; }
+
 </style>
 </head>
 <body>
@@ -328,7 +446,7 @@ window.__pubnubLoadPromise = (function () {
       <h1>分數乘法</h1>
       <div class="school">順德聯誼總會何日東小學— 何老師設計</div>
     </div>
-    <p style="text-align:center;color:var(--muted);margin-bottom:8px;">分數乘法一：分數 × 整數　｜　帶分數 × 整數</p>
+    <p style="text-align:center;color:var(--muted);margin-bottom:8px;">分數乘法一：分數 × 整數　｜　帶分數 × 整數<br>分數乘法二教學：分數 × 分數（面積模型）</p>
     <p style="text-align:center;color:var(--muted);">請選擇身份開始</p>
     <div class="role-btns">
       <button class="btn btn-primary" id="btn-student">學生</button>
@@ -409,7 +527,7 @@ window.__pubnubLoadPromise = (function () {
   </div>
   <div class="tabs" id="student-tabs">
     <button type="button" class="tab active" data-tab="1">分數乘法一</button>
-    <button type="button" class="tab disabled" data-tab="2" disabled title="即將推出">分數乘法二</button>
+    <button type="button" class="tab" data-tab="2">分數乘法二教學</button>
     <button type="button" class="tab disabled" data-tab="3" disabled title="即將推出">分數乘法三</button>
   </div>
   <div class="sync-bar" id="student-sync-bar"></div>
@@ -462,6 +580,10 @@ window.__pubnubLoadPromise = (function () {
     </div>
   </div>
 
+  <div id="pane-tab2">
+    <div id="explorer-host-student" class="exp-host" style="width:100%;display:flex;justify-content:center;"></div>
+  </div>
+
   <div class="btn-row" style="margin-top:16px;">
     <button class="btn btn-ghost" id="btn-play-join">課堂編號</button>
     <button class="btn btn-ghost" id="btn-play-back">返回選名</button>
@@ -480,8 +602,8 @@ window.__pubnubLoadPromise = (function () {
   </div>
   <div class="tabs" id="teacher-tabs" style="max-width:960px;">
     <button type="button" class="tab active" data-tab="1">分數乘法一</button>
-    <button type="button" class="tab disabled" data-tab="2" disabled>分數乘法二</button>
-    <button type="button" class="tab disabled" data-tab="3" disabled>分數乘法三</button>
+    <button type="button" class="tab" data-tab="2">分數乘法二教學</button>
+    <button type="button" class="tab disabled" data-tab="3" disabled title="即將推出">分數乘法三</button>
   </div>
   <div class="sync-bar">
     <div class="sync-pill" id="teacher-room-pill">課堂：----</div>
@@ -489,6 +611,7 @@ window.__pubnubLoadPromise = (function () {
   </div>
   <div class="online-names" id="teacher-online-names"></div>
 
+  <div id="pane-teacher-tab1">
   <div class="teacher-q-preview" id="teacher-q-preview">
     <div style="color:var(--muted);font-weight:600;">本輪題目</div>
     <div class="big" id="teacher-q-text">尚未出題</div>
@@ -508,6 +631,60 @@ window.__pubnubLoadPromise = (function () {
   <div class="monitor-stats" id="monitor-stats"></div>
   <div class="monitor-roster" id="monitor-roster" aria-live="polite"></div>
   <div class="answers-list" id="student-answers-list"></div>
+  </div><!-- /pane-teacher-tab1 -->
+
+  <div id="pane-teacher-tab2">
+    <div id="explorer-host-teacher" class="exp-host" style="width:100%;max-width:960px;display:flex;justify-content:center;"></div>
+  </div>
+</div>
+
+
+<!-- Shared fraction×fraction area-model explorer (moved into active tab host) -->
+<div id="explorer-shared" class="exp-card" style="display:none;" hidden>
+  <div class="exp-title"><span class="exp-ico" aria-hidden="true"></span>分數乘法探索器</div>
+  <div class="exp-body">
+    <div class="exp-canvas-wrap">
+      <canvas id="exp-canvas" width="560" height="560" aria-label="分數乘法面積模型"></canvas>
+    </div>
+    <div class="exp-right">
+      <div class="exp-eq" id="exp-eq" aria-label="分數乘法算式">
+        <div class="exp-chip blue empty" data-chip="blue" id="exp-chip-blue">
+          <span class="exp-num"><span class="digit-hit" data-field="bn">?</span></span>
+          <span class="exp-den"><span class="digit-hit" data-field="bd">?</span></span>
+        </div>
+        <span class="exp-op">×</span>
+        <div class="exp-chip red empty" data-chip="red" id="exp-chip-red">
+          <span class="exp-num"><span class="digit-hit" data-field="rn">?</span></span>
+          <span class="exp-den"><span class="digit-hit" data-field="rd">?</span></span>
+        </div>
+        <span class="exp-op">=</span>
+        <div class="exp-chip purple empty" data-chip="purple" id="exp-chip-purple">
+          <span class="exp-num"><span class="digit-hit" data-field="pn">?</span></span>
+          <span class="exp-den"><span class="digit-hit" data-field="pd">?</span></span>
+        </div>
+      </div>
+      <div class="exp-prompt" id="exp-prompt">第一步：先填寫左側藍色的分母</div>
+      <div class="exp-actions">
+        <button type="button" class="btn btn-ghost" id="exp-btn-reset">重新開始</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="exp-keypad-backdrop" id="exp-keypad-backdrop" aria-hidden="true">
+  <div class="exp-keypad" id="exp-keypad" role="dialog" aria-label="數字鍵盤">
+    <div class="exp-keypad-hint" id="exp-keypad-hint">請選擇數字</div>
+    <button type="button" data-dig="1">1</button>
+    <button type="button" data-dig="2">2</button>
+    <button type="button" data-dig="3">3</button>
+    <button type="button" data-dig="4">4</button>
+    <button type="button" data-dig="5">5</button>
+    <button type="button" data-dig="6">6</button>
+    <button type="button" data-dig="7">7</button>
+    <button type="button" data-dig="8">8</button>
+    <button type="button" data-dig="9">9</button>
+    <button type="button" class="zero" data-dig="0">0</button>
+  </div>
 </div>
 
 <div class="modal-backdrop" id="modal">
@@ -1749,12 +1926,24 @@ function wire() {
       syncAnswerInputsUI();
     });
   });
-  document.querySelectorAll('#student-tabs .tab, #teacher-tabs .tab').forEach(function (tab) {
+  document.querySelectorAll('#student-tabs .tab').forEach(function (tab) {
     tab.addEventListener('click', function () {
       if (tab.classList.contains('disabled')) {
-        var n = tab.getAttribute('data-tab');
-        toast('分數乘法' + (n === '2' ? '二' : '三') + '即將推出', 'ok');
+        toast('分數乘法三即將推出', 'ok');
+        return;
       }
+      var n = parseInt(tab.getAttribute('data-tab'), 10);
+      if (window.__fracMulExplorer) window.__fracMulExplorer.setStudentTab(n);
+    });
+  });
+  document.querySelectorAll('#teacher-tabs .tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      if (tab.classList.contains('disabled')) {
+        toast('分數乘法三即將推出', 'ok');
+        return;
+      }
+      var n = parseInt(tab.getAttribute('data-tab'), 10);
+      if (window.__fracMulExplorer) window.__fracMulExplorer.setTeacherTab(n);
     });
   });
   document.getElementById('btn-gen-frac').onclick = function () { startRound(genFracTimesInt()); };
@@ -1786,5 +1975,558 @@ function wire() {
     if (e.key === 'Enter') document.getElementById('btn-join-go').click();
   });
 }
+
+/* ===== 分數乘法二教學：分數×分數面積模型探索器 ===== */
+(function () {
+  var state = {
+    bn: null, bd: null, rn: null, rd: null,
+    highlight: null, // 'bn'|'bd'|'rn'|'rd'|'pn'|'pd'|null
+    editing: null,   // field being edited via keypad
+    fillStep: 1,     // 1 bd, 2 bn, 3 rd, 4 rn, 5 done
+    lastTap: { field: null, t: 0 }
+  };
+
+  var PROMPTS = {
+    1: '第一步：先填寫左側藍色的分母',
+    2: '第二步：再填寫左側藍色的分子',
+    3: '第三步：再填寫右側紅色的分母',
+    4: '第四步：再填寫右側紅色的分子',
+    5: '太棒了！單擊數字看高亮，雙擊數字可修改'
+  };
+  var FIELD_HINT = {
+    bd: '填寫左側藍色的分母',
+    bn: '填寫左側藍色的分子',
+    rd: '填寫右側紅色的分母',
+    rn: '填寫右側紅色的分子'
+  };
+
+  var mounted = false;
+  var canvas, ctx;
+
+  function $(id) { return document.getElementById(id); }
+
+  function product() {
+    if (state.bn == null || state.bd == null || state.rn == null || state.rd == null) return null;
+    return { n: state.bn * state.rn, d: state.bd * state.rd };
+  }
+
+  function isComplete() {
+    return state.bn != null && state.bd != null && state.rn != null && state.rd != null;
+  }
+
+  function recomputeStep() {
+    if (state.bd == null) state.fillStep = 1;
+    else if (state.bn == null) state.fillStep = 2;
+    else if (state.rd == null) state.fillStep = 3;
+    else if (state.rn == null) state.fillStep = 4;
+    else state.fillStep = 5;
+  }
+
+  function mountExplorerInto(host) {
+    var shared = $('explorer-shared');
+    if (!shared || !host) return;
+    if (shared.parentElement !== host) {
+      host.appendChild(shared);
+    }
+    shared.style.display = 'flex';
+    shared.hidden = false;
+    if (!mounted) {
+      canvas = $('exp-canvas');
+      ctx = canvas.getContext('2d');
+      wireExplorer();
+      mounted = true;
+    }
+    resizeCanvas();
+    renderAll();
+  }
+
+  function hideExplorer() {
+    var shared = $('explorer-shared');
+    if (shared) { shared.style.display = 'none'; shared.hidden = true; }
+  }
+
+  function resizeCanvas() {
+    if (!canvas) return;
+    var wrap = canvas.parentElement;
+    var size = Math.floor(Math.min(wrap.clientWidth || 480, wrap.clientHeight || 480, 560));
+    if (size < 200) size = 280;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawModel(size);
+  }
+
+  function hatch(x, y, w, h, color, dir, gap) {
+    // dir: 1 = \, -1 = /
+    gap = gap || 8;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    var i;
+    if (dir < 0) {
+      for (i = -h; i < w + h; i += gap) {
+        ctx.moveTo(x + i, y);
+        ctx.lineTo(x + i + h, y + h);
+      }
+    } else {
+      for (i = -h; i < w + h; i += gap) {
+        ctx.moveTo(x + i, y + h);
+        ctx.lineTo(x + i + h, y);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function fillShade(x, y, w, h, rgba) {
+    ctx.fillStyle = rgba;
+    ctx.fillRect(x, y, w, h);
+  }
+
+  function drawModel(cssSize) {
+    if (!ctx) return;
+    var S = cssSize || (canvas.clientWidth || 400);
+    var pad = 10;
+    var x0 = pad, y0 = pad, W = S - pad * 2, H = S - pad * 2;
+
+    ctx.clearRect(0, 0, S, S);
+
+    // Unit square border
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#2c3e50';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x0, y0, W, H);
+    ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
+
+    var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
+    var done = isComplete();
+    var showLattice = done || state.highlight;
+
+    // Pale yellow cells when lattice shown
+    if (showLattice && bd && rd) {
+      var cw = W / bd, rh = H / rd;
+      var c, r;
+      for (c = 0; c < bd; c++) {
+        for (r = 0; r < rd; r++) {
+          ctx.fillStyle = '#fff8e1';
+          ctx.fillRect(x0 + c * cw + 0.5, y0 + r * rh + 0.5, cw - 1, rh - 1);
+        }
+      }
+    }
+
+    // Blue vertical columns shade (leftmost bn)
+    if (bd && bn != null && bn > 0) {
+      var colW = W / bd;
+      var bx = x0, by = y0, bw = colW * Math.min(bn, bd), bh = H;
+      // During early steps (before red), shade full height; after red, still shade full then red overlays
+      fillShade(bx, by, bw, bh, 'rgba(52, 152, 219, 0.12)');
+      hatch(bx, by, bw, bh, 'rgba(41, 128, 185, 0.85)', -1, 9);
+    }
+
+    // Red horizontal rows shade (top rn)
+    if (rd && rn != null && rn > 0) {
+      var rowH = H / rd;
+      var rx = x0, ry = y0, rw = W, rh2 = rowH * Math.min(rn, rd);
+      fillShade(rx, ry, rw, rh2, 'rgba(231, 76, 60, 0.10)');
+      hatch(rx, ry, rw, rh2, 'rgba(192, 57, 43, 0.85)', 1, 9);
+    }
+
+    // Purple overlap
+    if (bd && bn != null && rd && rn != null && bn > 0 && rn > 0) {
+      var ow = (W / bd) * Math.min(bn, bd);
+      var oh = (H / rd) * Math.min(rn, rd);
+      fillShade(x0, y0, ow, oh, 'rgba(142, 68, 173, 0.28)');
+      hatch(x0, y0, ow, oh, 'rgba(108, 52, 131, 0.95)', -1, 7);
+      hatch(x0, y0, ow, oh, 'rgba(108, 52, 131, 0.95)', 1, 7);
+    }
+
+    // Division lines
+    ctx.setLineDash([6, 5]);
+    ctx.lineWidth = 1.8;
+    if (bd && bd > 1) {
+      ctx.strokeStyle = '#5dade2';
+      var i;
+      for (i = 1; i < bd; i++) {
+        var lx = x0 + (W / bd) * i;
+        ctx.beginPath();
+        ctx.moveTo(lx, y0);
+        ctx.lineTo(lx, y0 + H);
+        ctx.stroke();
+      }
+    }
+    if (rd && rd > 1) {
+      ctx.strokeStyle = '#e74c3c';
+      for (i = 1; i < rd; i++) {
+        var ly = y0 + (H / rd) * i;
+        ctx.beginPath();
+        ctx.moveTo(x0, ly);
+        ctx.lineTo(x0 + W, ly);
+        ctx.stroke();
+      }
+    }
+    ctx.setLineDash([]);
+
+    // Lattice thin grid when complete
+    if (showLattice && bd && rd) {
+      ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+      ctx.lineWidth = 1;
+      var cw2 = W / bd, rh3 = H / rd;
+      for (var cc = 1; cc < bd; cc++) {
+        ctx.beginPath();
+        ctx.moveTo(x0 + cc * cw2, y0);
+        ctx.lineTo(x0 + cc * cw2, y0 + H);
+        ctx.stroke();
+      }
+      for (var rr = 1; rr < rd; rr++) {
+        ctx.beginPath();
+        ctx.moveTo(x0, y0 + rr * rh3);
+        ctx.lineTo(x0 + W, y0 + rr * rh3);
+        ctx.stroke();
+      }
+    }
+
+    // Highlight overlays for teacher explanation
+    applyHighlight(x0, y0, W, H);
+
+    // Outer border again on top
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#2c3e50';
+    ctx.setLineDash([]);
+    ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
+  }
+
+  function applyHighlight(x0, y0, W, H) {
+    var hl = state.highlight;
+    if (!hl || !isComplete()) return;
+    var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
+    var cw = W / bd, rh = H / rd;
+
+    function ringCell(c, r, color) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x0 + c * cw + 2, y0 + r * rh + 2, cw - 4, rh - 4);
+    }
+    function wash(x, y, w, h, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+    }
+
+    if (hl === 'bn') {
+      // emphasize blue columns
+      wash(x0, y0, cw * bn, H, 'rgba(52,152,219,0.18)');
+      ctx.strokeStyle = '#2980b9';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(x0 + 2, y0 + 2, cw * bn - 4, H - 4);
+    } else if (hl === 'bd') {
+      // all vertical strips
+      wash(x0, y0, W, H, 'rgba(52,152,219,0.08)');
+      for (var c = 0; c < bd; c++) {
+        ctx.strokeStyle = '#2980b9';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(x0 + c * cw + 1.5, y0 + 1.5, cw - 3, H - 3);
+      }
+    } else if (hl === 'rn') {
+      wash(x0, y0, W, rh * rn, 'rgba(231,76,60,0.18)');
+      ctx.strokeStyle = '#c0392b';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(x0 + 2, y0 + 2, W - 4, rh * rn - 4);
+    } else if (hl === 'rd') {
+      wash(x0, y0, W, H, 'rgba(231,76,60,0.08)');
+      for (var r = 0; r < rd; r++) {
+        ctx.strokeStyle = '#c0392b';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(x0 + 1.5, y0 + r * rh + 1.5, W - 3, rh - 3);
+      }
+    } else if (hl === 'pn') {
+      wash(x0, y0, cw * bn, rh * rn, 'rgba(142,68,173,0.28)');
+      ctx.strokeStyle = '#8e44ad';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(x0 + 2, y0 + 2, cw * bn - 4, rh * rn - 4);
+      for (var cc = 0; cc < bn; cc++) {
+        for (var rr = 0; rr < rn; rr++) ringCell(cc, rr, '#8e44ad');
+      }
+    } else if (hl === 'pd') {
+      wash(x0, y0, W, H, 'rgba(142,68,173,0.10)');
+      for (var c2 = 0; c2 < bd; c2++) {
+        for (var r2 = 0; r2 < rd; r2++) ringCell(c2, r2, '#8e44ad');
+      }
+    }
+  }
+
+  function setDigitText(field, val) {
+    var el = document.querySelector('#exp-eq .digit-hit[data-field="' + field + '"]');
+    if (!el) return;
+    el.textContent = (val == null) ? '?' : String(val);
+  }
+
+  function updateChipsUI() {
+    setDigitText('bn', state.bn);
+    setDigitText('bd', state.bd);
+    setDigitText('rn', state.rn);
+    setDigitText('rd', state.rd);
+    var p = product();
+    setDigitText('pn', p ? p.n : null);
+    setDigitText('pd', p ? p.d : null);
+
+    var blue = $('exp-chip-blue');
+    var red = $('exp-chip-red');
+    var purple = $('exp-chip-purple');
+    function syncChip(el, hasAny, colorClass) {
+      el.classList.remove('empty', 'selected', 'blue', 'red', 'purple');
+      el.classList.add(colorClass);
+      if (!hasAny) el.classList.add('empty');
+    }
+    syncChip(blue, state.bn != null || state.bd != null, 'blue');
+    syncChip(red, state.rn != null || state.rd != null, 'red');
+    syncChip(purple, !!p, 'purple');
+
+    // selection ring on chip owning highlight
+    var map = { bn: blue, bd: blue, rn: red, rd: red, pn: purple, pd: purple };
+    if (state.highlight && map[state.highlight]) {
+      map[state.highlight].classList.add('selected');
+    }
+
+    // editing / expect markers
+    recomputeStep();
+    var expectField = null;
+    if (state.fillStep >= 1 && state.fillStep <= 4) {
+      expectField = { 1: 'bd', 2: 'bn', 3: 'rd', 4: 'rn' }[state.fillStep];
+    }
+    document.querySelectorAll('#exp-eq .digit-hit').forEach(function (d) {
+      var f = d.getAttribute('data-field');
+      d.classList.toggle('editing', state.editing === f);
+      d.classList.toggle('expect', expectField === f && state.editing == null);
+    });
+    blue.classList.toggle('editing-digit', state.editing === 'bn' || state.editing === 'bd');
+    red.classList.toggle('editing-digit', state.editing === 'rn' || state.editing === 'rd');
+    // During fill, ring the chip of the expected factor
+    if (expectField && !state.highlight) {
+      if (expectField === 'bn' || expectField === 'bd') blue.classList.add('selected');
+      if (expectField === 'rn' || expectField === 'rd') red.classList.add('selected');
+    }
+
+    var prompt = $('exp-prompt');
+    prompt.textContent = PROMPTS[state.fillStep] || PROMPTS[5];
+    prompt.classList.toggle('done', state.fillStep === 5);
+  }
+
+  function renderAll() {
+    updateChipsUI();
+    resizeCanvas();
+  }
+
+  function openKeypad(field) {
+    // Product fields are not editable
+    if (field === 'pn' || field === 'pd') return;
+    state.editing = field;
+    var bd = $('exp-keypad-backdrop');
+    var hint = $('exp-keypad-hint');
+    hint.textContent = FIELD_HINT[field] || '請選擇數字';
+    bd.classList.add('show');
+    bd.setAttribute('aria-hidden', 'false');
+    updateChipsUI();
+  }
+
+  function closeKeypad() {
+    state.editing = null;
+    var bd = $('exp-keypad-backdrop');
+    bd.classList.remove('show');
+    bd.setAttribute('aria-hidden', 'true');
+    updateChipsUI();
+  }
+
+  function applyDigit(n) {
+    var f = state.editing;
+    if (!f) return;
+    // Denominator cannot be 0
+    if ((f === 'bd' || f === 'rd') && n === 0) {
+      if (typeof toast === 'function') toast('分母不能為 0', 'bad');
+      return;
+    }
+    // Soft warn if numerator > denominator but still allow (visual still works)
+    state[f] = n;
+
+    // If denominator shrinks below numerator, keep as-is (teacher may explain)
+    recomputeStep();
+    closeKeypad();
+
+    // Auto-open next step during initial fill
+    if (!isComplete()) {
+      var nextField = { 1: 'bd', 2: 'bn', 3: 'rd', 4: 'rn' }[state.fillStep];
+      // don't auto-open; wait for user tap — matches demo better after first entry
+    }
+
+    if (isComplete() && typeof toast === 'function') {
+      // gentle celebration once when just completed — check via fillStep
+    }
+    renderAll();
+    if (state.fillStep === 5 && typeof toast === 'function') {
+      // only toast when transitioning — use a flag
+      if (!state._celebrated) {
+        state._celebrated = true;
+        toast('太棒了！', 'ok');
+      }
+    } else if (state.fillStep < 5) {
+      state._celebrated = false;
+    }
+  }
+
+  function resetExplorer() {
+    state.bn = state.bd = state.rn = state.rd = null;
+    state.highlight = null;
+    state.editing = null;
+    state.fillStep = 1;
+    state._celebrated = false;
+    closeKeypad();
+    renderAll();
+  }
+
+  function fieldForStep(step) {
+    return { 1: 'bd', 2: 'bn', 3: 'rd', 4: 'rn' }[step];
+  }
+
+  function onDigitPointer(field, isDouble) {
+    if (field === 'pn' || field === 'pd') {
+      if (isComplete()) {
+        state.highlight = field;
+        renderAll();
+      }
+      return;
+    }
+
+    // During incomplete fill: tap current or already-filled field opens keypad
+    if (!isComplete()) {
+      var expected = fieldForStep(state.fillStep);
+      if (field === expected || state[field] != null) {
+        if (isDouble || state[field] == null || field === expected) {
+          openKeypad(field);
+        }
+      } else if (state[field] != null) {
+        openKeypad(field);
+      } else {
+        // nudge: open expected
+        openKeypad(expected);
+      }
+      return;
+    }
+
+    // Complete: single click = highlight; double = edit
+    if (isDouble) {
+      openKeypad(field);
+    } else {
+      state.highlight = field;
+      renderAll();
+    }
+  }
+
+  function handleDigitEvent(field) {
+    var now = Date.now();
+    var isDouble = (state.lastTap.field === field && (now - state.lastTap.t) < 350);
+    state.lastTap = { field: field, t: now };
+    onDigitPointer(field, isDouble);
+  }
+
+  function wireExplorer() {
+    document.querySelectorAll('#exp-eq .digit-hit').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleDigitEvent(el.getAttribute('data-field'));
+      });
+    });
+    // Chip click (background) selects highlight for that factor when complete
+    ['exp-chip-blue', 'exp-chip-red', 'exp-chip-purple'].forEach(function (id) {
+      var chip = $(id);
+      if (!chip) return;
+      chip.addEventListener('click', function (e) {
+        if (e.target.classList.contains('digit-hit')) return;
+        if (!isComplete()) {
+          var expected = fieldForStep(state.fillStep);
+          if (expected) openKeypad(expected);
+          return;
+        }
+        var def = { blue: 'bn', red: 'rn', purple: 'pn' }[chip.getAttribute('data-chip')];
+        state.highlight = def;
+        renderAll();
+      });
+    });
+
+    $('exp-btn-reset').onclick = resetExplorer;
+
+    $('exp-keypad').addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-dig]');
+      if (!btn) return;
+      applyDigit(parseInt(btn.getAttribute('data-dig'), 10));
+    });
+    $('exp-keypad-backdrop').addEventListener('click', function (e) {
+      if (e.target === $('exp-keypad-backdrop')) closeKeypad();
+    });
+
+    window.addEventListener('resize', function () {
+      if ($('explorer-shared') && !$('explorer-shared').hidden) resizeCanvas();
+    });
+  }
+
+  // ---- Tab switching ----
+  function setStudentTab(n) {
+    document.querySelectorAll('#student-tabs .tab').forEach(function (t) {
+      t.classList.toggle('active', t.getAttribute('data-tab') === String(n));
+    });
+    var p1 = $('pane-tab1');
+    var p2 = $('pane-tab2');
+    if (n === 1) {
+      if (p1) {
+        p1.style.display = 'flex';
+        p1.style.flexDirection = 'column';
+        p1.style.alignItems = 'center';
+        p1.classList.remove('hide');
+      }
+      if (p2) p2.classList.remove('show');
+      hideExplorer();
+    } else if (n === 2) {
+      if (p1) { p1.style.display = 'none'; p1.classList.add('hide'); }
+      if (p2) p2.classList.add('show');
+      // defer mount so layout has size
+      requestAnimationFrame(function () {
+        mountExplorerInto($('explorer-host-student'));
+      });
+    }
+  }
+
+  function setTeacherTab(n) {
+    document.querySelectorAll('#teacher-tabs .tab').forEach(function (t) {
+      t.classList.toggle('active', t.getAttribute('data-tab') === String(n));
+    });
+    var p1 = $('pane-teacher-tab1');
+    var p2 = $('pane-teacher-tab2');
+    if (n === 1) {
+      if (p1) p1.classList.remove('hide');
+      if (p2) p2.classList.remove('show');
+      hideExplorer();
+    } else if (n === 2) {
+      if (p1) p1.classList.add('hide');
+      if (p2) p2.classList.add('show');
+      requestAnimationFrame(function () {
+        mountExplorerInto($('explorer-host-teacher'));
+      });
+    }
+  }
+
+  window.__fracMulExplorer = {
+    setStudentTab: setStudentTab,
+    setTeacherTab: setTeacherTab,
+    reset: resetExplorer,
+    mountStudent: function () { mountExplorerInto($('explorer-host-student')); },
+    mountTeacher: function () { mountExplorerInto($('explorer-host-teacher')); }
+  };
+})();
+
 wire();
 </script></body></html>
