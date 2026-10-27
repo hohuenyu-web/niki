@@ -418,12 +418,12 @@ window.__pubnubLoadPromise = (function () {
   .exp-chip.purple { background: #f5eef8; color: #6c3483; border-color: #d2b4de; cursor: default; }
   .exp-chip.empty { background: #f7f9fc; color: #b0b8c4; border-color: #d5dde8; border-style: dashed; }
   .exp-chip.selected {
-    border-style: dashed; border-width: 3px;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
+    border-style: dashed; border-width: 3px; border-color: #7f8c8d !important;
+    box-shadow: 0 0 0 2px rgba(127, 140, 141, 0.18);
   }
-  .exp-chip.blue.selected { border-color: #2980b9; }
-  .exp-chip.red.selected { border-color: #e74c3c; }
-  .exp-chip.purple.selected { border-color: #8e44ad; }
+  .exp-chip.blue.selected { border-color: #7f8c8d !important; }
+  .exp-chip.red.selected { border-color: #7f8c8d !important; }
+  .exp-chip.purple.selected { border-color: #7f8c8d !important; }
   .exp-chip .exp-num, .exp-chip .exp-den {
     min-width: 1.4em; text-align: center; line-height: 1.15;
     padding: 2px 4px; border-radius: 6px;
@@ -2588,7 +2588,7 @@ function wire() {
 
     ctx.clearRect(0, 0, S, S);
 
-    // Unit square border
+    // Unit square — plain white by default (no pale-yellow lattice)
     ctx.lineWidth = 4;
     ctx.strokeStyle = '#2c3e50';
     ctx.fillStyle = '#ffffff';
@@ -2596,53 +2596,38 @@ function wire() {
     ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
 
     var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
-    var done = isComplete();
-    var showLattice = done || state.highlight;
 
-    // Pale yellow cells when lattice shown
-    if (showLattice && bd && rd) {
-      var cw = W / bd, rh = H / rd;
-      var c, r;
-      for (c = 0; c < bd; c++) {
-        for (r = 0; r < rd; r++) {
-          ctx.fillStyle = '#fff8e1';
-          ctx.fillRect(x0 + c * cw + 0.5, y0 + r * rh + 0.5, cw - 1, rh - 1);
-        }
-      }
-    }
-
-    // Blue vertical columns shade (leftmost bn)
+    // Blue vertical columns: \\ hatch (leftmost bn), full height
     if (bd && bn != null && bn > 0) {
       var colW = W / bd;
       var bx = x0, by = y0, bw = colW * Math.min(bn, bd), bh = H;
-      // During early steps (before red), shade full height; after red, still shade full then red overlays
-      fillShade(bx, by, bw, bh, 'rgba(52, 152, 219, 0.12)');
+      fillShade(bx, by, bw, bh, 'rgba(52, 152, 219, 0.10)');
       hatch(bx, by, bw, bh, 'rgba(41, 128, 185, 0.85)', -1, 9);
     }
 
-    // Red horizontal rows shade (top rn)
+    // Red horizontal rows: // hatch (top rn), full width
     if (rd && rn != null && rn > 0) {
       var rowH = H / rd;
       var rx = x0, ry = y0, rw = W, rh2 = rowH * Math.min(rn, rd);
-      fillShade(rx, ry, rw, rh2, 'rgba(231, 76, 60, 0.10)');
+      fillShade(rx, ry, rw, rh2, 'rgba(231, 76, 60, 0.08)');
       hatch(rx, ry, rw, rh2, 'rgba(192, 57, 43, 0.85)', 1, 9);
     }
 
-    // Purple overlap
+    // Purple crosshatch on overlap
     if (bd && bn != null && rd && rn != null && bn > 0 && rn > 0) {
       var ow = (W / bd) * Math.min(bn, bd);
       var oh = (H / rd) * Math.min(rn, rd);
-      fillShade(x0, y0, ow, oh, 'rgba(142, 68, 173, 0.28)');
+      fillShade(x0, y0, ow, oh, 'rgba(142, 68, 173, 0.26)');
       hatch(x0, y0, ow, oh, 'rgba(108, 52, 131, 0.95)', -1, 7);
       hatch(x0, y0, ow, oh, 'rgba(108, 52, 131, 0.95)', 1, 7);
     }
 
-    // Division lines
+    // Dashed blue/red partition lines (always when denominators known)
     ctx.setLineDash([6, 5]);
     ctx.lineWidth = 1.8;
+    var i;
     if (bd && bd > 1) {
       ctx.strokeStyle = '#5dade2';
-      var i;
       for (i = 1; i < bd; i++) {
         var lx = x0 + (W / bd) * i;
         ctx.beginPath();
@@ -2663,29 +2648,10 @@ function wire() {
     }
     ctx.setLineDash([]);
 
-    // Lattice thin grid when complete
-    if (showLattice && bd && rd) {
-      ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-      ctx.lineWidth = 1;
-      var cw2 = W / bd, rh3 = H / rd;
-      for (var cc = 1; cc < bd; cc++) {
-        ctx.beginPath();
-        ctx.moveTo(x0 + cc * cw2, y0);
-        ctx.lineTo(x0 + cc * cw2, y0 + H);
-        ctx.stroke();
-      }
-      for (var rr = 1; rr < rd; rr++) {
-        ctx.beginPath();
-        ctx.moveTo(x0, y0 + rr * rh3);
-        ctx.lineTo(x0 + W, y0 + rr * rh3);
-        ctx.stroke();
-      }
-    }
-
-    // Highlight overlays for teacher explanation
+    // Amber/gold shadow only on click (see applyHighlight)
     applyHighlight(x0, y0, W, H);
 
-    // Outer border again on top
+    // Outer border on top
     ctx.lineWidth = 4;
     ctx.strokeStyle = '#2c3e50';
     ctx.setLineDash([]);
@@ -2696,58 +2662,72 @@ function wire() {
     var hl = state.highlight;
     if (!hl || !isComplete()) return;
     var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
+    if (!bd || !rd) return;
     var cw = W / bd, rh = H / rd;
+    var GOLD_WASH = 'rgba(250, 190, 0, 0.32)';
+    var GOLD_STROKE = '#e6bd37';
 
-    function ringCell(c, r, color) {
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 3;
-      ctx.strokeRect(x0 + c * cw + 2, y0 + r * rh + 2, cw - 4, rh - 4);
-    }
-    function wash(x, y, w, h, color) {
-      ctx.fillStyle = color;
-      ctx.fillRect(x, y, w, h);
-    }
-
+    // Target region by clicked digit (XHS explorer shadow)
+    // bd / rd / pd → whole square lattice
+    // bn → left num1 columns, full height
+    // rn → top num2 rows, full width
+    // pn → overlap cells only
+    var rx = x0, ry = y0, rw = W, rhR = H;
+    var c0 = 0, c1 = bd, r0 = 0, r1 = rd;
     if (hl === 'bn') {
-      // emphasize blue columns
-      wash(x0, y0, cw * bn, H, 'rgba(52,152,219,0.18)');
-      ctx.strokeStyle = '#2980b9';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(x0 + 2, y0 + 2, cw * bn - 4, H - 4);
-    } else if (hl === 'bd') {
-      // all vertical strips
-      wash(x0, y0, W, H, 'rgba(52,152,219,0.08)');
-      for (var c = 0; c < bd; c++) {
-        ctx.strokeStyle = '#2980b9';
-        ctx.lineWidth = 2.5;
-        ctx.strokeRect(x0 + c * cw + 1.5, y0 + 1.5, cw - 3, H - 3);
-      }
+      c1 = Math.min(bn, bd);
+      rw = cw * c1;
     } else if (hl === 'rn') {
-      wash(x0, y0, W, rh * rn, 'rgba(231,76,60,0.18)');
-      ctx.strokeStyle = '#c0392b';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(x0 + 2, y0 + 2, W - 4, rh * rn - 4);
-    } else if (hl === 'rd') {
-      wash(x0, y0, W, H, 'rgba(231,76,60,0.08)');
-      for (var r = 0; r < rd; r++) {
-        ctx.strokeStyle = '#c0392b';
-        ctx.lineWidth = 2.5;
-        ctx.strokeRect(x0 + 1.5, y0 + r * rh + 1.5, W - 3, rh - 3);
-      }
+      r1 = Math.min(rn, rd);
+      rhR = rh * r1;
     } else if (hl === 'pn') {
-      wash(x0, y0, cw * bn, rh * rn, 'rgba(142,68,173,0.28)');
-      ctx.strokeStyle = '#8e44ad';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(x0 + 2, y0 + 2, cw * bn - 4, rh * rn - 4);
-      for (var cc = 0; cc < bn; cc++) {
-        for (var rr = 0; rr < rn; rr++) ringCell(cc, rr, '#8e44ad');
-      }
-    } else if (hl === 'pd') {
-      wash(x0, y0, W, H, 'rgba(142,68,173,0.10)');
-      for (var c2 = 0; c2 < bd; c2++) {
-        for (var r2 = 0; r2 < rd; r2++) ringCell(c2, r2, '#8e44ad');
-      }
+      c1 = Math.min(bn, bd);
+      r1 = Math.min(rn, rd);
+      rw = cw * c1;
+      rhR = rh * r1;
+    } else if (hl === 'bd' || hl === 'rd' || hl === 'pd') {
+      // whole square
+    } else {
+      return;
     }
+
+    // Amber wash over white+hatch (hatch stays visible underneath)
+    ctx.fillStyle = GOLD_WASH;
+    ctx.fillRect(rx, ry, rw, rhR);
+
+    // Solid gold lattice lines inside the region only
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rx - 0.5, ry - 0.5, rw + 1, rhR + 1);
+    ctx.clip();
+    ctx.strokeStyle = GOLD_STROKE;
+    ctx.lineWidth = 2.2;
+    ctx.setLineDash([]);
+    var c, r, gx, gy;
+    for (c = c0 + 1; c < c1; c++) {
+      gx = x0 + c * cw;
+      ctx.beginPath();
+      ctx.moveTo(gx, ry);
+      ctx.lineTo(gx, ry + rhR);
+      ctx.stroke();
+    }
+    for (r = r0 + 1; r < r1; r++) {
+      gy = y0 + r * rh;
+      ctx.beginPath();
+      ctx.moveTo(rx, gy);
+      ctx.lineTo(rx + rw, gy);
+      ctx.stroke();
+    }
+    // Also draw the outer perimeter of every small cell for pd (every cell)
+    // and for whole-square denoms — outer region stroke below covers the rim;
+    // internal lines above form the lattice.
+    ctx.restore();
+
+    // Solid gold outline of the target region
+    ctx.strokeStyle = GOLD_STROKE;
+    ctx.lineWidth = 3.5;
+    ctx.setLineDash([]);
+    ctx.strokeRect(rx + 1.5, ry + 1.5, rw - 3, rhR - 3);
   }
 
   function setDigitText(field, val) {
@@ -2815,6 +2795,7 @@ function wire() {
   function openKeypad(field) {
     // Product fields are not editable
     if (field === 'pn' || field === 'pd') return;
+    state.highlight = null;
     state.editing = field;
     var bd = $('exp-keypad-backdrop');
     var hint = $('exp-keypad-hint');
@@ -2885,7 +2866,7 @@ function wire() {
   function onDigitPointer(field, isDouble) {
     if (field === 'pn' || field === 'pd') {
       if (isComplete()) {
-        state.highlight = field;
+        state.highlight = (state.highlight === field) ? null : field;
         renderAll();
       }
       return;
@@ -2907,11 +2888,11 @@ function wire() {
       return;
     }
 
-    // Complete: single click = highlight; double = edit
+    // Complete: single click = amber shadow; re-click clears; double = edit
     if (isDouble) {
       openKeypad(field);
     } else {
-      state.highlight = field;
+      state.highlight = (state.highlight === field) ? null : field;
       renderAll();
     }
   }
