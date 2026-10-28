@@ -2554,7 +2554,11 @@ function wire() {
 
   function hatch(x, y, w, h, color, dir, gap, lineWidth) {
     // dir: 1 = //, -1 = \\
+    // Phase is centered in this rectangle: consecutive lines stay `gap`
+    // apart, and the leftover (span % gap) is split on both ends so the
+    // stripes don't clump against one edge.
     gap = gap || 8;
+    if (!(w > 0) || !(h > 0) || !(gap > 0)) return;
     ctx.save();
     ctx.beginPath();
     ctx.rect(x, y, w, h);
@@ -2562,14 +2566,21 @@ function wire() {
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth || 1.6;
     ctx.beginPath();
+    var span = w + h;
+    var rem = span % gap;
+    if (rem < 0) rem += gap;
+    if (gap - rem < 0.05) rem = 0;
+    var margin = rem / 2;
     var i;
+    var start = -h + margin;
+    var end = w - margin;
     if (dir < 0) {
-      for (i = -h; i < w + h; i += gap) {
+      for (i = start; i <= end + 0.01; i += gap) {
         ctx.moveTo(x + i, y);
         ctx.lineTo(x + i + h, y + h);
       }
     } else {
-      for (i = -h; i < w + h; i += gap) {
+      for (i = start; i <= end + 0.01; i += gap) {
         ctx.moveTo(x + i, y + h);
         ctx.lineTo(x + i + h, y);
       }
@@ -2578,46 +2589,9 @@ function wire() {
     ctx.restore();
   }
 
-  function drawModel(cssSize) {
-    if (!ctx) return;
-    var S = cssSize || (canvas.clientWidth || 400);
-    var pad = 10;
-    var x0 = pad, y0 = pad, W = S - pad * 2, H = S - pad * 2;
-
-    ctx.clearRect(0, 0, S, S);
-
-    // Unit square — plain white (陰影 = 斜線 only, no color fills)
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = '#2c3e50';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(x0, y0, W, H);
-    ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
-
-    var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
-
-    // Factor 1 columns: \\ hatch (leftmost bn), full height — neutral stroke
-    if (bd && bn != null && bn > 0) {
-      var colW = W / bd;
-      var bx = x0, by = y0, bw = colW * Math.min(bn, bd), bh = H;
-      hatch(bx, by, bw, bh, HATCH_NEUTRAL, -1, 36);
-    }
-
-    // Factor 2 rows: // hatch (top rn), full width — neutral stroke
-    if (rd && rn != null && rn > 0) {
-      var rowH = H / rd;
-      var rx = x0, ry = y0, rw = W, rh2 = rowH * Math.min(rn, rd);
-      hatch(rx, ry, rw, rh2, HATCH_NEUTRAL, 1, 36);
-    }
-
-    // Overlap: denser crosshatch (both directions) — still neutral, no purple wash
-    if (bd && bn != null && rd && rn != null && bn > 0 && rn > 0) {
-      var ow = (W / bd) * Math.min(bn, bd);
-      var oh = (H / rd) * Math.min(rn, rd);
-      hatch(x0, y0, ow, oh, HATCH_NEUTRAL, -1, 28);
-      hatch(x0, y0, ow, oh, HATCH_NEUTRAL, 1, 28);
-    }
-
-    // Dashed blue/red partition lines (grid guides matching equation chips)
+  function strokePartitionLines(x0, y0, W, H) {
+    var bd = state.bd, rd = state.rd;
+    ctx.save();
     ctx.setLineDash([6, 5]);
     ctx.lineWidth = 1.8;
     var i;
@@ -2641,7 +2615,49 @@ function wire() {
         ctx.stroke();
       }
     }
-    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawModel(cssSize) {
+    if (!ctx) return;
+    var S = cssSize || (canvas.clientWidth || 400);
+    var pad = 10;
+    var x0 = pad, y0 = pad, W = S - pad * 2, H = S - pad * 2;
+
+    ctx.clearRect(0, 0, S, S);
+
+    // Unit square — plain white (陰影 = 斜線 only, no color fills)
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#2c3e50';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x0, y0, W, H);
+    ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
+
+    var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
+    var bw = (bd && bn != null && bn > 0) ? (W / bd) * Math.min(bn, bd) : 0;
+    var rh2 = (rd && rn != null && rn > 0) ? (H / rd) * Math.min(rn, rd) : 0;
+    var hasOverlap = bw > 0 && rh2 > 0;
+
+    // One pitch per visible region. Factor lines stay outside the overlap so
+    // gap 36 and gap 28 are not drawn on top of each other (that beat pattern
+    // is what made the crosshatch look clumped).
+    if (bw > 0) {
+      var by = y0 + (hasOverlap ? rh2 : 0);
+      var bh = H - (hasOverlap ? rh2 : 0);
+      hatch(x0, by, bw, bh, HATCH_NEUTRAL, -1, 36);
+    }
+    if (rh2 > 0) {
+      var rx = x0 + (hasOverlap ? bw : 0);
+      var rw = W - (hasOverlap ? bw : 0);
+      hatch(rx, y0, rw, rh2, HATCH_NEUTRAL, 1, 36);
+    }
+    if (hasOverlap) {
+      hatch(x0, y0, bw, rh2, HATCH_NEUTRAL, -1, 28);
+      hatch(x0, y0, bw, rh2, HATCH_NEUTRAL, 1, 28);
+    }
+
+    // Dashed blue/red partition lines (grid guides matching equation chips)
+    strokePartitionLines(x0, y0, W, H);
 
     // Click highlight: denser neutral 斜線 + dark outline (no gold wash)
     applyHighlight(x0, y0, W, H);
@@ -2683,13 +2699,22 @@ function wire() {
       return;
     }
 
-    // Emphasize with denser neutral 斜線 (no color wash, no gold)
+    // One centered gap-22 pattern in the target rect. Clearing first avoids
+    // stacking 22 on 36/28, which clumps the stripes.
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(rx, ry, rw, rhR);
     if (denserDir === 0) {
       hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, -1, 22, 2.0);
       hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, 1, 22, 2.0);
     } else {
       hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, denserDir, 22, 2.0);
     }
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rx, ry, rw, rhR);
+    ctx.clip();
+    strokePartitionLines(x0, y0, W, H);
+    ctx.restore();
 
     // Dark outline of the target region
     ctx.strokeStyle = HATCH_NEUTRAL;
