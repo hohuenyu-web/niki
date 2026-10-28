@@ -133,11 +133,12 @@ window.__pubnubLoadPromise = (function () {
   .sync-pill.clickable { cursor: pointer; font-family: inherit; }
   .tabs {
     display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
-    width: 100%; max-width: 720px; margin-bottom: 12px;
+    width: 100%; max-width: 920px; margin-bottom: 12px;
   }
   .tab {
-    flex: 1 1 120px; padding: 10px 12px; border-radius: 12px; border: 2px solid var(--border);
+    flex: 1 1 150px; padding: 10px 8px; border-radius: 12px; border: 2px solid var(--border);
     background: #fff; font-weight: 700; font-family: inherit; cursor: pointer; color: var(--muted);
+    text-align: center; line-height: 1.35; font-size: 0.95rem;
   }
   .tab.active { border-color: var(--primary); background: #ffe8d1; color: var(--primary-dark); }
   .tab.disabled { opacity: 0.5; cursor: not-allowed; }
@@ -493,7 +494,7 @@ window.__pubnubLoadPromise = (function () {
       <h1>分數乘法</h1>
       <div class="school">順德聯誼總會何日東小學— 何老師設計</div>
     </div>
-    <p style="text-align:center;color:var(--muted);margin-bottom:8px;">分數乘法一：分數 × 整數　｜　帶分數 × 整數<br>分數乘法二教學：分數 × 分數（面積模型）</p>
+    <p style="text-align:center;color:var(--muted);margin-bottom:8px;">分數乘法一：分數 × 整數　｜　帶分數 × 整數<br>分數乘法二：分數 × 分數<br>分數乘法二教學：分數 × 分數（面積模型）</p>
     <p style="text-align:center;color:var(--muted);">請選擇身份開始</p>
     <div class="role-btns">
       <button class="btn btn-primary" id="btn-student">學生</button>
@@ -574,8 +575,8 @@ window.__pubnubLoadPromise = (function () {
   </div>
   <div class="tabs" id="student-tabs">
     <button type="button" class="tab active" data-tab="1">分數乘法一</button>
-    <button type="button" class="tab" data-tab="2">分數乘法二教學</button>
-    <button type="button" class="tab disabled" data-tab="3" disabled title="即將推出">分數乘法三</button>
+    <button type="button" class="tab" data-tab="2">分數乘法二</button>
+    <button type="button" class="tab" data-tab="3">分數乘法二教學</button>
   </div>
   <div class="sync-bar" id="student-sync-bar"></div>
   <div class="student-badge" id="student-badge"></div>
@@ -659,8 +660,8 @@ window.__pubnubLoadPromise = (function () {
   </div>
   <div class="tabs" id="teacher-tabs" style="max-width:960px;">
     <button type="button" class="tab active" data-tab="1">分數乘法一</button>
-    <button type="button" class="tab" data-tab="2">分數乘法二教學</button>
-    <button type="button" class="tab disabled" data-tab="3" disabled title="即將推出">分數乘法三</button>
+    <button type="button" class="tab" data-tab="2">分數乘法二</button>
+    <button type="button" class="tab" data-tab="3">分數乘法二教學</button>
   </div>
   <div class="sync-bar">
     <div class="sync-pill" id="teacher-room-pill">課堂：----</div>
@@ -671,14 +672,19 @@ window.__pubnubLoadPromise = (function () {
   <div id="pane-teacher-tab1">
   <div class="teacher-q-preview" id="teacher-q-preview">
     <div style="color:var(--muted);font-weight:600;">本輪題目</div>
+    <div id="teacher-q-kind" style="color:var(--muted);font-size:0.9rem;">分數乘法一 · 分數 × 整數／帶分數 × 整數</div>
     <div class="big" id="teacher-q-text">尚未出題</div>
     <div id="teacher-q-answer" style="color:var(--muted);font-size:0.95rem;"></div>
   </div>
 
-  <div class="btn-row" style="max-width:960px;margin:4px 0 8px;">
+  <div class="btn-row" id="teacher-gen-1" style="max-width:960px;margin:4px 0 8px;">
     <button class="btn btn-primary" id="btn-gen-frac">出題：分數 × 整數</button>
     <button class="btn btn-primary" id="btn-gen-mixed">出題：帶分數 × 整數</button>
     <button class="btn btn-accent" id="btn-gen-random">隨機出題</button>
+  </div>
+  <div class="btn-row" id="teacher-gen-2" style="max-width:960px;margin:4px 0 8px;display:none;">
+    <button class="btn btn-primary" id="btn-gen-ffrac">出題：分數 × 分數</button>
+    <button class="btn btn-accent" id="btn-gen-ffrac-again">換一題</button>
   </div>
   <div class="btn-row" style="max-width:960px;margin:0 0 8px;">
     <button class="btn btn-danger btn-block" id="btn-new-round">開新一輪（清除本輪提交）</button>
@@ -766,7 +772,12 @@ window.__pubnubLoadPromise = (function () {
 <div class="toast" id="toast"></div>
 
 <script>
-/* 分數乘法（分頁一）+ PubNub
+/* 分數乘法 + PubNub
+   分頁一：分數×整數／帶分數×整數
+   分頁二：真分數×真分數（課室練習，與分頁一同一課堂）
+   分頁三：分數乘法二教學（面積模型，不經出題同步）
+   同一頻道 hyt-fracmul-v1-<編號>；題目與提交以 practice "1"|"2" 分開。
+   快照 modes 同時帶兩個練習的現題，遲入班仍看得到該分頁題目。
    順德聯誼總會何日東小學— 何老師設計
    TEACHER_PIN default 1234
    評分：只根據最終答案輸入；手寫板僅供老師檢視約簡／運算
@@ -817,7 +828,7 @@ function ratEq(a, b) {
   return ra.n === rb.n && ra.d === rb.d;
 }
 function fracHtml(num, den) {
-  return '<span class="frac" aria-label="' + num + ' 分之 ' + den + '">' +
+  return '<span class="frac" aria-label="' + den + '分之' + num + '">' +
     '<span class="frac-num">' + num + '</span>' +
     '<span class="frac-den">' + den + '</span></span>';
 }
@@ -852,8 +863,13 @@ function formatRatPlain(r) {
   return x.n + '/' + x.d;
 }
 function formatPrompt(q) {
-  /* stacked HTML for display */
+  /* stacked HTML for display — never slash notation */
   if (!q) return '';
+  if (q.kind === 'ffrac') {
+    return '<span class="q-expr">' + fracHtml(q.num, q.den) +
+      '<span class="op-times" aria-hidden="true">×</span>' +
+      fracHtml(q.num2, q.den2) + '</span>';
+  }
   var left = (q.kind === 'mixed')
     ? mixedHtml(q.whole, q.num, q.den)
     : fracHtml(q.num, q.den);
@@ -863,18 +879,30 @@ function formatPrompt(q) {
 }
 function formatPromptPlain(q) {
   if (!q) return '';
+  if (q.kind === 'ffrac') return q.num + '/' + q.den + ' × ' + q.num2 + '/' + q.den2;
   if (q.kind === 'mixed') return q.whole + ' ' + q.num + '/' + q.den + ' × ' + q.mult;
   return q.num + '/' + q.den + ' × ' + q.mult;
 }
-function slashDisplayToHtml(s) {
-  /* Convert plain "a/b" or "w a/b" (and optional trailing text) to stacked HTML */
-  if (s == null || s === '') return '—';
-  s = String(s).trim();
+function slashAtomToHtml(s) {
+  s = String(s == null ? '' : s).trim();
   var m = s.match(/^(-?\d+)\s+(\d+)\/(\d+)$/);
   if (m) return mixedHtml(m[1], m[2], m[3]);
   m = s.match(/^(-?\d+)\/(\d+)$/);
   if (m) return fracHtml(m[1], m[2]);
+  if (/^-?\d+$/.test(s)) return s;
   return s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function slashDisplayToHtml(s) {
+  /* Convert plain "a/b", "w a/b", or "a/b × c/d" to stacked HTML */
+  if (s == null || s === '') return '—';
+  s = String(s).trim();
+  var parts = s.split(/\s*[×x*]\s*/);
+  if (parts.length === 2) {
+    return '<span class="q-expr">' + slashAtomToHtml(parts[0]) +
+      '<span class="op-times" aria-hidden="true">×</span>' +
+      slashAtomToHtml(parts[1]) + '</span>';
+  }
+  return slashAtomToHtml(s);
 }
 function genFracTimesInt() {
   /* 只出真分數（分子 < 分母）；何老師不設假分數題 */
@@ -901,28 +929,93 @@ function genMixedTimesInt() {
   };
 }
 function genRandomQ() { return Math.random() < 0.5 ? genFracTimesInt() : genMixedTimesInt(); }
+function genFracTimesFrac() {
+  /* 真分數 × 真分數。分母 2–12，分母乘積 ≤ 36，方便小學約簡。
+     約四分三題目可先約；答案必為真分數（已約至最簡）。 */
+  var wantCancel = Math.random() < 0.75;
+  var fallback = null;
+  var i;
+  for (i = 0; i < 40; i++) {
+    var d1 = 2 + Math.floor(Math.random() * 11); /* 2–12 */
+    var maxD2 = Math.min(12, Math.floor(36 / d1));
+    if (maxD2 < 2) continue;
+    var d2 = 2 + Math.floor(Math.random() * (maxD2 - 1)); /* 2–maxD2 */
+    if (d1 * d2 > 36) continue;
+    var n1 = 1 + Math.floor(Math.random() * (d1 - 1));
+    var n2 = 1 + Math.floor(Math.random() * (d2 - 1));
+    if (!(n1 >= 1 && n1 < d1 && n2 >= 1 && n2 < d2)) continue;
+    var rawN = n1 * n2;
+    var rawD = d1 * d2;
+    var g = gcd(rawN, rawD);
+    var ans = reduce(rawN, rawD);
+    if (!(ans.n > 0 && ans.d > 1 && ans.n < ans.d)) continue;
+    var q = {
+      id: 'q2-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      kind: 'ffrac',
+      num: n1, den: d1, num2: n2, den2: d2,
+      mult: 0, whole: 0,
+      answer: ans,
+      createdAt: new Date().toISOString()
+    };
+    if (!fallback) fallback = q;
+    if (!wantCancel || g > 1) return q;
+  }
+  if (fallback) return fallback;
+  return {
+    id: 'q2-' + Date.now(),
+    kind: 'ffrac', num: 2, den: 3, num2: 3, den2: 4, mult: 0, whole: 0,
+    answer: reduce(1, 2), createdAt: new Date().toISOString()
+  };
+}
+function genForPractice(mode) {
+  return practiceOf(mode) === '2' ? genFracTimesFrac() : genRandomQ();
+}
 
-function emptyStore() {
+function emptyModeStore() {
   return { submissions: [], history: [], currentQuestion: null, roundId: null };
+}
+function emptyStore() {
+  return { modes: { '1': emptyModeStore(), '2': emptyModeStore() } };
+}
+function migrateStore(data) {
+  if (!data || typeof data !== 'object') return emptyStore();
+  if (!data.modes) {
+    data.modes = {
+      '1': {
+        submissions: data.submissions || [],
+        history: data.history || [],
+        currentQuestion: ('currentQuestion' in data) ? data.currentQuestion : null,
+        roundId: ('roundId' in data) ? data.roundId : null
+      },
+      '2': emptyModeStore()
+    };
+  }
+  ['1', '2'].forEach(function (mode) {
+    if (!data.modes[mode]) data.modes[mode] = emptyModeStore();
+    var m = data.modes[mode];
+    if (!m.submissions) m.submissions = [];
+    if (!m.history) m.history = [];
+    if (!('currentQuestion' in m)) m.currentQuestion = null;
+    if (!('roundId' in m)) m.roundId = null;
+  });
+  return data;
 }
 function loadStore() {
   try {
     var raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyStore();
-    var data = JSON.parse(raw);
-    if (!data.submissions) data.submissions = [];
-    if (!data.history) data.history = [];
-    if (!('currentQuestion' in data)) data.currentQuestion = null;
-    if (!('roundId' in data)) data.roundId = null;
-    /* Migrate: drop leftover handwriting dataURLs from history (Q2 submit fix) */
+    var data = migrateStore(JSON.parse(raw));
     var dirty = false;
-    data.history = (data.history || []).map(function (h) {
-      if (h && h.handwriting) { dirty = true; return stripHwMeta(h); }
-      return h;
+    ['1', '2'].forEach(function (mode) {
+      var m = data.modes[mode];
+      m.history = (m.history || []).map(function (h) {
+        if (h && h.handwriting) { dirty = true; return stripHwMeta(h); }
+        return h;
+      });
+      if (m.history.length > 80) { m.history = m.history.slice(-80); dirty = true; }
     });
-    if (data.history.length > 80) { data.history = data.history.slice(-80); dirty = true; }
     if (dirty) {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e2) {}
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeStoreForSave(data))); } catch (e2) {}
     }
     return data;
   } catch (e) { return emptyStore(); }
@@ -938,17 +1031,24 @@ function stripHwMeta(entry) {
   return copy;
 }
 function normalizeStoreForSave(data) {
-  var out = Object.assign({}, data || emptyStore());
-  /* Always strip ink from history — old buggy sessions left multi‑MB blobs that block Q2 submit */
-  out.history = (out.history || []).slice(-80).map(stripHwMeta);
-  out.submissions = (out.submissions || []).map(function (e) {
-    if (!e) return e;
-    var c = Object.assign({}, e);
-    if (c.handwriting && String(c.handwriting).length > 120000) {
-      c.hasHandwriting = true;
-      c.handwriting = '';
-    }
-    return c;
+  data = migrateStore(data || emptyStore());
+  var out = { modes: { '1': emptyModeStore(), '2': emptyModeStore() } };
+  ['1', '2'].forEach(function (mode) {
+    var m = data.modes[mode];
+    out.modes[mode] = {
+      currentQuestion: m.currentQuestion || null,
+      roundId: m.roundId || null,
+      history: (m.history || []).slice(-80).map(stripHwMeta),
+      submissions: (m.submissions || []).map(function (e) {
+        if (!e) return e;
+        var c = Object.assign({}, e);
+        if (c.handwriting && String(c.handwriting).length > 120000) {
+          c.hasHandwriting = true;
+          c.handwriting = '';
+        }
+        return c;
+      })
+    };
   });
   return out;
 }
@@ -967,11 +1067,13 @@ function saveStore(data) {
     } catch (err2) {
       try {
         localStorage.removeItem(STORAGE_KEY);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          submissions: [], history: [],
-          currentQuestion: data && data.currentQuestion || null,
-          roundId: data && data.roundId || null
-        }));
+        var slim = emptyStore();
+        ['1', '2'].forEach(function (mode) {
+          var b = practiceState[mode];
+          slim.modes[mode].currentQuestion = (b && b.question) || null;
+          slim.modes[mode].roundId = (b && b.roundId) || null;
+        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
       } catch (err3) {}
       console.warn('localStorage full; submission metadata may be incomplete', err2);
       return false;
@@ -979,29 +1081,34 @@ function saveStore(data) {
   }
 }
 function wipeAllClassroomLocal() { saveStore(emptyStore()); }
-function clearCurrentRoundLocal() {
+function clearCurrentRoundLocal(mode) {
+  mode = practiceOf(mode || activePractice);
   var store = loadStore();
+  var m = store.modes[mode];
   var stamp = new Date().toISOString();
-  (store.submissions || []).forEach(function (s) {
-    store.history.push(Object.assign({}, stripHwMeta(s), { archivedAt: stamp, archivedReason: 'new-round' }));
+  (m.submissions || []).forEach(function (s) {
+    m.history.push(Object.assign({}, stripHwMeta(s), { archivedAt: stamp, archivedReason: 'new-round', practice: mode }));
   });
-  if (store.history && store.history.length > 80) store.history = store.history.slice(-80);
-  store.submissions = [];
+  if (m.history && m.history.length > 80) m.history = m.history.slice(-80);
+  m.submissions = [];
   saveStore(store);
 }
-function upsertSubmission(entry) {
+function upsertSubmission(entry, mode) {
+  mode = practiceOf(mode || (entry && entry.practice) || activePractice);
   var store = loadStore();
+  var m = store.modes[mode];
   /* Only metadata in history — full ink stays in current-round submissions for teacher inspect */
-  store.history.push(Object.assign({}, stripHwMeta(entry), { archivedAt: new Date().toISOString() }));
-  if (store.history.length > 80) store.history = store.history.slice(-80);
-  var idx = store.submissions.findIndex(function (s) { return s.studentNo === entry.studentNo; });
-  if (idx >= 0) store.submissions[idx] = entry; else store.submissions.push(entry);
+  m.history.push(Object.assign({}, stripHwMeta(entry), { archivedAt: new Date().toISOString(), practice: mode }));
+  if (m.history.length > 80) m.history = m.history.slice(-80);
+  var idx = m.submissions.findIndex(function (s) { return s.studentNo === entry.studentNo; });
+  if (idx >= 0) m.submissions[idx] = entry; else m.submissions.push(entry);
   saveStore(store);
 }
-function setLocalQuestion(q, rid) {
+function setLocalQuestion(q, rid, mode) {
+  mode = practiceOf(mode || activePractice);
   var store = loadStore();
-  store.currentQuestion = q;
-  store.roundId = rid || (q && q.id) || null;
+  store.modes[mode].currentQuestion = q;
+  store.modes[mode].roundId = rid || (q && q.id) || null;
   saveStore(store);
 }
 
@@ -1043,6 +1150,55 @@ var monitorFilter = null;
 var onlineNamesOpen = false;
 var onlineRoster = {};
 var mySubmittedRound = null;
+
+function freshBucket() {
+  return { question: null, roundId: null, submissions: {}, mySubmittedRound: null };
+}
+var practiceState = { '1': freshBucket(), '2': freshBucket() };
+var activePractice = '1';
+var hwCache = { '1': '', '2': '' };
+var answerDraft = { '1': null, '2': null };
+var shownQuestionKey = '';
+var renderToken = 0;
+
+function practiceOf(v) {
+  return (v === '2' || v === 2) ? '2' : '1';
+}
+function practiceLabel(mode) {
+  return practiceOf(mode) === '2' ? '分數乘法二' : '分數乘法一';
+}
+function bucket(mode) {
+  return practiceState[practiceOf(mode)];
+}
+function syncViewFrom(mode) {
+  var s = bucket(mode);
+  currentQuestion = s.question;
+  roundId = s.roundId;
+  submissionsMap = s.submissions;
+  mySubmittedRound = s.mySubmittedRound;
+}
+function resetAllPracticeMemory() {
+  practiceState = { '1': freshBucket(), '2': freshBucket() };
+  hwCache = { '1': '', '2': '' };
+  answerDraft = { '1': null, '2': null };
+  shownQuestionKey = '';
+  syncViewFrom(activePractice);
+}
+function loadPracticeFromStore() {
+  var store = loadStore();
+  ['1', '2'].forEach(function (mode) {
+    var m = store.modes[mode];
+    var b = freshBucket();
+    b.question = m.currentQuestion || null;
+    b.roundId = m.roundId || (b.question && b.question.id) || null;
+    (m.submissions || []).forEach(function (s) {
+      if (!s || s.studentNo == null) return;
+      b.submissions[Number(s.studentNo)] = Object.assign({}, s, { practice: s.practice || mode });
+    });
+    practiceState[mode] = b;
+  });
+  syncViewFrom(activePractice);
+}
 
 var pubnub = null;
 var roomCode = null;
@@ -1533,8 +1689,8 @@ function exportHwThumb() {
   return exportHwDataUrl(220, 160, 0.42);
 }
 
-function ensureHwCanvasReady() {
-  if (!hwCanvas) return;
+function ensureHwCanvasReady(done) {
+  if (!hwCanvas) { if (done) done(); return; }
   unlockHwScroll();
   requestAnimationFrame(function () {
     sizeHwCanvas(true);
@@ -1545,6 +1701,7 @@ function ensureHwCanvasReady() {
         hwUndoStack = [];
         updateHwUndoBtn();
       }
+      if (done) done();
     });
   });
 }
@@ -1665,6 +1822,7 @@ function cloudMsgKey(msg) {
   if (!msg || typeof msg !== 'object') return '';
   return [
     msg.type || '',
+    msg.practice || (msg.entry && msg.entry.practice) || '',
     msg.ts || '',
     msg.roundId || (msg.question && msg.question.id) || '',
     msg.studentNo != null ? msg.studentNo : (msg.entry && msg.entry.studentNo) || '',
@@ -1713,14 +1871,31 @@ function publishCloudRest(envelope) {
     '/0/' + encodeURIComponent(channel) + '/0/' + encodeURIComponent(JSON.stringify(envelope));
   return fetch(url, { method: 'GET' }).then(function (r) { return r.ok; }).catch(function () { return false; });
 }
+function modeSnapshot(mode) {
+  mode = practiceOf(mode);
+  var b = bucket(mode);
+  return {
+    practice: mode,
+    question: b.question,
+    roundId: b.roundId || (b.question && b.question.id) || null,
+    submissions: Object.keys(b.submissions).map(function (k) {
+      var e = stripHwMeta(b.submissions[k]);
+      if (e) e.practice = mode;
+      return e;
+    })
+  };
+}
 function teacherSnapshotPayload() {
+  /* One room, two practices. Top-level fields stay practice 1 for older readers;
+     modes carries the live question + submissions of both 分數乘法一 and 分數乘法二. */
+  var m1 = modeSnapshot('1');
   return {
     type: 'snapshot',
-    question: currentQuestion,
-    roundId: roundId || (currentQuestion && currentQuestion.id) || null,
-    submissions: Object.keys(submissionsMap).map(function (k) {
-      return stripHwMeta(submissionsMap[k]);
-    })
+    practice: '1',
+    question: m1.question,
+    roundId: m1.roundId,
+    submissions: m1.submissions,
+    modes: { '1': m1, '2': modeSnapshot('2') }
   };
 }
 function teacherSendSnapshot(reason) {
@@ -1728,9 +1903,11 @@ function teacherSendSnapshot(reason) {
   lastQuestionBroadcastAt = Date.now();
   return publishCloudReliable(teacherSnapshotPayload());
 }
-function publishQuestionToClass(q, rid, kind) {
+function publishQuestionToClass(q, rid, kind, mode) {
+  mode = practiceOf(mode || activePractice);
   var roundPayload = {
     type: kind || 'new-round',
+    practice: mode,
     question: q || null,
     roundId: rid || (q && q.id) || null
   };
@@ -1771,7 +1948,7 @@ function startStateRequestLoop() {
   if (role !== 'student' || soloPractice || !roomCode) return;
   var tick = function () {
     stateRequestTries += 1;
-    if (currentQuestion) {
+    if (bucket(activePractice).question) {
       if (stateRequestTimer) { clearInterval(stateRequestTimer); stateRequestTimer = null; }
       return;
     }
@@ -1796,7 +1973,8 @@ function startQuestionRebroadcastLoop() {
   if (questionRebroadcastTimer) { clearInterval(questionRebroadcastTimer); questionRebroadcastTimer = null; }
   if (role !== 'teacher' || !isHost) return;
   questionRebroadcastTimer = setInterval(function () {
-    if (!syncReady || !roomCode || !currentQuestion) return;
+    if (!syncReady || !roomCode) return;
+    if (!practiceState['1'].question && !practiceState['2'].question) return;
     if (Date.now() - lastQuestionBroadcastAt < QUESTION_REBROADCAST_MS - 500) return;
     teacherSendSnapshot('periodic');
   }, QUESTION_REBROADCAST_MS);
@@ -1852,7 +2030,7 @@ async function connectRoom(code, asHost) {
   publishPresence();
   if (role === 'teacher') {
     publishCloud({ type: 'hello', role: 'teacher', studentName: '老師' });
-    if (currentQuestion) teacherSendSnapshot('connect');
+    if (practiceState['1'].question || practiceState['2'].question) teacherSendSnapshot('connect');
     startQuestionRebroadcastLoop();
   } else if (currentStudent) {
     publishCloud({ type: 'hello-student', role: 'student', studentNo: currentStudent.no, studentName: currentStudent.name });
@@ -1894,58 +2072,62 @@ function handleCloudMessage(msg) {
     return;
   }
   if (msg.type === 'snapshot') {
-    if (role === 'student') {
-      applyQuestion(msg.question, msg.roundId, false);
-      if (msg.question && stateRequestTimer) {
-        clearInterval(stateRequestTimer); stateRequestTimer = null;
-      }
-    }
-    if (Array.isArray(msg.submissions)) {
-      msg.submissions.forEach(function (s) { ingestSubmission(s); });
-    }
-    if (role === 'teacher') renderTeacherMonitor();
+    applySnapshotMessage(msg);
     return;
   }
   if (msg.type === 'round') {
-    applyQuestion(msg.question, msg.roundId, true);
-    if (role === 'student' && msg.question && stateRequestTimer) {
+    var roundMode = practiceOf(msg.practice);
+    applyQuestionFor(roundMode, msg.question, msg.roundId, true);
+    if (role === 'student' && msg.question && roundMode === activePractice && stateRequestTimer) {
       clearInterval(stateRequestTimer); stateRequestTimer = null;
     }
     if (role === 'teacher') renderTeacherMonitor();
     return;
   }
   if (msg.type === 'submit') {
+    if (msg.entry && msg.practice && !msg.entry.practice) msg.entry.practice = msg.practice;
     ingestSubmission(msg.entry);
     if (role === 'teacher') renderTeacherMonitor();
     return;
   }
   if (msg.type === 'new-round') {
-    submissionsMap = {};
-    clearCurrentRoundLocal();
-    mySubmittedRound = null;
-    if (role === 'student') {
-      document.getElementById('submit-msg').textContent = '';
-      document.getElementById('submit-msg').className = 'submit-msg';
-      clearAnswerInputs();
-      clearHw(true);
-      toast(msg.question ? '老師已出新題，請作答' : '老師已開新一輪，請重新作答', 'ok');
-      if (msg.question && stateRequestTimer) {
-        clearInterval(stateRequestTimer); stateRequestTimer = null;
+    var mode = practiceOf(msg.practice);
+    var b = bucket(mode);
+    b.submissions = {};
+    b.mySubmittedRound = null;
+    hwCache[mode] = '';
+    answerDraft[mode] = null;
+    clearCurrentRoundLocal(mode);
+    if (mode === activePractice) {
+      submissionsMap = b.submissions;
+      mySubmittedRound = null;
+      if (role === 'student') {
+        var sm = document.getElementById('submit-msg');
+        if (sm) { sm.textContent = ''; sm.className = 'submit-msg'; }
+        clearAnswerInputs();
+        clearHw(true);
+        toast(msg.question ? '老師已出新題，請作答' : '老師已開新一輪，請重新作答', 'ok');
+        if (msg.question && stateRequestTimer) {
+          clearInterval(stateRequestTimer); stateRequestTimer = null;
+        }
       }
+    } else if (role === 'student') {
+      toast(msg.question
+        ? ('老師已在' + practiceLabel(mode) + '出新題')
+        : ('老師已在' + practiceLabel(mode) + '開新一輪'), 'ok');
     }
-    if (msg.question) applyQuestion(msg.question, msg.roundId, true);
-    else if (role === 'student') applyQuestion(currentQuestion, roundId, true);
+    if (msg.question) applyQuestionFor(mode, msg.question, msg.roundId, true);
+    else if (role === 'student' && mode === activePractice) applyQuestionFor(mode, b.question, b.roundId, true);
     if (role === 'teacher') renderTeacherMonitor();
     return;
   }
   if (msg.type === 'wipe') {
-    submissionsMap = {};
-    currentQuestion = null;
-    roundId = null;
+    activePractice = activePractice || '1';
+    resetAllPracticeMemory();
     wipeAllClassroomLocal();
-    mySubmittedRound = null;
+    shownQuestionKey = '';
     if (role === 'student') {
-      applyQuestion(null, null, true);
+      renderStudentQuestion(true);
       toast('老師已建立新課堂，紀錄已清除', 'ok');
       startStateRequestLoop();
     }
@@ -1953,19 +2135,53 @@ function handleCloudMessage(msg) {
   }
 }
 
+function snapshotPacks(msg) {
+  var packs = [];
+  if (msg.modes && typeof msg.modes === 'object') {
+    ['1', '2'].forEach(function (mode) {
+      if (msg.modes[mode]) packs.push({ mode: mode, pack: msg.modes[mode] });
+    });
+    return packs;
+  }
+  packs.push({ mode: practiceOf(msg.practice), pack: msg });
+  return packs;
+}
+function applySnapshotMessage(msg) {
+  snapshotPacks(msg).forEach(function (item) {
+    var mode = practiceOf(item.mode);
+    var pack = item.pack || {};
+    if (role === 'student') {
+      applyQuestionFor(mode, pack.question || null, pack.roundId, false);
+      if (pack.question && mode === activePractice && stateRequestTimer) {
+        clearInterval(stateRequestTimer); stateRequestTimer = null;
+      }
+    }
+    if (Array.isArray(pack.submissions)) {
+      pack.submissions.forEach(function (s) {
+        if (!s) return;
+        ingestSubmission(Object.assign({}, s, { practice: s.practice || mode }));
+      });
+    }
+  });
+  if (role === 'teacher') renderTeacherMonitor();
+}
+
 function ingestSubmission(entry) {
   if (!entry || entry.studentNo == null) return;
+  var mode = practiceOf(entry.practice);
+  var b = bucket(mode);
   var no = Number(entry.studentNo);
-  var prev = submissionsMap[no];
+  var prev = b.submissions[no];
   if (prev && prev.at && entry.at && new Date(entry.at) < new Date(prev.at)) return;
-  var q = currentQuestion;
+  var q = b.question;
+  var rid = b.roundId || (q && q.id) || null;
   var correct = false;
-  if (entry.roundId && q && entry.roundId === (roundId || q.id) && entry.answerRat) {
+  if (entry.roundId && q && entry.roundId === rid && entry.answerRat) {
     correct = ratEq(entry.answerRat, q.answer);
-  } else if (entry.roundId && q && entry.roundId === (roundId || q.id) && typeof entry.correct === 'boolean') {
+  } else if (entry.roundId && q && entry.roundId === rid && typeof entry.correct === 'boolean') {
     correct = !!entry.correct;
   }
-  entry = Object.assign({}, entry, { correct: correct, studentNo: no });
+  entry = Object.assign({}, entry, { correct: correct, studentNo: no, practice: mode });
   /* Keep prior ink if new packet stripped handwriting (size limit) but same round */
   if ((!entry.handwriting || entry.handwriting.length < 32) && prev && prev.handwriting &&
       prev.roundId && entry.roundId && prev.roundId === entry.roundId) {
@@ -1973,31 +2189,146 @@ function ingestSubmission(entry) {
     entry.hasHandwriting = true;
   }
   if (entry.handwriting) entry.hasHandwriting = true;
-  submissionsMap[no] = entry;
-  upsertSubmission(entry);
+  b.submissions[no] = entry;
+  if (mode === activePractice) submissionsMap = b.submissions;
+  upsertSubmission(entry, mode);
 }
 function applyQuestion(q, rid, resetStudentUi) {
-  var newRid = rid || (q && q.id) || null;
-  var prevRid = roundId;
-  var changed = String(newRid || '') !== String(prevRid || '');
-  if (!changed && q && currentQuestion && q.id && currentQuestion.id && q.id !== currentQuestion.id) changed = true;
-  if (!changed && !!q !== !!currentQuestion) changed = true;
-  currentQuestion = q || null;
-  roundId = newRid;
-  setLocalQuestion(currentQuestion, roundId);
-  if (role === 'student') renderStudentQuestion(!!resetStudentUi || changed);
-  if (role === 'teacher') renderTeacherQuestion();
+  applyQuestionFor(activePractice, q, rid, resetStudentUi);
 }
-function renderStudentQuestion(reset) {
+function applyQuestionFor(mode, q, rid, resetStudentUi) {
+  mode = practiceOf(mode);
+  var b = bucket(mode);
+  var newRid = rid || (q && q.id) || null;
+  var prevQ = b.question;
+  var prevRid = b.roundId;
+  var changed = String(newRid || '') !== String(prevRid || '');
+  if (!changed && q && prevQ && q.id && prevQ.id && q.id !== prevQ.id) changed = true;
+  if (!changed && !!q !== !!prevQ) changed = true;
+  b.question = q || null;
+  b.roundId = newRid;
+  setLocalQuestion(b.question, b.roundId, mode);
+  if (changed || resetStudentUi) {
+    hwCache[mode] = '';
+    answerDraft[mode] = null;
+    b.mySubmittedRound = null;
+  }
+  if (mode === activePractice) {
+    currentQuestion = b.question;
+    roundId = b.roundId;
+    submissionsMap = b.submissions;
+    mySubmittedRound = b.mySubmittedRound;
+    if (role === 'student') renderStudentQuestion(!!resetStudentUi || changed);
+    if (role === 'teacher') renderTeacherQuestion();
+  }
+}
+function updatePracticeChrome() {
+  var g1 = document.getElementById('teacher-gen-1');
+  var g2 = document.getElementById('teacher-gen-2');
+  if (g1) g1.style.display = activePractice === '1' ? 'flex' : 'none';
+  if (g2) g2.style.display = activePractice === '2' ? 'flex' : 'none';
+  var ql = document.querySelector('#question-card .q-label');
+  if (ql) ql.textContent = activePractice === '2' ? '題目（真分數 × 真分數）' : '題目';
+  var kind = document.getElementById('teacher-q-kind');
+  if (kind) {
+    kind.textContent = activePractice === '2'
+      ? '分數乘法二 · 真分數 × 真分數'
+      : '分數乘法一 · 分數 × 整數／帶分數 × 整數';
+  }
+}
+function stashHw(mode) {
+  mode = practiceOf(mode);
+  if (!hwCanvas || !hwCtx || !hwDirty) { hwCache[mode] = ''; return; }
+  try { hwCache[mode] = hwCanvas.toDataURL('image/png'); }
+  catch (e) { hwCache[mode] = ''; }
+}
+function stashAnswerDraft(mode) {
+  mode = practiceOf(mode);
+  var q = bucket(mode).question;
+  var wholeEl = document.getElementById('guess-whole');
+  var numEl = document.getElementById('guess-num');
+  var denEl = document.getElementById('guess-den');
+  answerDraft[mode] = {
+    questionId: (q && q.id) || '',
+    answerMode: answerMode,
+    fracKind: fracKind,
+    whole: wholeEl ? wholeEl.value : '',
+    num: numEl ? numEl.value : '',
+    den: denEl ? denEl.value : ''
+  };
+}
+function restoreAnswerDraft(mode) {
+  mode = practiceOf(mode);
+  var d = answerDraft[mode];
+  var q = bucket(mode).question;
+  if (!d || !q || d.questionId !== q.id) {
+    if (q && q.kind === 'ffrac') {
+      answerMode = 'frac';
+      fracKind = 'proper';
+    }
+    syncAnswerInputsUI();
+    return;
+  }
+  answerMode = d.answerMode || (q.kind === 'ffrac' ? 'frac' : 'int');
+  fracKind = d.fracKind || 'proper';
+  document.getElementById('guess-whole').value = d.whole || '';
+  document.getElementById('guess-num').value = d.num || '';
+  document.getElementById('guess-den').value = d.den || '';
+  syncAnswerInputsUI();
+}
+function restoreHw(mode, token) {
+  mode = practiceOf(mode);
+  var url = hwCache[mode];
+  if (!url || !hwCtx) return;
+  var img = new Image();
+  img.onload = function () {
+    if (token !== renderToken) return;
+    if (activePractice !== mode) return;
+    hwCtx.setTransform(hwDpr, 0, 0, hwDpr, 0, 0);
+    hwCtx.drawImage(img, 0, 0, hwCssW, hwCssH);
+    hwDirty = true;
+    hwUndoStack = [];
+    updateHwUndoBtn();
+  };
+  img.src = url;
+}
+function showSubmitState() {
+  var prev = submissionsMap[currentStudent && currentStudent.no];
+  var msg2 = document.getElementById('submit-msg');
+  var submitBtn = document.getElementById('btn-submit-answer');
+  if (mySubmittedRound && mySubmittedRound === roundId && prev && msg2) {
+    msg2.textContent = prev.correct ? '✓ 已提交：答對！' : '✗ 已提交：不正確（等候老師講解）';
+    msg2.className = 'submit-msg ' + (prev.correct ? 'ok' : 'bad');
+    if (submitBtn) submitBtn.textContent = '重新提交／已交（可改答案再交）';
+    return;
+  }
+  if (msg2 && !(mySubmittedRound && mySubmittedRound === roundId)) {
+    msg2.textContent = '';
+    msg2.className = 'submit-msg';
+  }
+  if (submitBtn && !(mySubmittedRound && mySubmittedRound === roundId)) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '提交答案給老師';
+  }
+}
+function renderStudentQuestion(hardReset) {
+  var myToken = ++renderToken;
+  var mode = activePractice;
   var qText = document.getElementById('q-text');
   var qWait = document.getElementById('q-wait');
   var hw = document.getElementById('hw-wrap');
   var gb = document.getElementById('guess-box');
   var solo = document.getElementById('solo-tools');
+  updatePracticeChrome();
+  var key = mode + '|' + (currentQuestion ? currentQuestion.id : '') + '|' + (roundId || '');
+  var switched = key !== shownQuestionKey;
+  shownQuestionKey = key;
   if (!currentQuestion) {
     qText.style.display = 'none';
     qWait.style.display = 'block';
-    qWait.textContent = soloPractice ? '請按「換一題練習」開始。' : '請等候老師出題。';
+    qWait.textContent = soloPractice
+      ? (mode === '2' ? '請按「換一題練習」開始真分數 × 真分數。' : '請按「換一題練習」開始。')
+      : '請等候老師出題。';
     hw.style.display = 'none';
     gb.style.display = 'none';
   } else {
@@ -2006,12 +2337,17 @@ function renderStudentQuestion(reset) {
     qText.innerHTML = formatPrompt(currentQuestion);
     hw.style.display = 'block';
     gb.style.display = 'block';
-    ensureHwCanvasReady();
-    if (reset) {
-      unlockHwScroll();
-      clearHw(true);
-      clearAnswerInputs();
+    if (hardReset) {
       mySubmittedRound = null;
+      bucket(mode).mySubmittedRound = null;
+      hwCache[mode] = '';
+      answerDraft[mode] = null;
+      clearAnswerInputs();
+      if (currentQuestion.kind === 'ffrac') {
+        answerMode = 'frac';
+        fracKind = 'proper';
+      }
+      syncAnswerInputsUI();
       var msg = document.getElementById('submit-msg');
       if (msg) { msg.textContent = ''; msg.className = 'submit-msg'; }
       var submitBtn = document.getElementById('btn-submit-answer');
@@ -2019,18 +2355,47 @@ function renderStudentQuestion(reset) {
         submitBtn.disabled = false;
         submitBtn.textContent = '提交答案給老師';
       }
-      syncAnswerInputsUI();
-    } else if (mySubmittedRound === roundId) {
-      var prev = submissionsMap[currentStudent && currentStudent.no];
-      var msg2 = document.getElementById('submit-msg');
-      if (prev) {
-        msg2.textContent = prev.correct ? '✓ 已提交：答對！' : '✗ 已提交：不正確（等候老師講解）';
-        msg2.className = 'submit-msg ' + (prev.correct ? 'ok' : 'bad');
-      }
+    } else if (switched) {
+      clearAnswerInputs();
+      restoreAnswerDraft(mode);
+      showSubmitState();
     }
+    ensureHwCanvasReady(function () {
+      if (myToken !== renderToken || activePractice !== mode) return;
+      if (hardReset) {
+        if (mySubmittedRound) return;
+        unlockHwScroll();
+        clearHw(true);
+        syncAnswerInputsUI();
+      } else if (switched) {
+        unlockHwScroll();
+        clearHw(true);
+        restoreHw(mode, myToken);
+      } else {
+        showSubmitState();
+      }
+    });
   }
   solo.style.display = soloPractice ? 'block' : 'none';
   updateStudentSyncBar();
+}
+function activatePractice(mode) {
+  mode = practiceOf(mode);
+  if (mode !== activePractice && role === 'student') {
+    stashHw(activePractice);
+    stashAnswerDraft(activePractice);
+  }
+  activePractice = mode;
+  syncViewFrom(mode);
+  updatePracticeChrome();
+  if (role === 'student') renderStudentQuestion(false);
+  if (role === 'teacher') renderTeacherMonitor();
+}
+function stashActivePractice() {
+  if (role === 'student') {
+    stashHw(activePractice);
+    stashAnswerDraft(activePractice);
+  }
 }
 function clearAnswerInputs() {
   document.getElementById('guess-whole').value = '';
@@ -2062,12 +2427,13 @@ function publishSubmitEntry(entry) {
     delete chosen.handwriting;
     chosen.hasHandwriting = !!entry.hasHandwriting;
   }
-  return publishCloudReliable({ type: 'submit', entry: chosen }).then(function (ok) {
+  return publishCloudReliable({ type: 'submit', practice: chosen.practice || activePractice, entry: chosen }).then(function (ok) {
     if (ok) return true;
     var lite = Object.assign({}, entry);
     delete lite.handwriting;
     lite.hasHandwriting = !!entry.hasHandwriting;
-    return publishCloudReliable({ type: 'submit', entry: lite });
+    lite.practice = entry.practice || activePractice;
+    return publishCloudReliable({ type: 'submit', practice: lite.practice, entry: lite });
   });
 }
 function submitStudentAnswer() {
@@ -2090,6 +2456,7 @@ function submitStudentAnswer() {
     correct: ok,
     handwriting: exportHwDataUrl(),
     hasHandwriting: hwDirty,
+    practice: activePractice,
     at: new Date().toISOString()
   };
   try {
@@ -2102,6 +2469,7 @@ function submitStudentAnswer() {
     } catch (e2) {}
   }
   mySubmittedRound = entry.roundId;
+  bucket(activePractice).mySubmittedRound = entry.roundId;
   var msg = document.getElementById('submit-msg');
   if (msg) {
     msg.textContent = ok ? '✓ 已提交：答對！' : '✗ 已提交：不正確（等候老師講解）';
@@ -2117,6 +2485,7 @@ function submitStudentAnswer() {
 }
 
 function renderTeacherQuestion() {
+  updatePracticeChrome();
   var t = document.getElementById('teacher-q-text');
   var a = document.getElementById('teacher-q-answer');
   if (!currentQuestion) {
@@ -2125,16 +2494,24 @@ function renderTeacherQuestion() {
   } else {
     t.innerHTML = formatPrompt(currentQuestion);
     a.innerHTML = '參考答案：' + formatRat(currentQuestion.answer) +
-      '（只供老師；學生以最終答案輸入評分）';
+      (currentQuestion.kind === 'ffrac'
+        ? '（已約至最簡；只供老師。學生以最終答案輸入評分，等值即對）'
+        : '（只供老師；學生以最終答案輸入評分）');
   }
 }
 function startRound(q) {
-  submissionsMap = {};
-  clearCurrentRoundLocal();
+  var mode = activePractice;
+  var b = bucket(mode);
+  b.submissions = {};
+  b.mySubmittedRound = null;
+  submissionsMap = b.submissions;
   mySubmittedRound = null;
-  applyQuestion(q, q.id, true);
+  hwCache[mode] = '';
+  answerDraft[mode] = null;
+  clearCurrentRoundLocal(mode);
+  applyQuestionFor(mode, q, q.id, true);
   if (roomCode && syncReady) {
-    publishQuestionToClass(q, q.id, 'new-round').then(function (ok) {
+    publishQuestionToClass(q, q.id, 'new-round', mode).then(function (ok) {
       toast(ok ? '已出題並廣播全班' : '已出題（雲端廣播可能未成功，請再按一次出題）', ok ? 'ok' : 'bad');
     });
   } else {
@@ -2340,9 +2717,7 @@ function wire() {
     var code = document.getElementById('room-code-display').textContent.trim();
     if (!/^\d{4,6}$/.test(code)) { toast('編號無效', 'bad'); return; }
     wipeAllClassroomLocal();
-    submissionsMap = {};
-    currentQuestion = null;
-    roundId = null;
+    resetAllPracticeMemory();
     monitorFilter = null;
     document.getElementById('room-status').textContent = '連接雲端中…';
     await connectRoom(code, true);
@@ -2356,11 +2731,7 @@ function wire() {
     if (!/^\d{4,6}$/.test(code)) { toast('請輸入有效舊編號', 'bad'); return; }
     document.getElementById('room-code-display').textContent = code;
     roomCode = code;
-    var store = loadStore();
-    currentQuestion = store.currentQuestion;
-    roundId = store.roundId;
-    submissionsMap = {};
-    (store.submissions || []).forEach(function (s) { submissionsMap[s.studentNo] = s; });
+    loadPracticeFromStore();
     await connectRoom(code, true);
     showScreen('screen-gallery');
     renderTeacherMonitor();
@@ -2370,6 +2741,8 @@ function wire() {
     var code = document.getElementById('join-code').value.trim();
     if (!/^\d{4,6}$/.test(code)) { toast('請輸入課堂編號', 'bad'); return; }
     soloPractice = false;
+    resetAllPracticeMemory();
+    shownQuestionKey = '';
     document.getElementById('student-badge').textContent = currentStudent.no + '. ' + currentStudent.name;
     showScreen('screen-play');
     renderStudentQuestion(true);
@@ -2382,15 +2755,18 @@ function wire() {
     roomCode = null;
     document.getElementById('student-badge').textContent =
       currentStudent.no + '. ' + currentStudent.name + '（單機）';
+    var expOpen = document.getElementById('pane-tab2') &&
+      document.getElementById('pane-tab2').classList.contains('show');
+    if (expOpen && window.__fracMulExplorer) window.__fracMulExplorer.setStudentTab(1);
     showScreen('screen-play');
-    var q = genRandomQ();
-    applyQuestion(q, q.id, true);
+    var q = genForPractice(activePractice);
+    applyQuestionFor(activePractice, q, q.id, true);
     document.getElementById('solo-tools').style.display = 'block';
-    toast('單機練習模式', 'ok');
+    toast(activePractice === '2' ? '單機練習：真分數 × 真分數' : '單機練習模式', 'ok');
   };
   document.getElementById('btn-solo-new').onclick = function () {
-    var q = genRandomQ();
-    applyQuestion(q, q.id, true);
+    var q = genForPractice(activePractice);
+    applyQuestionFor(activePractice, q, q.id, true);
   };
   document.getElementById('btn-play-back').onclick = function () { stopCloud(); showScreen('screen-names'); };
   document.getElementById('btn-play-join').onclick = function () { showScreen('screen-join'); };
@@ -2416,20 +2792,14 @@ function wire() {
   });
   document.querySelectorAll('#student-tabs .tab').forEach(function (tab) {
     tab.addEventListener('click', function () {
-      if (tab.classList.contains('disabled')) {
-        toast('分數乘法三即將推出', 'ok');
-        return;
-      }
+      if (tab.classList.contains('disabled')) return;
       var n = parseInt(tab.getAttribute('data-tab'), 10);
       if (window.__fracMulExplorer) window.__fracMulExplorer.setStudentTab(n);
     });
   });
   document.querySelectorAll('#teacher-tabs .tab').forEach(function (tab) {
     tab.addEventListener('click', function () {
-      if (tab.classList.contains('disabled')) {
-        toast('分數乘法三即將推出', 'ok');
-        return;
-      }
+      if (tab.classList.contains('disabled')) return;
       var n = parseInt(tab.getAttribute('data-tab'), 10);
       if (window.__fracMulExplorer) window.__fracMulExplorer.setTeacherTab(n);
     });
@@ -2437,13 +2807,21 @@ function wire() {
   document.getElementById('btn-gen-frac').onclick = function () { startRound(genFracTimesInt()); };
   document.getElementById('btn-gen-mixed').onclick = function () { startRound(genMixedTimesInt()); };
   document.getElementById('btn-gen-random').onclick = function () { startRound(genRandomQ()); };
+  document.getElementById('btn-gen-ffrac').onclick = function () { startRound(genFracTimesFrac()); };
+  document.getElementById('btn-gen-ffrac-again').onclick = function () { startRound(genFracTimesFrac()); };
   document.getElementById('btn-new-round').onclick = function () {
-    showModal('開新一輪', '將清除本輪所有學生提交（題目可再出）。確定？', function () {
-      submissionsMap = {};
-      clearCurrentRoundLocal();
+    showModal('開新一輪', '將清除本練習本輪所有學生提交（另一練習的題目與提交會保留）。確定？', function () {
+      var mode = activePractice;
+      var b = bucket(mode);
+      b.submissions = {};
+      b.mySubmittedRound = null;
+      submissionsMap = b.submissions;
       mySubmittedRound = null;
+      hwCache[mode] = '';
+      answerDraft[mode] = null;
+      clearCurrentRoundLocal(mode);
       if (roomCode && syncReady) {
-        publishQuestionToClass(currentQuestion, roundId, 'new-round');
+        publishQuestionToClass(currentQuestion, roundId, 'new-round', mode);
       }
       renderTeacherMonitor();
       toast('已清除本輪提交', 'ok');
@@ -2465,6 +2843,11 @@ function wire() {
     if (e.key === 'Enter') document.getElementById('btn-join-go').click();
   });
 }
+
+window.__fracMulPractice = {
+  activate: activatePractice,
+  stash: stashActivePractice
+};
 
 /* ===== 分數乘法二教學：分數×分數面積模型探索器 ===== */
 (function () {
@@ -2920,25 +3303,35 @@ function wire() {
   }
 
   // ---- Tab switching ----
+  // 1 分數乘法一（練習）  2 分數乘法二（真分數×真分數）  3 分數乘法二教學（面積模型）
+  function showPracticePane(p1, pExp) {
+    if (p1) {
+      p1.classList.remove('hide');
+      if (p1.id === 'pane-tab1') {
+        p1.style.display = 'flex';
+        p1.style.flexDirection = 'column';
+        p1.style.alignItems = 'center';
+      } else {
+        /* Teacher pane visibility is class-based; inline display would beat .hide */
+        p1.style.display = '';
+      }
+    }
+    if (pExp) pExp.classList.remove('show');
+    hideExplorer();
+  }
   function setStudentTab(n) {
     document.querySelectorAll('#student-tabs .tab').forEach(function (t) {
       t.classList.toggle('active', t.getAttribute('data-tab') === String(n));
     });
     var p1 = $('pane-tab1');
     var p2 = $('pane-tab2');
-    if (n === 1) {
-      if (p1) {
-        p1.style.display = 'flex';
-        p1.style.flexDirection = 'column';
-        p1.style.alignItems = 'center';
-        p1.classList.remove('hide');
-      }
-      if (p2) p2.classList.remove('show');
-      hideExplorer();
-    } else if (n === 2) {
+    if (n === 1 || n === 2) {
+      showPracticePane(p1, p2);
+      if (window.__fracMulPractice) window.__fracMulPractice.activate(String(n));
+    } else if (n === 3) {
+      if (window.__fracMulPractice) window.__fracMulPractice.stash();
       if (p1) { p1.style.display = 'none'; p1.classList.add('hide'); }
       if (p2) p2.classList.add('show');
-      // defer mount so layout has size
       requestAnimationFrame(function () {
         mountExplorerInto($('explorer-host-student'));
       });
@@ -2951,11 +3344,10 @@ function wire() {
     });
     var p1 = $('pane-teacher-tab1');
     var p2 = $('pane-teacher-tab2');
-    if (n === 1) {
-      if (p1) p1.classList.remove('hide');
-      if (p2) p2.classList.remove('show');
-      hideExplorer();
-    } else if (n === 2) {
+    if (n === 1 || n === 2) {
+      showPracticePane(p1, p2);
+      if (window.__fracMulPractice) window.__fracMulPractice.activate(String(n));
+    } else if (n === 3) {
       if (p1) p1.classList.add('hide');
       if (p2) p2.classList.add('show');
       requestAnimationFrame(function () {
