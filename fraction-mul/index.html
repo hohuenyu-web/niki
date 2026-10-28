@@ -2599,22 +2599,22 @@ function wire() {
     if (bd && bn != null && bn > 0) {
       var colW = W / bd;
       var bx = x0, by = y0, bw = colW * Math.min(bn, bd), bh = H;
-      hatch(bx, by, bw, bh, HATCH_NEUTRAL, -1, 14);
+      hatch(bx, by, bw, bh, HATCH_NEUTRAL, -1, 36);
     }
 
     // Factor 2 rows: // hatch (top rn), full width — neutral stroke
     if (rd && rn != null && rn > 0) {
       var rowH = H / rd;
       var rx = x0, ry = y0, rw = W, rh2 = rowH * Math.min(rn, rd);
-      hatch(rx, ry, rw, rh2, HATCH_NEUTRAL, 1, 14);
+      hatch(rx, ry, rw, rh2, HATCH_NEUTRAL, 1, 36);
     }
 
     // Overlap: denser crosshatch (both directions) — still neutral, no purple wash
     if (bd && bn != null && rd && rn != null && bn > 0 && rn > 0) {
       var ow = (W / bd) * Math.min(bn, bd);
       var oh = (H / rd) * Math.min(rn, rd);
-      hatch(x0, y0, ow, oh, HATCH_NEUTRAL, -1, 11);
-      hatch(x0, y0, ow, oh, HATCH_NEUTRAL, 1, 11);
+      hatch(x0, y0, ow, oh, HATCH_NEUTRAL, -1, 28);
+      hatch(x0, y0, ow, oh, HATCH_NEUTRAL, 1, 28);
     }
 
     // Dashed blue/red partition lines (grid guides matching equation chips)
@@ -2685,10 +2685,10 @@ function wire() {
 
     // Emphasize with denser neutral 斜線 (no color wash, no gold)
     if (denserDir === 0) {
-      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, -1, 9, 2.0);
-      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, 1, 9, 2.0);
+      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, -1, 22, 2.0);
+      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, 1, 22, 2.0);
     } else {
-      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, denserDir, 9, 2.0);
+      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, denserDir, 22, 2.0);
     }
 
     // Dark outline of the target region
