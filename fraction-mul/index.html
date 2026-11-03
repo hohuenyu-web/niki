@@ -3849,29 +3849,23 @@ window.__fracMulPractice = {
       return;
     }
 
-    // During incomplete fill: tap current or already-filled field opens keypad
+    /* While the equation is unfinished, any filled number can be corrected
+       with one tap. An empty later number still follows the step prompt. */
     if (!isComplete()) {
       var expected = fieldForStep(state.fillStep);
-      if (field === expected || state[field] != null) {
-        if (isDouble || state[field] == null || field === expected) {
-          openKeypad(field);
-        }
-      } else if (state[field] != null) {
-        openKeypad(field);
-      } else {
-        // nudge: open expected
-        openKeypad(expected);
-      }
+      if (state[field] != null || field === expected) openKeypad(field);
+      else if (expected) openKeypad(expected);
       return;
     }
 
-    // Complete: single click = amber shadow; re-click clears; double = edit
-    if (isDouble) {
+    /* Finished: first tap explains that part with斜線; tapping the same
+       number again opens the keypad so it can be changed. */
+    if (isDouble || state.highlight === field) {
       openKeypad(field);
-    } else {
-      state.highlight = (state.highlight === field) ? null : field;
-      renderAll();
+      return;
     }
+    state.highlight = field;
+    renderAll();
   }
 
   function handleDigitEvent(field) {
@@ -4362,15 +4356,16 @@ window.__fracMulPractice = {
     }
     if (!isComplete()) {
       var expected = fieldForStep(state.fillStep);
-      if (field === expected || state[field] != null) openKeypad(field);
+      if (state[field] != null || field === expected) openKeypad(field);
       else if (expected) openKeypad(expected);
       return;
     }
-    if (isDouble) openKeypad(field);
-    else {
-      state.highlight = (state.highlight === field) ? null : field;
-      render();
+    if (isDouble || state.highlight === field) {
+      openKeypad(field);
+      return;
     }
+    state.highlight = field;
+    render();
   }
   function handleDigitEvent(field) {
     var now = Date.now();
