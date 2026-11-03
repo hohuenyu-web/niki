@@ -58,7 +58,7 @@ window.__pubnubLoadPromise = (function () {
   /* Drawing: do NOT toggle overflow:hidden (removes scrollbar → layout shift).
      Lock scroll via preventDefault on the canvas + overscroll-behavior only. */
   html.drawing-lock, body.drawing-lock { overscroll-behavior: none; }
-  body.drawing-lock { touch-action: none; }
+  /* Do not set touch-action:none on body. It swallows the 提交 tap after a stroke. */
   .screen {
     display: none; min-height: 100vh; padding: 12px; width: 100%;
     box-sizing: border-box; overflow-x: hidden;
@@ -337,6 +337,25 @@ window.__pubnubLoadPromise = (function () {
   .teacher-q-preview .big {
     font-size: 1.8rem; font-weight: 800; color: var(--primary-dark); margin: 6px 0;
   }
+  .custom-q {
+    width: 100%; max-width: 960px; background: #fff; border: 2px solid var(--border);
+    border-radius: 14px; padding: 12px 12px 6px; margin: 0 0 8px;
+  }
+  .custom-q h3 {
+    font-size: 0.95rem; text-align: center; color: var(--primary-dark); margin-bottom: 8px;
+  }
+  .custom-q .mini-row {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; justify-content: center;
+    margin-bottom: 8px;
+  }
+  .custom-q label {
+    display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; font-weight: 700; color: var(--muted);
+  }
+  .custom-q input {
+    width: 68px; padding: 8px 4px; font-size: 1.05rem; text-align: center;
+    border: 2px solid var(--border); border-radius: 10px; font-family: inherit;
+  }
+  .custom-q .op-times { font-weight: 800; padding-bottom: 8px; color: var(--text); }
 
   /* Stacked fraction notation (numerator over denominator) */
   .frac {
@@ -476,10 +495,64 @@ window.__pubnubLoadPromise = (function () {
     font-size: 0.85rem; font-weight: 600; padding: 4px 0 2px;
   }
 
-  #pane-tab2, #pane-teacher-tab2 {
+  #pane-tab2, #pane-teacher-tab2, .farm-pane {
     width: 100%; display: none; flex-direction: column; align-items: center;
   }
-  #pane-tab2.show, #pane-teacher-tab2.show { display: flex; }
+  #pane-tab2.show, #pane-teacher-tab2.show, .farm-pane.show { display: flex; }
+
+  .farm-card {
+    width: 100%; max-width: min(960px, 100%);
+    background: #fffef8; border: 2px solid #d5e4b4; border-radius: 18px;
+    box-shadow: var(--shadow); padding: 14px 14px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .farm-title {
+    text-align: center; font-weight: 800; color: #2e7d32;
+    font-size: clamp(1.15rem, 3.2vw, 1.4rem);
+  }
+  .farm-body {
+    display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; align-items: flex-start;
+  }
+  .farm-canvas-wrap {
+    flex: 1 1 280px; max-width: 460px; width: 100%; aspect-ratio: 1 / 1;
+  }
+  #farm-canvas {
+    width: 100%; height: 100%; display: block; background: #fffef8; border-radius: 8px;
+    touch-action: none;
+  }
+  .farm-side {
+    flex: 1 1 260px; max-width: 420px; min-width: 240px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 4px;
+  }
+  .farm-eq {
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+    gap: 8px; font-weight: 800; font-size: clamp(1.25rem, 3.5vw, 1.6rem); color: #2e5a1c;
+  }
+  .farm-op { color: #7f8c8d; }
+  .farm-chip {
+    border: 2px solid #c5d6a8; background: #f7fbe9; border-radius: 12px;
+    padding: 4px 8px; cursor: pointer; font: inherit; font-weight: 800; color: #2e7d32;
+  }
+  .farm-chip.selected { border-color: #e67e22; box-shadow: 0 0 0 3px rgba(230,126,34,0.28); }
+  .farm-chip .frac { font-size: 0.95em; }
+  .farm-prompt {
+    background: #f3f8e6; color: #2e5a1c; border-radius: 16px;
+    padding: 10px 14px; font-weight: 700; text-align: center; line-height: 1.5; width: 100%;
+  }
+  .farm-how {
+    color: var(--muted); font-weight: 700; text-align: center; font-size: 0.92rem; min-height: 1.3em;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px;
+  }
+  .farm-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%; }
+  .farm-actions .btn { min-width: 120px; }
+  .farm-legend {
+    display: flex; flex-wrap: wrap; gap: 10px 14px; justify-content: center;
+    font-size: 0.85rem; font-weight: 700; color: var(--text);
+  }
+  .farm-legend i {
+    display: inline-block; width: 16px; height: 16px; border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.15); margin-right: 4px; vertical-align: -2px;
+  }
   #pane-teacher-tab1 { width: 100%; display: flex; flex-direction: column; align-items: center; }
   #pane-teacher-tab1.hide { display: none; }
   #pane-tab1.hide { display: none !important; }
@@ -494,7 +567,7 @@ window.__pubnubLoadPromise = (function () {
       <h1>分數乘法</h1>
       <div class="school">順德聯誼總會何日東小學— 何老師設計</div>
     </div>
-    <p style="text-align:center;color:var(--muted);margin-bottom:8px;">分數乘法一：分數 × 整數　｜　帶分數 × 整數<br>分數乘法二：分數 × 分數<br>分數乘法二教學：分數 × 分數（面積模型）</p>
+    <p style="text-align:center;color:var(--muted);margin-bottom:8px;">分數乘法一：分數 × 整數　｜　帶分數 × 整數<br>分數乘法二：分數 × 分數<br>分數乘法二教學：分數 × 分數（面積模型）<br>分數乘法二農田：正方形農地（種稻）</p>
     <p style="text-align:center;color:var(--muted);">請選擇身份開始</p>
     <div class="role-btns">
       <button class="btn btn-primary" id="btn-student">學生</button>
@@ -577,6 +650,7 @@ window.__pubnubLoadPromise = (function () {
     <button type="button" class="tab active" data-tab="1">分數乘法一</button>
     <button type="button" class="tab" data-tab="2">分數乘法二</button>
     <button type="button" class="tab" data-tab="3">分數乘法二教學</button>
+    <button type="button" class="tab" data-tab="4">分數乘法二農田</button>
   </div>
   <div class="sync-bar" id="student-sync-bar"></div>
   <div class="student-badge" id="student-badge"></div>
@@ -641,6 +715,9 @@ window.__pubnubLoadPromise = (function () {
   <div id="pane-tab2">
     <div id="explorer-host-student" class="exp-host" style="width:100%;display:flex;justify-content:center;"></div>
   </div>
+  <div id="pane-tab-farm" class="farm-pane">
+    <div id="farm-host-student" class="farm-host" style="width:100%;display:flex;justify-content:center;"></div>
+  </div>
 
   <div class="btn-row" style="margin-top:16px;">
     <button class="btn btn-ghost" id="btn-play-join">課堂編號</button>
@@ -662,6 +739,7 @@ window.__pubnubLoadPromise = (function () {
     <button type="button" class="tab active" data-tab="1">分數乘法一</button>
     <button type="button" class="tab" data-tab="2">分數乘法二</button>
     <button type="button" class="tab" data-tab="3">分數乘法二教學</button>
+    <button type="button" class="tab" data-tab="4">分數乘法二農田</button>
   </div>
   <div class="sync-bar">
     <div class="sync-pill" id="teacher-room-pill">課堂：----</div>
@@ -674,7 +752,6 @@ window.__pubnubLoadPromise = (function () {
     <div style="color:var(--muted);font-weight:600;">本輪題目</div>
     <div id="teacher-q-kind" style="color:var(--muted);font-size:0.9rem;">分數乘法一 · 分數 × 整數／帶分數 × 整數</div>
     <div class="big" id="teacher-q-text">尚未出題</div>
-    <div id="teacher-q-answer" style="color:var(--muted);font-size:0.95rem;"></div>
   </div>
 
   <div class="btn-row" id="teacher-gen-1" style="max-width:960px;margin:4px 0 8px;">
@@ -685,6 +762,35 @@ window.__pubnubLoadPromise = (function () {
   <div class="btn-row" id="teacher-gen-2" style="max-width:960px;margin:4px 0 8px;display:none;">
     <button class="btn btn-primary" id="btn-gen-ffrac">出題：分數 × 分數</button>
     <button class="btn btn-accent" id="btn-gen-ffrac-again">換一題</button>
+  </div>
+  <div class="custom-q" id="teacher-custom-1">
+    <h3>自訂題目（鎖定數字，不隨機）</h3>
+    <div class="mini-row">
+      <label>分子<input id="custom-frac-num" inputmode="numeric" autocomplete="off" aria-label="分數分子"></label>
+      <label>分母<input id="custom-frac-den" inputmode="numeric" autocomplete="off" aria-label="分數分母"></label>
+      <span class="op-times" aria-hidden="true">×</span>
+      <label>整數<input id="custom-frac-mult" inputmode="numeric" autocomplete="off" aria-label="整數乘數"></label>
+      <button type="button" class="btn btn-primary" id="btn-custom-frac">出這題：分數 × 整數</button>
+    </div>
+    <div class="mini-row">
+      <label>整數<input id="custom-mix-whole" inputmode="numeric" autocomplete="off" aria-label="帶分數整數"></label>
+      <label>分子<input id="custom-mix-num" inputmode="numeric" autocomplete="off" aria-label="帶分數分子"></label>
+      <label>分母<input id="custom-mix-den" inputmode="numeric" autocomplete="off" aria-label="帶分數分母"></label>
+      <span class="op-times" aria-hidden="true">×</span>
+      <label>乘數<input id="custom-mix-mult" inputmode="numeric" autocomplete="off" aria-label="帶分數乘數"></label>
+      <button type="button" class="btn btn-primary" id="btn-custom-mixed">出這題：帶分數 × 整數</button>
+    </div>
+  </div>
+  <div class="custom-q" id="teacher-custom-2" style="display:none;">
+    <h3>自訂題目：真分數 × 真分數</h3>
+    <div class="mini-row">
+      <label>分子<input id="custom-ff-n1" inputmode="numeric" autocomplete="off" aria-label="左分子"></label>
+      <label>分母<input id="custom-ff-d1" inputmode="numeric" autocomplete="off" aria-label="左分母"></label>
+      <span class="op-times" aria-hidden="true">×</span>
+      <label>分子<input id="custom-ff-n2" inputmode="numeric" autocomplete="off" aria-label="右分子"></label>
+      <label>分母<input id="custom-ff-d2" inputmode="numeric" autocomplete="off" aria-label="右分母"></label>
+      <button type="button" class="btn btn-primary" id="btn-custom-ffrac">出這題</button>
+    </div>
   </div>
   <div class="btn-row" style="max-width:960px;margin:0 0 8px;">
     <button class="btn btn-danger btn-block" id="btn-new-round">開新一輪（清除本輪提交）</button>
@@ -698,6 +804,9 @@ window.__pubnubLoadPromise = (function () {
 
   <div id="pane-teacher-tab2">
     <div id="explorer-host-teacher" class="exp-host" style="width:100%;max-width:960px;display:flex;justify-content:center;"></div>
+  </div>
+  <div id="pane-teacher-tab-farm" class="farm-pane">
+    <div id="farm-host-teacher" class="farm-host" style="width:100%;max-width:960px;display:flex;justify-content:center;"></div>
   </div>
 </div>
 
@@ -750,6 +859,33 @@ window.__pubnubLoadPromise = (function () {
   </div>
 </div>
 
+<div id="farm-shared" class="farm-card" style="display:none;" hidden>
+  <div class="farm-title">正方形農地 · 種稻</div>
+  <div class="farm-body">
+    <div class="farm-canvas-wrap">
+      <canvas id="farm-canvas" width="520" height="520" aria-label="正方形農地面積模型"></canvas>
+    </div>
+    <div class="farm-side">
+      <div class="farm-eq" id="farm-eq" aria-label="種稻算式"></div>
+      <div class="farm-prompt" id="farm-prompt"></div>
+      <div class="farm-how" id="farm-how"></div>
+      <div class="farm-actions">
+        <button type="button" class="btn btn-primary" id="farm-next">下一步</button>
+        <button type="button" class="btn btn-ghost" id="farm-restart">重新講解</button>
+      </div>
+      <div class="farm-actions">
+        <button type="button" class="btn btn-accent" id="farm-ex-main">例一：種稻</button>
+        <button type="button" class="btn btn-accent" id="farm-ex-adv">例二：進階</button>
+      </div>
+    </div>
+  </div>
+  <div class="farm-legend" aria-hidden="true">
+    <span><i style="background:#e4f2c4"></i>成塊農地</span>
+    <span><i style="background:#e2c56a"></i>先取的部分</span>
+    <span><i style="background:#1f7a3a"></i>種稻（重疊）</span>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="modal">
   <div class="modal">
     <h3 id="modal-title">提示</h3>
@@ -777,7 +913,8 @@ window.__pubnubLoadPromise = (function () {
    分頁二：真分數×真分數（課室練習，與分頁一同一課堂）
    分頁三：分數乘法二教學（面積模型，不經出題同步）
    同一頻道 hyt-fracmul-v1-<編號>；題目與提交以 practice "1"|"2" 分開。
-   快照 modes 同時帶兩個練習的現題，遲入班仍看得到該分頁題目。
+   快照 modes 同時帶兩個練習的現題與 rev。學生只接受較新的 rev，
+   過期快照不能把新題蓋回舊題。在線心跳不寫入歷史，避免沖走題目。
    順德聯誼總會何日東小學— 何老師設計
    TEACHER_PIN default 1234
    評分：只根據最終答案輸入；手寫板僅供老師檢視約簡／運算
@@ -793,9 +930,8 @@ const REST_POLL_MS = 2000;
 const ONLINE_STALE_MS = 90000;
 const PUBLISH_RETRIES = 3;
 const STATE_REQUEST_MS = 4000;
-const STATE_REQUEST_MAX = 8;
-const QUESTION_REBROADCAST_MS = 20000;
-const HISTORY_FETCH_COUNT = 50;
+const QUESTION_REBROADCAST_MS = 8000;
+const HISTORY_FETCH_COUNT = 100;
 
 const STUDENTS = [
   { no: 1, name: '陳倬宇' }, { no: 2, name: '陳志恒' }, { no: 3, name: '陳雅渝' },
@@ -970,6 +1106,56 @@ function genFracTimesFrac() {
 function genForPractice(mode) {
   return practiceOf(mode) === '2' ? genFracTimesFrac() : genRandomQ();
 }
+function readPosInt(id) {
+  var el = document.getElementById(id);
+  var s = String(el && el.value || '').trim();
+  if (!/^\d+$/.test(s)) return null;
+  return parseInt(s, 10);
+}
+function properPairOk(num, den) {
+  return num != null && den != null && den >= 2 && den <= 60 && num >= 1 && num < den;
+}
+function multOk(mult) {
+  return mult != null && mult >= 1 && mult <= 30;
+}
+function newQId(prefix) {
+  return prefix + Date.now() + '-' + Math.floor(Math.random() * 1000);
+}
+function buildCustomFracTimesInt() {
+  var num = readPosInt('custom-frac-num');
+  var den = readPosInt('custom-frac-den');
+  var mult = readPosInt('custom-frac-mult');
+  if (!properPairOk(num, den) || !multOk(mult)) return null;
+  return {
+    id: newQId('q-'), kind: 'frac', num: num, den: den, mult: mult, whole: 0,
+    answer: reduce(num * mult, den), createdAt: new Date().toISOString()
+  };
+}
+function buildCustomMixedTimesInt() {
+  var whole = readPosInt('custom-mix-whole');
+  var num = readPosInt('custom-mix-num');
+  var den = readPosInt('custom-mix-den');
+  var mult = readPosInt('custom-mix-mult');
+  if (whole == null || whole < 1 || whole > 20) return null;
+  if (!properPairOk(num, den) || !multOk(mult)) return null;
+  return {
+    id: newQId('q-'), kind: 'mixed', num: num, den: den, mult: mult, whole: whole,
+    answer: reduce((whole * den + num) * mult, den), createdAt: new Date().toISOString()
+  };
+}
+function buildCustomFracTimesFrac() {
+  var n1 = readPosInt('custom-ff-n1');
+  var d1 = readPosInt('custom-ff-d1');
+  var n2 = readPosInt('custom-ff-n2');
+  var d2 = readPosInt('custom-ff-d2');
+  if (!properPairOk(n1, d1) || !properPairOk(n2, d2)) return null;
+  var ans = reduce(n1 * n2, d1 * d2);
+  if (!(ans.n > 0 && ans.d > 1 && ans.n < ans.d)) return null;
+  return {
+    id: newQId('q2-'), kind: 'ffrac', num: n1, den: d1, num2: n2, den2: d2,
+    mult: 0, whole: 0, answer: ans, createdAt: new Date().toISOString()
+  };
+}
 
 function emptyModeStore() {
   return { submissions: [], history: [], currentQuestion: null, roundId: null };
@@ -1039,15 +1225,8 @@ function normalizeStoreForSave(data) {
       currentQuestion: m.currentQuestion || null,
       roundId: m.roundId || null,
       history: (m.history || []).slice(-80).map(stripHwMeta),
-      submissions: (m.submissions || []).map(function (e) {
-        if (!e) return e;
-        var c = Object.assign({}, e);
-        if (c.handwriting && String(c.handwriting).length > 120000) {
-          c.hasHandwriting = true;
-          c.handwriting = '';
-        }
-        return c;
-      })
+      /* Never persist ink. A data URL in localStorage freezes the next submit. */
+      submissions: (m.submissions || []).map(stripHwMeta)
     };
   });
   return out;
@@ -1060,8 +1239,12 @@ function saveStore(data) {
   } catch (err) {
     /* QuotaExceeded: aggressive prune, then retry */
     try {
-      normalized.history = normalized.history.slice(-15);
-      normalized.submissions = (normalized.submissions || []).map(stripHwMeta);
+      ['1', '2'].forEach(function (mode) {
+        var m = normalized.modes && normalized.modes[mode];
+        if (!m) return;
+        m.history = (m.history || []).slice(-15).map(stripHwMeta);
+        m.submissions = (m.submissions || []).map(stripHwMeta);
+      });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       return true;
     } catch (err2) {
@@ -1094,22 +1277,27 @@ function clearCurrentRoundLocal(mode) {
   saveStore(store);
 }
 function upsertSubmission(entry, mode) {
+  try {
   mode = practiceOf(mode || (entry && entry.practice) || activePractice);
   var store = loadStore();
   var m = store.modes[mode];
-  /* Only metadata in history — full ink stays in current-round submissions for teacher inspect */
+  /* Ink stays in memory for the live monitor. Disk keeps metadata only. */
   m.history.push(Object.assign({}, stripHwMeta(entry), { archivedAt: new Date().toISOString(), practice: mode }));
   if (m.history.length > 80) m.history = m.history.slice(-80);
+  var stored = stripHwMeta(entry);
   var idx = m.submissions.findIndex(function (s) { return s.studentNo === entry.studentNo; });
-  if (idx >= 0) m.submissions[idx] = entry; else m.submissions.push(entry);
+  if (idx >= 0) m.submissions[idx] = stored; else m.submissions.push(stored);
   saveStore(store);
+  } catch (e) { console.warn('upsertSubmission', e); }
 }
 function setLocalQuestion(q, rid, mode) {
-  mode = practiceOf(mode || activePractice);
-  var store = loadStore();
-  store.modes[mode].currentQuestion = q;
-  store.modes[mode].roundId = rid || (q && q.id) || null;
-  saveStore(store);
+  try {
+    mode = practiceOf(mode || activePractice);
+    var store = loadStore();
+    store.modes[mode].currentQuestion = q;
+    store.modes[mode].roundId = rid || (q && q.id) || null;
+    saveStore(store);
+  } catch (e) {}
 }
 
 function showScreen(id) {
@@ -1152,10 +1340,12 @@ var onlineRoster = {};
 var mySubmittedRound = null;
 
 function freshBucket() {
-  return { question: null, roundId: null, submissions: {}, mySubmittedRound: null };
+  return { question: null, roundId: null, rev: 0, submissions: {}, mySubmittedRound: null };
 }
 var practiceState = { '1': freshBucket(), '2': freshBucket() };
 var activePractice = '1';
+var modeRev = { '1': 0, '2': 0 };
+var revClock = 0;
 var hwCache = { '1': '', '2': '' };
 var answerDraft = { '1': null, '2': null };
 var shownQuestionKey = '';
@@ -1177,8 +1367,53 @@ function syncViewFrom(mode) {
   submissionsMap = s.submissions;
   mySubmittedRound = s.mySubmittedRound;
 }
+function nextRev() {
+  var now = Date.now();
+  if (now <= revClock) now = revClock + 1;
+  revClock = now;
+  return now;
+}
+function stampMode(mode, q) {
+  mode = practiceOf(mode);
+  var rev = nextRev();
+  var b = bucket(mode);
+  b.rev = rev;
+  modeRev[mode] = rev;
+  if (q) q.rev = rev;
+  return rev;
+}
+function messageRev(msg, q) {
+  return Number((msg && msg.rev) || (q && q.rev) || 0) || 0;
+}
+function isStaleRev(mode, rev) {
+  rev = Number(rev) || 0;
+  var have = modeRev[practiceOf(mode)] || 0;
+  if (!rev) return have > 0;
+  return rev < have;
+}
+function acceptRev(mode, rev) {
+  mode = practiceOf(mode);
+  rev = Number(rev) || 0;
+  if (rev > (modeRev[mode] || 0)) modeRev[mode] = rev;
+  if (rev > revClock) revClock = rev;
+  var b = bucket(mode);
+  if ((modeRev[mode] || 0) > (b.rev || 0)) b.rev = modeRev[mode];
+}
+function ensureModeRev(mode) {
+  mode = practiceOf(mode);
+  var b = bucket(mode);
+  var rev = Number(b.rev || (b.question && b.question.rev) || 0);
+  if (!rev && b.question) {
+    rev = nextRev();
+    b.question.rev = rev;
+  }
+  if (rev > (modeRev[mode] || 0)) modeRev[mode] = rev;
+  b.rev = modeRev[mode] || rev || 0;
+  return b.rev;
+}
 function resetAllPracticeMemory() {
   practiceState = { '1': freshBucket(), '2': freshBucket() };
+  modeRev = { '1': 0, '2': 0 };
   hwCache = { '1': '', '2': '' };
   answerDraft = { '1': null, '2': null };
   shownQuestionKey = '';
@@ -1191,6 +1426,9 @@ function loadPracticeFromStore() {
     var b = freshBucket();
     b.question = m.currentQuestion || null;
     b.roundId = m.roundId || (b.question && b.question.id) || null;
+    b.rev = Number((b.question && b.question.rev) || 0);
+    if (b.rev > (modeRev[mode] || 0)) modeRev[mode] = b.rev;
+    if (b.rev > revClock) revClock = b.rev;
     (m.submissions || []).forEach(function (s) {
       if (!s || s.studentNo == null) return;
       b.submissions[Number(s.studentNo)] = Object.assign({}, s, { practice: s.practice || mode });
@@ -1418,23 +1656,30 @@ function unlockHwScroll() {
   if (hwLockTimer) { clearTimeout(hwLockTimer); hwLockTimer = null; }
 }
 
+function releaseHwPointer() {
+  /* Drop pen capture so the next tap hits 提交 / 換題, not the canvas. */
+  if (hwRaf) { cancelAnimationFrame(hwRaf); hwRaf = 0; }
+  hwPending = null;
+  hwDrawing = false;
+  hwLast = null;
+  hwMid = null;
+  var pid = hwPointerId;
+  hwPointerId = null;
+  try {
+    if (hwCanvas && pid != null && hwCanvas.releasePointerCapture) {
+      hwCanvas.releasePointerCapture(pid);
+    }
+  } catch (e) {}
+  unlockHwScroll();
+}
+
 function lockHwScroll(on) {
   /* Do NOT toggle overflow:hidden (scrollbar disappearance = layout shift). */
   if (on) {
     document.documentElement.classList.add('drawing-lock');
     document.body.classList.add('drawing-lock');
     if (hwLockTimer) clearTimeout(hwLockTimer);
-    /* Safety: never leave body touch-action:none stuck (blocks Q2 submit taps on iPad) */
-    hwLockTimer = setTimeout(function () {
-      if (hwDrawing) {
-        hwDrawing = false;
-        hwLast = null;
-        hwMid = null;
-        hwPending = null;
-        hwPointerId = null;
-      }
-      unlockHwScroll();
-    }, 8000);
+    hwLockTimer = setTimeout(function () { releaseHwPointer(); }, 1500);
   } else {
     unlockHwScroll();
   }
@@ -1572,18 +1817,18 @@ function initHwCanvas() {
     else if (hwMid && hwLast) {
       hwDrawSegment(hwLast, null, hwMid);
     }
-    hwDrawing = false;
-    hwLast = null;
-    hwMid = null;
-    hwPending = null;
-    try {
-      if (hwPointerId != null && hwCanvas.releasePointerCapture) {
-        hwCanvas.releasePointerCapture(hwPointerId);
-      }
-    } catch (err) {}
-    hwPointerId = null;
-    unlockHwScroll();
+    var outside = false;
+    if (e && hwCanvas && e.clientX != null) {
+      var box = hwCanvas.getBoundingClientRect();
+      outside = e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom;
+    }
+    releaseHwPointer();
     updateHwUndoBtn();
+    if (outside && e) {
+      var under = document.elementFromPoint(e.clientX, e.clientY);
+      var ctl = under && under.closest && under.closest('button, .tab');
+      if (ctl) setTimeout(function () { ctl.click(); }, 0);
+    }
   }
 
   /* Pointer Events cover mouse + modern touch / Apple Pencil */
@@ -1592,6 +1837,23 @@ function initHwCanvas() {
     hwCanvas.addEventListener('pointermove', move, { passive: false });
     hwCanvas.addEventListener('pointerup', end);
     hwCanvas.addEventListener('pointercancel', end);
+    window.addEventListener('pointerup', end, true);
+    window.addEventListener('pointercancel', end, true);
+    window.addEventListener('pointerdown', function (e) {
+      if (!hwDrawing && hwPointerId == null) return;
+      if (!hwCanvas || e.clientX == null) return;
+      var box = hwCanvas.getBoundingClientRect();
+      var inside = e.clientX >= box.left && e.clientX <= box.right && e.clientY >= box.top && e.clientY <= box.bottom;
+      if (inside) return;
+      var under = document.elementFromPoint(e.clientX, e.clientY);
+      var ctl = under && under.closest && under.closest('button, .tab');
+      releaseHwPointer();
+      if (ctl) {
+        if (e.cancelable) e.preventDefault();
+        e.stopPropagation();
+        setTimeout(function () { ctl.click(); }, 0);
+      }
+    }, true);
     hwCanvas.addEventListener('lostpointercapture', function () {
       if (hwDrawing) end(null);
       else unlockHwScroll();
@@ -1639,25 +1901,18 @@ function initHwCanvas() {
   });
   /* If tab hides mid-stroke, release lock so Submit stays tappable */
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) {
-      hwDrawing = false;
-      hwLast = null;
-      hwMid = null;
-      hwPending = null;
-      hwPointerId = null;
-      unlockHwScroll();
+    if (document.hidden) releaseHwPointer();
+    else if (role === 'student' && !soloPractice && roomCode) {
+      requestClassState();
+      pollRestHistory();
     }
   });
-  window.addEventListener('blur', function () {
-    hwDrawing = false;
-    unlockHwScroll();
-  });
+  window.addEventListener('blur', function () { releaseHwPointer(); });
 }
 
 function clearHw(silent) {
   if (!hwCanvas || !hwCtx) return;
-  unlockHwScroll();
-  hwDrawing = false;
+  releaseHwPointer();
   hwLast = null;
   hwMid = null;
   hwPending = null;
@@ -1691,9 +1946,9 @@ function exportHwThumb() {
 
 function ensureHwCanvasReady(done) {
   if (!hwCanvas) { if (done) done(); return; }
-  unlockHwScroll();
+  var needForce = !hwSizedOnce || hwCssW < 8;
   requestAnimationFrame(function () {
-    sizeHwCanvas(true);
+    sizeHwCanvas(needForce);
     requestAnimationFrame(function () {
       sizeHwCanvas(false);
       if (!hwDirty) {
@@ -1780,7 +2035,7 @@ function publishPresence() {
       : null);
   if (!payload) return;
   upsertOnlinePerson(payload);
-  publishCloud({ type: 'presence', person: payload });
+  publishCloud({ type: 'presence', person: payload }, { history: false });
   if (syncBackend === 'pubnub' && pubnub) {
     try { pubnub.setState({ channels: [cloudChannel(roomCode)], state: payload }); } catch (e) {}
   }
@@ -1840,20 +2095,24 @@ function rememberCloudMsg(msg) {
   }
   return false;
 }
-function publishCloud(msg) {
+function publishCloud(msg, opts) {
   if (!roomCode) return Promise.resolve(false);
+  var storeHistory = !(opts && opts.history === false);
   var envelope = Object.assign({ ts: Date.now(), room: roomCode }, msg);
   if (syncBackend === 'pubnub' && pubnub) {
-    return pubnub.publish({ channel: cloudChannel(roomCode), message: envelope })
-      .then(function () { return true; })
-      .catch(function () { return publishCloudRest(envelope); });
+    return pubnub.publish({
+      channel: cloudChannel(roomCode),
+      message: envelope,
+      storeInHistory: storeHistory
+    }).then(function () { return true; })
+      .catch(function () { return publishCloudRest(envelope, storeHistory); });
   }
-  return publishCloudRest(envelope);
+  return publishCloudRest(envelope, storeHistory);
 }
-function publishCloudReliable(msg, tries) {
+function publishCloudReliable(msg, tries, opts) {
   var left = (typeof tries === 'number') ? tries : PUBLISH_RETRIES;
   var attempt = function () {
-    return publishCloud(msg).then(function (ok) {
+    return publishCloud(msg, opts).then(function (ok) {
       if (ok) return true;
       left -= 1;
       if (left <= 0) return false;
@@ -1864,11 +2123,12 @@ function publishCloudReliable(msg, tries) {
   };
   return attempt();
 }
-function publishCloudRest(envelope) {
+function publishCloudRest(envelope, storeHistory) {
   if (!roomCode) return Promise.resolve(false);
   var channel = cloudChannel(roomCode);
   var url = PUBNUB_REST_ORIGIN + '/publish/' + PUBNUB_PUBLISH_KEY + '/' + PUBNUB_SUBSCRIBE_KEY +
     '/0/' + encodeURIComponent(channel) + '/0/' + encodeURIComponent(JSON.stringify(envelope));
+  if (storeHistory === false) url += '?store=0';
   return fetch(url, { method: 'GET' }).then(function (r) { return r.ok; }).catch(function () { return false; });
 }
 function modeSnapshot(mode) {
@@ -1876,6 +2136,7 @@ function modeSnapshot(mode) {
   var b = bucket(mode);
   return {
     practice: mode,
+    rev: ensureModeRev(mode),
     question: b.question,
     roundId: b.roundId || (b.question && b.question.id) || null,
     submissions: Object.keys(b.submissions).map(function (k) {
@@ -1898,16 +2159,24 @@ function teacherSnapshotPayload() {
     modes: { '1': m1, '2': modeSnapshot('2') }
   };
 }
+var snapshotReplyAt = 0;
 function teacherSendSnapshot(reason) {
   if (role !== 'teacher' || !isHost || !roomCode || !syncReady) return Promise.resolve(false);
-  lastQuestionBroadcastAt = Date.now();
+  var now = Date.now();
+  var burst = reason === 'request-state' || reason === 'hello-student' || reason === 'hello';
+  if (burst && now - snapshotReplyAt < 1200) return Promise.resolve(true);
+  snapshotReplyAt = now;
+  ['1', '2'].forEach(ensureModeRev);
+  lastQuestionBroadcastAt = now;
   return publishCloudReliable(teacherSnapshotPayload());
 }
 function publishQuestionToClass(q, rid, kind, mode) {
   mode = practiceOf(mode || activePractice);
+  var rev = Number((q && q.rev) || bucket(mode).rev || 0);
   var roundPayload = {
     type: kind || 'new-round',
     practice: mode,
+    rev: rev,
     question: q || null,
     roundId: rid || (q && q.id) || null
   };
@@ -1942,29 +2211,27 @@ async function pollRestHistory() {
     }
   } catch (e) {}
 }
+function requestClassState() {
+  if (role !== 'student' || soloPractice || !roomCode || !currentStudent || !syncReady) return;
+  publishCloud({
+    type: 'request-state',
+    role: 'student',
+    studentNo: currentStudent.no,
+    studentName: currentStudent.name,
+    practice: activePractice
+  }, { history: false });
+}
 function startStateRequestLoop() {
+  /* Keep asking for the whole session. Stopping after the first question
+     left later rounds and the other practice on a blank wait screen. */
   if (stateRequestTimer) { clearInterval(stateRequestTimer); stateRequestTimer = null; }
   stateRequestTries = 0;
   if (role !== 'student' || soloPractice || !roomCode) return;
   var tick = function () {
     stateRequestTries += 1;
-    if (bucket(activePractice).question) {
-      if (stateRequestTimer) { clearInterval(stateRequestTimer); stateRequestTimer = null; }
-      return;
-    }
-    if (stateRequestTries > STATE_REQUEST_MAX) {
-      if (stateRequestTimer) { clearInterval(stateRequestTimer); stateRequestTimer = null; }
-      return;
-    }
-    if (currentStudent) {
-      publishCloud({
-        type: 'request-state',
-        role: 'student',
-        studentNo: currentStudent.no,
-        studentName: currentStudent.name
-      });
-    }
-    pollRestHistory();
+    var missing = !bucket(activePractice).question;
+    if (missing || stateRequestTries <= 4 || stateRequestTries % 5 === 0) requestClassState();
+    if (missing) pollRestHistory();
   };
   tick();
   stateRequestTimer = setInterval(tick, STATE_REQUEST_MS);
@@ -2029,17 +2296,15 @@ async function connectRoom(code, asHost) {
   }, 15000);
   publishPresence();
   if (role === 'teacher') {
-    publishCloud({ type: 'hello', role: 'teacher', studentName: '老師' });
+    publishCloud({ type: 'hello', role: 'teacher', studentName: '老師' }, { history: false });
     if (practiceState['1'].question || practiceState['2'].question) teacherSendSnapshot('connect');
     startQuestionRebroadcastLoop();
   } else if (currentStudent) {
-    publishCloud({ type: 'hello-student', role: 'student', studentNo: currentStudent.no, studentName: currentStudent.name });
     publishCloud({
-      type: 'request-state',
-      role: 'student',
-      studentNo: currentStudent.no,
-      studentName: currentStudent.name
-    });
+      type: 'hello-student', role: 'student',
+      studentNo: currentStudent.no, studentName: currentStudent.name
+    }, { history: false });
+    requestClassState();
     startStateRequestLoop();
   }
   updateStudentSyncBar();
@@ -2077,10 +2342,10 @@ function handleCloudMessage(msg) {
   }
   if (msg.type === 'round') {
     var roundMode = practiceOf(msg.practice);
+    var roundRev = messageRev(msg, msg.question);
+    if (isStaleRev(roundMode, roundRev)) return;
+    acceptRev(roundMode, roundRev);
     applyQuestionFor(roundMode, msg.question, msg.roundId, true);
-    if (role === 'student' && msg.question && roundMode === activePractice && stateRequestTimer) {
-      clearInterval(stateRequestTimer); stateRequestTimer = null;
-    }
     if (role === 'teacher') renderTeacherMonitor();
     return;
   }
@@ -2092,24 +2357,36 @@ function handleCloudMessage(msg) {
   }
   if (msg.type === 'new-round') {
     var mode = practiceOf(msg.practice);
+    var rev = messageRev(msg, msg.question);
+    if (isStaleRev(mode, rev)) return;
+    var sameEpoch = !!(rev && rev === (modeRev[mode] || 0) && msg.question &&
+      bucket(mode).question && msg.question.id === bucket(mode).question.id);
+    if (sameEpoch) {
+      if (role === 'teacher') renderTeacherMonitor();
+      return;
+    }
+    acceptRev(mode, rev);
     var b = bucket(mode);
     b.submissions = {};
     b.mySubmittedRound = null;
     hwCache[mode] = '';
     answerDraft[mode] = null;
-    clearCurrentRoundLocal(mode);
+    try { clearCurrentRoundLocal(mode); } catch (e) {}
     if (mode === activePractice) {
       submissionsMap = b.submissions;
       mySubmittedRound = null;
       if (role === 'student') {
+        releaseHwPointer();
         var sm = document.getElementById('submit-msg');
         if (sm) { sm.textContent = ''; sm.className = 'submit-msg'; }
         clearAnswerInputs();
         clearHw(true);
-        toast(msg.question ? '老師已出新題，請作答' : '老師已開新一輪，請重新作答', 'ok');
-        if (msg.question && stateRequestTimer) {
-          clearInterval(stateRequestTimer); stateRequestTimer = null;
+        var submitBtnNow = document.getElementById('btn-submit-answer');
+        if (submitBtnNow) {
+          submitBtnNow.disabled = false;
+          submitBtnNow.textContent = '提交答案給老師';
         }
+        toast(msg.question ? '老師已出新題，請作答' : '老師已開新一輪，請重新作答', 'ok');
       }
     } else if (role === 'student') {
       toast(msg.question
@@ -2150,11 +2427,11 @@ function applySnapshotMessage(msg) {
   snapshotPacks(msg).forEach(function (item) {
     var mode = practiceOf(item.mode);
     var pack = item.pack || {};
+    var rev = messageRev(pack, pack.question);
+    if (isStaleRev(mode, rev)) return;
+    acceptRev(mode, rev);
     if (role === 'student') {
       applyQuestionFor(mode, pack.question || null, pack.roundId, false);
-      if (pack.question && mode === activePractice && stateRequestTimer) {
-        clearInterval(stateRequestTimer); stateRequestTimer = null;
-      }
     }
     if (Array.isArray(pack.submissions)) {
       pack.submissions.forEach(function (s) {
@@ -2218,15 +2495,19 @@ function applyQuestionFor(mode, q, rid, resetStudentUi) {
     roundId = b.roundId;
     submissionsMap = b.submissions;
     mySubmittedRound = b.mySubmittedRound;
-    if (role === 'student') renderStudentQuestion(!!resetStudentUi || changed);
-    if (role === 'teacher') renderTeacherQuestion();
+    if (role === 'student' && (resetStudentUi || changed)) renderStudentQuestion(true);
+    if (role === 'teacher' && (resetStudentUi || changed)) renderTeacherQuestion();
   }
 }
 function updatePracticeChrome() {
   var g1 = document.getElementById('teacher-gen-1');
   var g2 = document.getElementById('teacher-gen-2');
+  var c1 = document.getElementById('teacher-custom-1');
+  var c2 = document.getElementById('teacher-custom-2');
   if (g1) g1.style.display = activePractice === '1' ? 'flex' : 'none';
   if (g2) g2.style.display = activePractice === '2' ? 'flex' : 'none';
+  if (c1) c1.style.display = activePractice === '1' ? 'block' : 'none';
+  if (c2) c2.style.display = activePractice === '2' ? 'block' : 'none';
   var ql = document.querySelector('#question-card .q-label');
   if (ql) ql.textContent = activePractice === '2' ? '題目（真分數 × 真分數）' : '題目';
   var kind = document.getElementById('teacher-q-kind');
@@ -2338,6 +2619,7 @@ function renderStudentQuestion(hardReset) {
     hw.style.display = 'block';
     gb.style.display = 'block';
     if (hardReset) {
+      releaseHwPointer();
       mySubmittedRound = null;
       bucket(mode).mySubmittedRound = null;
       hwCache[mode] = '';
@@ -2388,7 +2670,10 @@ function activatePractice(mode) {
   activePractice = mode;
   syncViewFrom(mode);
   updatePracticeChrome();
-  if (role === 'student') renderStudentQuestion(false);
+  if (role === 'student') {
+    renderStudentQuestion(false);
+    if (!soloPractice && roomCode) requestClassState();
+  }
   if (role === 'teacher') renderTeacherMonitor();
 }
 function stashActivePractice() {
@@ -2436,12 +2721,23 @@ function publishSubmitEntry(entry) {
     return publishCloudReliable({ type: 'submit', practice: lite.practice, entry: lite });
   });
 }
+var lastSubmitAt = 0;
+function armSubmitButton(label) {
+  var submitBtn = document.getElementById('btn-submit-answer');
+  if (!submitBtn) return;
+  submitBtn.disabled = false;
+  submitBtn.textContent = label || '提交答案給老師';
+}
 function submitStudentAnswer() {
-  unlockHwScroll();
+  releaseHwPointer();
+  try {
   if (!currentStudent) { toast('請先選擇姓名', 'bad'); return; }
   if (!currentQuestion) { toast('尚未有題目', 'bad'); return; }
   var ans = readAnswerRational();
   if (!ans) { toast('請輸入最終答案（先選整數或分數）', 'bad'); return; }
+  var nowTap = Date.now();
+  if (nowTap - lastSubmitAt < 350) return;
+  lastSubmitAt = nowTap;
   // 評分只根據最終答案輸入（手寫不作自動評分）
   var ok = gradeAgainstQuestion(ans, currentQuestion);
   var entry = {
@@ -2475,32 +2771,26 @@ function submitStudentAnswer() {
     msg.textContent = ok ? '✓ 已提交：答對！' : '✗ 已提交：不正確（等候老師講解）';
     msg.className = 'submit-msg ' + (ok ? 'ok' : 'bad');
   }
-  var submitBtn = document.getElementById('btn-submit-answer');
-  if (submitBtn) {
-    submitBtn.disabled = false;
-    submitBtn.textContent = '重新提交／已交（可改答案再交）';
-  }
+  armSubmitButton('重新提交／已交（可改答案再交）');
   publishSubmitEntry(entry);
   toast(ok ? '已提交：答對！' : '已提交答案', ok ? 'ok' : 'bad');
+  } finally {
+    armSubmitButton(mySubmittedRound && mySubmittedRound === roundId
+      ? '重新提交／已交（可改答案再交）'
+      : '提交答案給老師');
+  }
 }
 
 function renderTeacherQuestion() {
   updatePracticeChrome();
   var t = document.getElementById('teacher-q-text');
-  var a = document.getElementById('teacher-q-answer');
-  if (!currentQuestion) {
-    t.textContent = '尚未出題';
-    a.textContent = '';
-  } else {
-    t.innerHTML = formatPrompt(currentQuestion);
-    a.innerHTML = '參考答案：' + formatRat(currentQuestion.answer) +
-      (currentQuestion.kind === 'ffrac'
-        ? '（已約至最簡；只供老師。學生以最終答案輸入評分，等值即對）'
-        : '（只供老師；學生以最終答案輸入評分）');
-  }
+  if (!t) return;
+  if (!currentQuestion) t.textContent = '尚未出題';
+  else t.innerHTML = formatPrompt(currentQuestion);
 }
 function startRound(q) {
   var mode = activePractice;
+  stampMode(mode, q);
   var b = bucket(mode);
   b.submissions = {};
   b.mySubmittedRound = null;
@@ -2661,7 +2951,6 @@ function openInspect(entry) {
   document.getElementById('inspect-meta').innerHTML =
     '題目：' + (entry.promptHtml || formatPrompt(currentQuestion) || slashDisplayToHtml(entry.prompt) || '—') + '<br>' +
     '最終答案：<strong class="frac-inline-wrap">' + slashDisplayToHtml(entry.guess) + '</strong>' +
-    (currentQuestion ? '　｜　參考：' + formatRat(currentQuestion.answer) : '') +
     '<br><span style="color:var(--muted);font-size:0.85rem;">（評分只根據最終答案輸入；手寫供檢視約簡）</span>';
   document.getElementById('inspect-modal').classList.add('show');
 }
@@ -2809,6 +3098,21 @@ function wire() {
   document.getElementById('btn-gen-random').onclick = function () { startRound(genRandomQ()); };
   document.getElementById('btn-gen-ffrac').onclick = function () { startRound(genFracTimesFrac()); };
   document.getElementById('btn-gen-ffrac-again').onclick = function () { startRound(genFracTimesFrac()); };
+  document.getElementById('btn-custom-frac').onclick = function () {
+    var q = buildCustomFracTimesInt();
+    if (!q) { toast('請輸入真分數 × 正整數（分母 2 至 60，分子小於分母）。', 'bad'); return; }
+    startRound(q);
+  };
+  document.getElementById('btn-custom-mixed').onclick = function () {
+    var q = buildCustomMixedTimesInt();
+    if (!q) { toast('請輸入帶分數 × 正整數（整數部分 1 至 20，分數部分為真分數）。', 'bad'); return; }
+    startRound(q);
+  };
+  document.getElementById('btn-custom-ffrac').onclick = function () {
+    var q = buildCustomFracTimesFrac();
+    if (!q) { toast('請輸入兩個真分數（分母 2 至 60，分子小於分母）。', 'bad'); return; }
+    startRound(q);
+  };
   document.getElementById('btn-new-round').onclick = function () {
     showModal('開新一輪', '將清除本練習本輪所有學生提交（另一練習的題目與提交會保留）。確定？', function () {
       var mode = activePractice;
@@ -2820,6 +3124,7 @@ function wire() {
       hwCache[mode] = '';
       answerDraft[mode] = null;
       clearCurrentRoundLocal(mode);
+      stampMode(mode, currentQuestion);
       if (roomCode && syncReady) {
         publishQuestionToClass(currentQuestion, roundId, 'new-round', mode);
       }
@@ -3303,7 +3608,14 @@ window.__fracMulPractice = {
   }
 
   // ---- Tab switching ----
-  // 1 分數乘法一（練習）  2 分數乘法二（真分數×真分數）  3 分數乘法二教學（面積模型）
+  // 1 分數乘法一  2 分數乘法二  3 分數乘法二教學  4 分數乘法二農田
+  function hideFarmPane() {
+    ['pane-tab-farm', 'pane-teacher-tab-farm'].forEach(function (id) {
+      var el = $(id);
+      if (el) el.classList.remove('show');
+    });
+    if (window.__fracMulFarm) window.__fracMulFarm.hide();
+  }
   function showPracticePane(p1, pExp) {
     if (p1) {
       p1.classList.remove('hide');
@@ -3325,6 +3637,7 @@ window.__fracMulPractice = {
     });
     var p1 = $('pane-tab1');
     var p2 = $('pane-tab2');
+    hideFarmPane();
     if (n === 1 || n === 2) {
       showPracticePane(p1, p2);
       if (window.__fracMulPractice) window.__fracMulPractice.activate(String(n));
@@ -3335,6 +3648,16 @@ window.__fracMulPractice = {
       requestAnimationFrame(function () {
         mountExplorerInto($('explorer-host-student'));
       });
+    } else if (n === 4) {
+      if (window.__fracMulPractice) window.__fracMulPractice.stash();
+      if (p1) { p1.style.display = 'none'; p1.classList.add('hide'); }
+      if (p2) p2.classList.remove('show');
+      hideExplorer();
+      var pf = $('pane-tab-farm');
+      if (pf) pf.classList.add('show');
+      requestAnimationFrame(function () {
+        if (window.__fracMulFarm) window.__fracMulFarm.mount($('farm-host-student'));
+      });
     }
   }
 
@@ -3344,6 +3667,7 @@ window.__fracMulPractice = {
     });
     var p1 = $('pane-teacher-tab1');
     var p2 = $('pane-teacher-tab2');
+    hideFarmPane();
     if (n === 1 || n === 2) {
       showPracticePane(p1, p2);
       if (window.__fracMulPractice) window.__fracMulPractice.activate(String(n));
@@ -3352,6 +3676,15 @@ window.__fracMulPractice = {
       if (p2) p2.classList.add('show');
       requestAnimationFrame(function () {
         mountExplorerInto($('explorer-host-teacher'));
+      });
+    } else if (n === 4) {
+      if (p1) p1.classList.add('hide');
+      if (p2) p2.classList.remove('show');
+      hideExplorer();
+      var pf = $('pane-teacher-tab-farm');
+      if (pf) pf.classList.add('show');
+      requestAnimationFrame(function () {
+        if (window.__fracMulFarm) window.__fracMulFarm.mount($('farm-host-teacher'));
       });
     }
   }
@@ -3363,6 +3696,231 @@ window.__fracMulPractice = {
     mountStudent: function () { mountExplorerInto($('explorer-host-student')); },
     mountTeacher: function () { mountExplorerInto($('explorer-host-teacher')); }
   };
+})();
+
+/* ===== 分數乘法二農田：正方形農地講解（不經出題同步） ===== */
+(function () {
+  var EXAMPLES = {
+    main: { n1: 1, d1: 2, n2: 1, d2: 3, name: '例一' },
+    adv: { n1: 2, d1: 3, n2: 3, d2: 5, name: '例二' }
+  };
+  var ex = EXAMPLES.main;
+  var step = 3;
+  var highlight = 'product';
+  var canvas, ctx, wired = false;
+
+  function $(id) { return document.getElementById(id); }
+  function product() { return reduce(ex.n1 * ex.n2, ex.d1 * ex.d2); }
+
+  function mount(host) {
+    var shared = $('farm-shared');
+    if (!shared || !host) return;
+    if (shared.parentElement !== host) host.appendChild(shared);
+    shared.hidden = false;
+    shared.style.display = 'flex';
+    if (!wired) { wire(); wired = true; }
+    render();
+  }
+  function hide() {
+    var shared = $('farm-shared');
+    if (!shared) return;
+    shared.hidden = true;
+    shared.style.display = 'none';
+  }
+
+  function chip(part, inner) {
+    var on = highlight === part ? ' selected' : '';
+    return '<button type="button" class="farm-chip' + on + '" data-part="' + part + '">' + inner + '</button>';
+  }
+  function renderEq() {
+    var eq = $('farm-eq');
+    if (!eq) return;
+    var p = product();
+    var second = step >= 2 ? fracHtml(ex.n2, ex.d2) : '?';
+    var prod = step >= 3 ? fracHtml(p.n, p.d) : '?';
+    var first = step >= 1 ? fracHtml(ex.n1, ex.d1) : '農地';
+    eq.innerHTML = chip('first', first) +
+      '<span class="farm-op">×</span>' + chip('second', second) +
+      '<span class="farm-op">=</span>' + chip('product', prod);
+    eq.querySelectorAll('.farm-chip').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var part = b.getAttribute('data-part');
+        highlight = (highlight === part) ? null : part;
+        render();
+      });
+    });
+  }
+  function renderCopy() {
+    var prompt = $('farm-prompt');
+    var how = $('farm-how');
+    var next = $('farm-next');
+    var p = product();
+    if (step <= 0) {
+      prompt.textContent = '農夫有一塊正方形農地。';
+      how.textContent = '';
+    } else if (step === 1) {
+      prompt.innerHTML = '先取這塊農地的 ' + fracHtml(ex.n1, ex.d1) + '。';
+      how.textContent = '';
+    } else if (step === 2) {
+      prompt.innerHTML = '再在這部分之中，用 ' + fracHtml(ex.n2, ex.d2) + ' 種雜交水稻。';
+      how.textContent = '';
+    } else {
+      prompt.innerHTML = '種稻面積佔成塊農地幾分之幾？怎樣列式？';
+      how.innerHTML = fracHtml(ex.n1, ex.d1) + ' × ' + fracHtml(ex.n2, ex.d2) +
+        ' = ' + fracHtml(p.n, p.d) + '　分子相乘，分母相乘。';
+    }
+    if (next) next.disabled = step >= 3;
+  }
+
+  function resize() {
+    if (!canvas) canvas = $('farm-canvas');
+    if (!canvas) return;
+    if (!ctx) ctx = canvas.getContext('2d');
+    var wrap = canvas.parentElement;
+    var size = Math.floor(Math.min(wrap.clientWidth || 420, wrap.clientHeight || 420, 460));
+    if (size < 180) size = 280;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw(size);
+  }
+
+  function riceTuft(x, y) {
+    ctx.strokeStyle = '#e7f6c9';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(x, y); ctx.lineTo(x - 3.5, y - 8);
+    ctx.moveTo(x, y); ctx.lineTo(x, y - 10);
+    ctx.moveTo(x, y); ctx.lineTo(x + 3.5, y - 8);
+    ctx.stroke();
+    ctx.fillStyle = '#f3e27a';
+    ctx.beginPath();
+    ctx.ellipse(x, y - 11, 2, 2.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function draw(S) {
+    if (!ctx) return;
+    var pad = 18;
+    var x0 = pad, y0 = pad + 8, W = S - pad * 2, H = S - pad * 2 - 8;
+    ctx.clearRect(0, 0, S, S);
+
+    ctx.fillStyle = '#f4e7a8';
+    ctx.beginPath();
+    ctx.arc(S - 36, 28, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#e4f2c4';
+    ctx.fillRect(x0, y0, W, H);
+    ctx.strokeStyle = 'rgba(96, 130, 48, 0.22)';
+    ctx.lineWidth = 1;
+    var fy;
+    for (fy = 12; fy < H; fy += 12) {
+      ctx.beginPath();
+      ctx.moveTo(x0, y0 + fy);
+      ctx.lineTo(x0 + W, y0 + fy);
+      ctx.stroke();
+    }
+
+    var selW = step >= 1 ? (W * ex.n1 / ex.d1) : 0;
+    var riceH = step >= 2 ? (H * ex.n2 / ex.d2) : 0;
+    if (step >= 1) {
+      ctx.fillStyle = 'rgba(226, 197, 106, 0.72)';
+      ctx.fillRect(x0, y0, selW, H);
+    }
+    if (step >= 2 && selW > 0 && riceH > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x0, y0, selW, riceH);
+      ctx.clip();
+      ctx.fillStyle = '#1f7a3a';
+      ctx.fillRect(x0, y0, selW, riceH);
+      var gx, gy;
+      for (gy = y0 + 16; gy < y0 + riceH - 4; gy += 20) {
+        for (gx = x0 + 12; gx < x0 + selW - 4; gx += 16) riceTuft(gx, gy);
+      }
+      ctx.restore();
+    }
+
+    if (step >= 1) {
+      ctx.strokeStyle = 'rgba(46, 80, 24, 0.45)';
+      ctx.lineWidth = 1.4;
+      var i;
+      for (i = 1; i < ex.d1; i++) {
+        var lx = x0 + (W / ex.d1) * i;
+        ctx.beginPath(); ctx.moveTo(lx, y0); ctx.lineTo(lx, y0 + H); ctx.stroke();
+      }
+      for (i = 1; i < ex.d2; i++) {
+        var ly = y0 + (H / ex.d2) * i;
+        ctx.beginPath(); ctx.moveTo(x0, ly); ctx.lineTo(x0 + W, ly); ctx.stroke();
+      }
+    }
+
+    var hx = x0, hy = y0, hw = W, hh = H;
+    if (highlight === 'first' && step >= 1) { hw = selW; }
+    else if ((highlight === 'second' || highlight === 'product') && step >= 2) { hw = selW; hh = riceH; }
+    if (highlight && hw > 0 && hh > 0) {
+      ctx.strokeStyle = '#e67e22';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(hx + 2, hy + 2, hw - 4, hh - 4);
+    }
+
+    ctx.strokeStyle = '#6d4c41';
+    ctx.lineWidth = 7;
+    ctx.strokeRect(x0, y0, W, H);
+    ctx.strokeStyle = '#8d6e63';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x0 + 5, y0 + 5, W - 10, H - 10);
+
+    if (step >= 2 && selW > 48 && riceH > 36) {
+      var lx = x0 + selW / 2;
+      var ly = y0 + riceH / 2;
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillRect(lx - 28, ly - 13, 56, 26);
+      ctx.fillStyle = '#145c28';
+      ctx.font = 'bold 15px "PingFang HK", "Noto Sans TC", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('種稻', lx, ly);
+    }
+  }
+
+  function render() {
+    renderEq();
+    renderCopy();
+    resize();
+  }
+  function loadExample(key) {
+    ex = EXAMPLES[key];
+    step = 3;
+    highlight = 'product';
+    render();
+  }
+  function wire() {
+    canvas = $('farm-canvas');
+    ctx = canvas.getContext('2d');
+    $('farm-next').onclick = function () {
+      if (step < 3) step += 1;
+      highlight = step >= 2 ? 'product' : (step === 1 ? 'first' : null);
+      render();
+    };
+    $('farm-restart').onclick = function () {
+      step = 0;
+      highlight = null;
+      render();
+    };
+    $('farm-ex-main').onclick = function () { loadExample('main'); };
+    $('farm-ex-adv').onclick = function () { loadExample('adv'); };
+    window.addEventListener('resize', function () {
+      var shared = $('farm-shared');
+      if (shared && !shared.hidden) resize();
+    });
+  }
+
+  window.__fracMulFarm = { mount: mount, hide: hide, loadExample: loadExample };
 })();
 
 wire();
