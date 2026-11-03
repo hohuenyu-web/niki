@@ -547,8 +547,8 @@ window.__pubnubLoadPromise = (function () {
     flex: 1 1 280px; max-width: 460px; width: 100%; aspect-ratio: 1 / 1;
   }
   #farm-canvas {
-    width: 100%; height: 100%; display: block; background: #fffef8; border-radius: 8px;
-    touch-action: none;
+    width: 100%; height: 100%; display: block; background: #fff; border-radius: 8px;
+    touch-action: none; -webkit-user-select: none; user-select: none;
   }
   .farm-side {
     flex: 1 1 260px; max-width: 420px; min-width: 240px;
@@ -918,12 +918,26 @@ window.__pubnubLoadPromise = (function () {
       <canvas id="farm-canvas" width="520" height="520" aria-label="正方形農地面積模型"></canvas>
     </div>
     <div class="farm-side">
-      <div class="farm-eq" id="farm-eq" aria-label="種稻算式"></div>
-      <div class="farm-prompt" id="farm-prompt"></div>
+      <div class="farm-eq exp-eq" id="farm-eq" aria-label="種稻算式">
+        <div class="exp-chip blue empty" data-chip="blue" id="farm-chip-blue">
+          <span class="exp-num"><span class="digit-hit" data-field="bn">?</span></span>
+          <span class="exp-den"><span class="digit-hit" data-field="bd">?</span></span>
+        </div>
+        <span class="exp-op" aria-hidden="true">×</span>
+        <div class="exp-chip red empty" data-chip="red" id="farm-chip-red">
+          <span class="exp-num"><span class="digit-hit" data-field="rn">?</span></span>
+          <span class="exp-den"><span class="digit-hit" data-field="rd">?</span></span>
+        </div>
+        <span class="exp-op" aria-hidden="true">=</span>
+        <div class="exp-chip purple empty" data-chip="purple" id="farm-chip-purple">
+          <span class="exp-num"><span class="digit-hit" data-field="pn">?</span></span>
+          <span class="exp-den"><span class="digit-hit" data-field="pd">?</span></span>
+        </div>
+      </div>
+      <div class="farm-prompt" id="farm-prompt">第一步：先填寫左側分母，把這塊正方形農地直向分開。</div>
       <div class="farm-how" id="farm-how"></div>
       <div class="farm-actions">
-        <button type="button" class="btn btn-primary" id="farm-next">下一步</button>
-        <button type="button" class="btn btn-ghost" id="farm-restart">重新講解</button>
+        <button type="button" class="btn btn-ghost" id="farm-restart">重新開始</button>
       </div>
       <div class="farm-actions">
         <button type="button" class="btn btn-accent" id="farm-ex-main">例一：種稻</button>
@@ -931,10 +945,26 @@ window.__pubnubLoadPromise = (function () {
       </div>
     </div>
   </div>
-  <div class="farm-legend" aria-hidden="true">
-    <span><i style="background:#e4f2c4"></i>成塊農地</span>
-    <span><i style="background:#e2c56a"></i>先取的部分</span>
-    <span><i style="background:#1f7a3a"></i>種稻（重疊）</span>
+  <div class="farm-legend">
+    <span>直向斜線：先取的部分</span>
+    <span>橫向斜線：種稻的部分</span>
+    <span>交叉斜線：種稻面積</span>
+  </div>
+</div>
+
+<div class="exp-keypad-backdrop" id="farm-keypad-backdrop" aria-hidden="true">
+  <div class="exp-keypad" id="farm-keypad" role="dialog" aria-label="數字鍵盤">
+    <div class="exp-keypad-hint" id="farm-keypad-hint">請選擇數字</div>
+    <button type="button" data-dig="1">1</button>
+    <button type="button" data-dig="2">2</button>
+    <button type="button" data-dig="3">3</button>
+    <button type="button" data-dig="4">4</button>
+    <button type="button" data-dig="5">5</button>
+    <button type="button" data-dig="6">6</button>
+    <button type="button" data-dig="7">7</button>
+    <button type="button" data-dig="8">8</button>
+    <button type="button" data-dig="9">9</button>
+    <button type="button" class="zero" data-dig="0">0</button>
   </div>
 </div>
 
@@ -3983,19 +4013,52 @@ window.__fracMulPractice = {
   };
 })();
 
-/* ===== 分數乘法二農田：正方形農地講解（不經出題同步） ===== */
+/* ===== 分數乘法二農田：正方形農地，填數與斜線陰影（不經出題同步） ===== */
 (function () {
   var EXAMPLES = {
-    main: { n1: 1, d1: 2, n2: 1, d2: 3, name: '例一' },
-    adv: { n1: 2, d1: 3, n2: 3, d2: 5, name: '例二' }
+    main: { n1: 1, d1: 2, n2: 1, d2: 3 },
+    adv: { n1: 2, d1: 3, n2: 3, d2: 5 }
   };
-  var ex = EXAMPLES.main;
-  var step = 3;
-  var highlight = 'product';
+  var PROMPTS = {
+    1: '第一步：先填寫左側分母，把這塊正方形農地直向分開。',
+    2: '第二步：再填寫左側分子，用斜線標出先取的部分。',
+    3: '第三步：再填寫右側分母，把農地橫向分開。',
+    4: '第四步：再填寫右側分子，用斜線標出種稻的部分。'
+  };
+  var FIELD_HINT = {
+    bd: '填寫左側分母',
+    bn: '填寫左側分子',
+    rd: '填寫右側分母',
+    rn: '填寫右側分子'
+  };
+  var HATCH_NEUTRAL = '#2c3e50';
+  var state = {
+    bn: null, bd: null, rn: null, rd: null,
+    highlight: null,
+    editing: null,
+    fillStep: 1,
+    lastTap: { field: null, t: 0 }
+  };
   var canvas, ctx, wired = false;
 
   function $(id) { return document.getElementById(id); }
-  function product() { return reduce(ex.n1 * ex.n2, ex.d1 * ex.d2); }
+  function product() {
+    if (state.bn == null || state.bd == null || state.rn == null || state.rd == null) return null;
+    return { n: state.bn * state.rn, d: state.bd * state.rd };
+  }
+  function isComplete() {
+    return state.bn != null && state.bd != null && state.rn != null && state.rd != null;
+  }
+  function recomputeStep() {
+    if (state.bd == null) state.fillStep = 1;
+    else if (state.bn == null) state.fillStep = 2;
+    else if (state.rd == null) state.fillStep = 3;
+    else if (state.rn == null) state.fillStep = 4;
+    else state.fillStep = 5;
+  }
+  function fieldForStep(step) {
+    return { 1: 'bd', 2: 'bn', 3: 'rd', 4: 'rn' }[step];
+  }
 
   function mount(host) {
     var shared = $('farm-shared');
@@ -4007,54 +4070,66 @@ window.__fracMulPractice = {
     render();
   }
   function hide() {
+    closeKeypad();
     var shared = $('farm-shared');
     if (!shared) return;
     shared.hidden = true;
     shared.style.display = 'none';
   }
 
-  function chip(part, inner) {
-    var on = highlight === part ? ' selected' : '';
-    return '<button type="button" class="farm-chip' + on + '" data-part="' + part + '">' + inner + '</button>';
+  function setDigitText(field, val) {
+    var el = document.querySelector('#farm-eq .digit-hit[data-field="' + field + '"]');
+    if (!el) return;
+    el.textContent = (val == null) ? '?' : String(val);
   }
-  function renderEq() {
-    var eq = $('farm-eq');
-    if (!eq) return;
+  function updateChips() {
+    setDigitText('bn', state.bn);
+    setDigitText('bd', state.bd);
+    setDigitText('rn', state.rn);
+    setDigitText('rd', state.rd);
     var p = product();
-    var second = step >= 2 ? fracHtml(ex.n2, ex.d2) : '?';
-    var prod = step >= 3 ? fracHtml(p.n, p.d) : '?';
-    var first = step >= 1 ? fracHtml(ex.n1, ex.d1) : '農地';
-    eq.innerHTML = chip('first', first) +
-      '<span class="farm-op">×</span>' + chip('second', second) +
-      '<span class="farm-op">=</span>' + chip('product', prod);
-    eq.querySelectorAll('.farm-chip').forEach(function (b) {
-      b.addEventListener('click', function () {
-        var part = b.getAttribute('data-part');
-        highlight = (highlight === part) ? null : part;
-        render();
-      });
+    setDigitText('pn', p ? p.n : null);
+    setDigitText('pd', p ? p.d : null);
+    var blue = $('farm-chip-blue');
+    var red = $('farm-chip-red');
+    var purple = $('farm-chip-purple');
+    function syncChip(el, hasAny, colorClass) {
+      el.classList.remove('empty', 'selected', 'blue', 'red', 'purple');
+      el.classList.add(colorClass);
+      if (!hasAny) el.classList.add('empty');
+    }
+    syncChip(blue, state.bn != null || state.bd != null, 'blue');
+    syncChip(red, state.rn != null || state.rd != null, 'red');
+    syncChip(purple, !!p, 'purple');
+    var map = { bn: blue, bd: blue, rn: red, rd: red, pn: purple, pd: purple };
+    if (state.highlight && map[state.highlight]) map[state.highlight].classList.add('selected');
+    recomputeStep();
+    var expectField = null;
+    if (state.fillStep >= 1 && state.fillStep <= 4) expectField = fieldForStep(state.fillStep);
+    document.querySelectorAll('#farm-eq .digit-hit').forEach(function (d) {
+      var f = d.getAttribute('data-field');
+      d.classList.toggle('editing', state.editing === f);
+      d.classList.toggle('expect', expectField === f && state.editing == null);
     });
-  }
-  function renderCopy() {
+    blue.classList.toggle('editing-digit', state.editing === 'bn' || state.editing === 'bd');
+    red.classList.toggle('editing-digit', state.editing === 'rn' || state.editing === 'rd');
+    if (expectField && !state.highlight) {
+      if (expectField === 'bn' || expectField === 'bd') blue.classList.add('selected');
+      if (expectField === 'rn' || expectField === 'rd') red.classList.add('selected');
+    }
     var prompt = $('farm-prompt');
     var how = $('farm-how');
-    var next = $('farm-next');
-    var p = product();
-    if (step <= 0) {
-      prompt.textContent = '農夫有一塊正方形農地。';
-      how.textContent = '';
-    } else if (step === 1) {
-      prompt.innerHTML = '先取這塊農地的 ' + fracHtml(ex.n1, ex.d1) + '。';
-      how.textContent = '';
-    } else if (step === 2) {
-      prompt.innerHTML = '再在這部分之中，用 ' + fracHtml(ex.n2, ex.d2) + ' 種水稻。';
-      how.textContent = '';
-    } else {
-      prompt.innerHTML = '種稻面積佔成塊農地幾分之幾？怎樣列式？';
-      how.innerHTML = fracHtml(ex.n1, ex.d1) + ' × ' + fracHtml(ex.n2, ex.d2) +
+    if (state.fillStep === 5 && p) {
+      prompt.textContent = '種稻面積佔成塊農地幾分之幾？怎樣列式？';
+      var r = reduce(p.n, p.d);
+      var html = fracHtml(state.bn, state.bd) + ' × ' + fracHtml(state.rn, state.rd) +
         ' = ' + fracHtml(p.n, p.d) + '　分子相乘，分母相乘。';
+      if (r.n !== p.n || r.d !== p.d) html += '約簡後是 ' + fracHtml(r.n, r.d) + '。';
+      how.innerHTML = html;
+    } else {
+      prompt.textContent = PROMPTS[state.fillStep] || '';
+      how.innerHTML = '';
     }
-    if (next) next.disabled = step >= 3;
   }
 
   function resize() {
@@ -4073,162 +4148,272 @@ window.__fracMulPractice = {
     draw(size);
   }
 
-  function riceTuft(x, y) {
-    ctx.strokeStyle = '#e7f6c9';
-    ctx.lineWidth = 1.3;
-    ctx.beginPath();
-    ctx.moveTo(x, y); ctx.lineTo(x - 3.5, y - 8);
-    ctx.moveTo(x, y); ctx.lineTo(x, y - 10);
-    ctx.moveTo(x, y); ctx.lineTo(x + 3.5, y - 8);
-    ctx.stroke();
-    ctx.fillStyle = '#f3e27a';
-    ctx.beginPath();
-    ctx.ellipse(x, y - 11, 2, 2.8, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Ink box of riceTuft: base is the anchor, grain reaches about 14px above.
-  var TUFT_W = 9;
-  var TUFT_H = 15;
-
-  function plantRiceCell(x, y, w, h) {
-    var padX = Math.max(6, Math.min(12, w * 0.1));
-    var padY = Math.max(5, Math.min(10, h * 0.1));
-    var innerW = w - padX * 2;
-    var innerH = h - padY * 2;
-    if (!(innerW >= TUFT_W) || !(innerH >= TUFT_H)) {
-      riceTuft(x + w / 2, Math.min(y + h - 3, y + h * 0.72));
-      return;
-    }
-    var minGap = 4;
-    var cols = Math.max(1, Math.floor((innerW + minGap) / (TUFT_W + minGap)));
-    var rows = Math.max(1, Math.floor((innerH + minGap) / (TUFT_H + minGap)));
-    var pitchX = cols > 1 ? (innerW - TUFT_W) / (cols - 1) : 0;
-    var pitchY = rows > 1 ? (innerH - TUFT_H) / (rows - 1) : 0;
-    var x0p = x + padX + TUFT_W / 2 + (cols === 1 ? (innerW - TUFT_W) / 2 : 0);
-    var y0p = y + padY + TUFT_H + (rows === 1 ? (innerH - TUFT_H) / 2 : 0);
-    var r, c;
+  function hatch(x, y, w, h, color, dir, gap, lineWidth) {
+    gap = gap || 8;
+    if (!(w > 0) || !(h > 0) || !(gap > 0)) return;
     ctx.save();
     ctx.beginPath();
     ctx.rect(x, y, w, h);
     ctx.clip();
-    for (r = 0; r < rows; r++) {
-      for (c = 0; c < cols; c++) riceTuft(x0p + c * pitchX, y0p + r * pitchY);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth || 1.6;
+    ctx.beginPath();
+    var span = w + h;
+    var rem = span % gap;
+    if (rem < 0) rem += gap;
+    if (gap - rem < 0.05) rem = 0;
+    var margin = rem / 2;
+    var i;
+    var start = -h + margin;
+    var end = w - margin;
+    if (dir < 0) {
+      for (i = start; i <= end + 0.01; i += gap) {
+        ctx.moveTo(x + i, y);
+        ctx.lineTo(x + i + h, y + h);
+      }
+    } else {
+      for (i = start; i <= end + 0.01; i += gap) {
+        ctx.moveTo(x + i, y + h);
+        ctx.lineTo(x + i + h, y);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function strokePartitionLines(x0, y0, W, H) {
+    var bd = state.bd, rd = state.rd;
+    ctx.save();
+    ctx.setLineDash([6, 5]);
+    ctx.lineWidth = 1.8;
+    var i;
+    if (bd && bd > 1) {
+      ctx.strokeStyle = '#5dade2';
+      for (i = 1; i < bd; i++) {
+        var lx = x0 + (W / bd) * i;
+        ctx.beginPath();
+        ctx.moveTo(lx, y0);
+        ctx.lineTo(lx, y0 + H);
+        ctx.stroke();
+      }
+    }
+    if (rd && rd > 1) {
+      ctx.strokeStyle = '#e74c3c';
+      for (i = 1; i < rd; i++) {
+        var ly = y0 + (H / rd) * i;
+        ctx.beginPath();
+        ctx.moveTo(x0, ly);
+        ctx.lineTo(x0 + W, ly);
+        ctx.stroke();
+      }
     }
     ctx.restore();
+  }
+
+  function applyHighlight(x0, y0, W, H) {
+    var hl = state.highlight;
+    if (!hl || !isComplete()) return;
+    var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
+    if (!bd || !rd) return;
+    var cw = W / bd, rh = H / rd;
+    var rx = x0, ry = y0, rw = W, rhR = H;
+    var denserDir = 0;
+    if (hl === 'bn') {
+      rw = cw * Math.min(bn, bd);
+      denserDir = -1;
+    } else if (hl === 'rn') {
+      rhR = rh * Math.min(rn, rd);
+      denserDir = 1;
+    } else if (hl === 'pn') {
+      rw = cw * Math.min(bn, bd);
+      rhR = rh * Math.min(rn, rd);
+      denserDir = 0;
+    } else if (hl === 'bd' || hl === 'rd' || hl === 'pd') {
+      denserDir = 0;
+    } else {
+      return;
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(rx, ry, rw, rhR);
+    if (denserDir === 0) {
+      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, -1, 22, 2.0);
+      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, 1, 22, 2.0);
+    } else {
+      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, denserDir, 22, 2.0);
+    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rx, ry, rw, rhR);
+    ctx.clip();
+    strokePartitionLines(x0, y0, W, H);
+    ctx.restore();
+    ctx.strokeStyle = HATCH_NEUTRAL;
+    ctx.lineWidth = 3.5;
+    ctx.setLineDash([]);
+    ctx.strokeRect(rx + 1.5, ry + 1.5, rw - 3, rhR - 3);
   }
 
   function draw(S) {
     if (!ctx) return;
     var pad = 18;
-    var x0 = pad, y0 = pad + 8, W = S - pad * 2, H = S - pad * 2 - 8;
+    var x0 = pad, y0 = pad, W = S - pad * 2, H = S - pad * 2;
     ctx.clearRect(0, 0, S, S);
 
-    ctx.fillStyle = '#f4e7a8';
-    ctx.beginPath();
-    ctx.arc(S - 36, 28, 12, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#e4f2c4';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#2c3e50';
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(x0, y0, W, H);
-    ctx.strokeStyle = 'rgba(96, 130, 48, 0.22)';
-    ctx.lineWidth = 1;
-    var fy;
-    for (fy = 12; fy < H; fy += 12) {
-      ctx.beginPath();
-      ctx.moveTo(x0, y0 + fy);
-      ctx.lineTo(x0 + W, y0 + fy);
-      ctx.stroke();
-    }
+    ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
 
-    var selW = step >= 1 ? (W * ex.n1 / ex.d1) : 0;
-    var riceH = step >= 2 ? (H * ex.n2 / ex.d2) : 0;
-    if (step >= 1) {
-      ctx.fillStyle = 'rgba(226, 197, 106, 0.72)';
-      ctx.fillRect(x0, y0, selW, H);
+    var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
+    var bw = (bd && bn != null && bn > 0) ? (W / bd) * Math.min(bn, bd) : 0;
+    var rh2 = (rd && rn != null && rn > 0) ? (H / rd) * Math.min(rn, rd) : 0;
+    var hasOverlap = bw > 0 && rh2 > 0;
+    if (bw > 0) {
+      var by = y0 + (hasOverlap ? rh2 : 0);
+      var bh = H - (hasOverlap ? rh2 : 0);
+      hatch(x0, by, bw, bh, HATCH_NEUTRAL, -1, 36);
     }
-    if (step >= 2 && selW > 0 && riceH > 0) {
-      ctx.fillStyle = '#1f7a3a';
-      ctx.fillRect(x0, y0, selW, riceH);
-      var cellW = W / ex.d1;
-      var cellH = H / ex.d2;
-      var col, row;
-      for (row = 0; row < ex.n2; row++) {
-        for (col = 0; col < ex.n1; col++) {
-          plantRiceCell(x0 + cellW * col, y0 + cellH * row, cellW, cellH);
-        }
-      }
+    if (rh2 > 0) {
+      var rx = x0 + (hasOverlap ? bw : 0);
+      var rw = W - (hasOverlap ? bw : 0);
+      hatch(rx, y0, rw, rh2, HATCH_NEUTRAL, 1, 36);
     }
+    if (hasOverlap) {
+      hatch(x0, y0, bw, rh2, HATCH_NEUTRAL, -1, 28);
+      hatch(x0, y0, bw, rh2, HATCH_NEUTRAL, 1, 28);
+    }
+    strokePartitionLines(x0, y0, W, H);
+    applyHighlight(x0, y0, W, H);
 
-    if (step >= 1) {
-      ctx.strokeStyle = 'rgba(46, 80, 24, 0.45)';
-      ctx.lineWidth = 1.4;
-      var i;
-      for (i = 1; i < ex.d1; i++) {
-        var lx = x0 + (W / ex.d1) * i;
-        ctx.beginPath(); ctx.moveTo(lx, y0); ctx.lineTo(lx, y0 + H); ctx.stroke();
-      }
-      for (i = 1; i < ex.d2; i++) {
-        var ly = y0 + (H / ex.d2) * i;
-        ctx.beginPath(); ctx.moveTo(x0, ly); ctx.lineTo(x0 + W, ly); ctx.stroke();
-      }
-    }
-
-    var hx = x0, hy = y0, hw = W, hh = H;
-    if (highlight === 'first' && step >= 1) { hw = selW; }
-    else if ((highlight === 'second' || highlight === 'product') && step >= 2) { hw = selW; hh = riceH; }
-    if (highlight && hw > 0 && hh > 0) {
-      ctx.strokeStyle = '#e67e22';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(hx + 2, hy + 2, hw - 4, hh - 4);
-    }
-
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#2c3e50';
+    ctx.setLineDash([]);
+    ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
     ctx.strokeStyle = '#6d4c41';
-    ctx.lineWidth = 7;
-    ctx.strokeRect(x0, y0, W, H);
-    ctx.strokeStyle = '#8d6e63';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x0 + 5, y0 + 5, W - 10, H - 10);
-
-    if (step >= 2 && selW > 48 && riceH > 36) {
-      var lx = x0 + selW / 2;
-      var ly = y0 + riceH / 2;
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.fillRect(lx - 28, ly - 13, 56, 26);
-      ctx.fillStyle = '#145c28';
-      ctx.font = 'bold 15px "PingFang HK", "Noto Sans TC", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('種稻', lx, ly);
-    }
+    ctx.lineWidth = 6;
+    ctx.strokeRect(x0 - 5, y0 - 5, W + 10, H + 10);
   }
 
   function render() {
-    renderEq();
-    renderCopy();
+    updateChips();
     resize();
   }
-  function loadExample(key) {
-    ex = EXAMPLES[key];
-    step = 3;
-    highlight = 'product';
+  function openKeypad(field) {
+    if (field === 'pn' || field === 'pd') return;
+    state.highlight = null;
+    state.editing = field;
+    var bd = $('farm-keypad-backdrop');
+    var hint = $('farm-keypad-hint');
+    if (hint) hint.textContent = FIELD_HINT[field] || '請選擇數字';
+    if (bd) {
+      bd.classList.add('show');
+      bd.setAttribute('aria-hidden', 'false');
+    }
+    updateChips();
+  }
+  function closeKeypad() {
+    state.editing = null;
+    var bd = $('farm-keypad-backdrop');
+    if (!bd) return;
+    bd.classList.remove('show');
+    bd.setAttribute('aria-hidden', 'true');
+  }
+  function applyDigit(n) {
+    var f = state.editing;
+    if (!f) return;
+    if ((f === 'bd' || f === 'rd') && n === 0) {
+      if (typeof toast === 'function') toast('分母不能為 0', 'bad');
+      return;
+    }
+    state[f] = n;
+    recomputeStep();
+    closeKeypad();
     render();
+  }
+  function resetFarm() {
+    state.bn = state.bd = state.rn = state.rd = null;
+    state.highlight = null;
+    state.editing = null;
+    state.fillStep = 1;
+    closeKeypad();
+    render();
+  }
+  function loadExample(key) {
+    var ex = EXAMPLES[key];
+    if (!ex) return;
+    state.bd = ex.d1;
+    state.bn = ex.n1;
+    state.rd = ex.d2;
+    state.rn = ex.n2;
+    state.highlight = null;
+    state.editing = null;
+    recomputeStep();
+    closeKeypad();
+    render();
+  }
+  function onDigitPointer(field, isDouble) {
+    if (field === 'pn' || field === 'pd') {
+      if (isComplete()) {
+        state.highlight = (state.highlight === field) ? null : field;
+        render();
+      }
+      return;
+    }
+    if (!isComplete()) {
+      var expected = fieldForStep(state.fillStep);
+      if (field === expected || state[field] != null) openKeypad(field);
+      else if (expected) openKeypad(expected);
+      return;
+    }
+    if (isDouble) openKeypad(field);
+    else {
+      state.highlight = (state.highlight === field) ? null : field;
+      render();
+    }
+  }
+  function handleDigitEvent(field) {
+    var now = Date.now();
+    var isDouble = (state.lastTap.field === field && (now - state.lastTap.t) < 350);
+    state.lastTap = { field: field, t: now };
+    onDigitPointer(field, isDouble);
   }
   function wire() {
     canvas = $('farm-canvas');
     ctx = canvas.getContext('2d');
-    $('farm-next').onclick = function () {
-      if (step < 3) step += 1;
-      highlight = step >= 2 ? 'product' : (step === 1 ? 'first' : null);
-      render();
-    };
-    $('farm-restart').onclick = function () {
-      step = 0;
-      highlight = null;
-      render();
-    };
+    document.querySelectorAll('#farm-eq .digit-hit').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleDigitEvent(el.getAttribute('data-field'));
+      });
+    });
+    ['farm-chip-blue', 'farm-chip-red', 'farm-chip-purple'].forEach(function (id) {
+      var chip = $(id);
+      if (!chip) return;
+      chip.addEventListener('click', function (e) {
+        if (e.target.classList.contains('digit-hit')) return;
+        if (!isComplete()) {
+          var expected = fieldForStep(state.fillStep);
+          if (expected) openKeypad(expected);
+          return;
+        }
+        var def = { blue: 'bn', red: 'rn', purple: 'pn' }[chip.getAttribute('data-chip')];
+        state.highlight = def;
+        render();
+      });
+    });
+    $('farm-restart').onclick = resetFarm;
     $('farm-ex-main').onclick = function () { loadExample('main'); };
     $('farm-ex-adv').onclick = function () { loadExample('adv'); };
+    $('farm-keypad').addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-dig]');
+      if (!btn) return;
+      applyDigit(parseInt(btn.getAttribute('data-dig'), 10));
+    });
+    $('farm-keypad-backdrop').addEventListener('click', function (e) {
+      if (e.target === $('farm-keypad-backdrop')) closeKeypad();
+    });
     window.addEventListener('resize', function () {
       var shared = $('farm-shared');
       if (shared && !shared.hidden) resize();
