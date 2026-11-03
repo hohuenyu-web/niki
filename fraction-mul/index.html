@@ -148,6 +148,7 @@ window.__pubnubLoadPromise = (function () {
   }
   .question-card .q-label { color: var(--muted); font-size: 0.9rem; margin-bottom: 6px; }
   .question-card .q-text {
+    display: flex; align-items: center; justify-content: center;
     font-size: clamp(1.6rem, 5vw, 2.2rem); font-weight: 800; color: var(--primary-dark);
     font-variant-numeric: tabular-nums;
   }
@@ -159,7 +160,24 @@ window.__pubnubLoadPromise = (function () {
     -webkit-user-select: none; user-select: none;
   }
   .hw-label { font-size: 0.9rem; color: var(--muted); margin: 2px 6px 6px; font-weight: 600; }
-  #hw-canvas {
+  .hw-boards { display: block; width: 100%; }
+  .hw-boards.two {
+    display: grid; grid-template-columns: 1fr; gap: 10px;
+  }
+  @media (min-width: 800px) {
+    .hw-boards.two { grid-template-columns: 1fr 1fr; }
+  }
+  .hw-wrap.two-methods { max-width: min(1100px, 100%); }
+  .hw-board[hidden] { display: none !important; }
+  .hw-board-label { display: none; }
+  .hw-boards.two .hw-board {
+    border: 2px solid #e8d5c0; border-radius: 12px; padding: 6px 6px 8px; background: #fffaf3;
+  }
+  .hw-boards.two .hw-board-label {
+    display: block; font-weight: 800; color: var(--primary-dark);
+    margin: 0 2px 4px; font-size: 1rem;
+  }
+  .hw-board canvas {
     /* Tall writing pad: more room for 約簡 steps; capped for iPad landscape */
     width: 100%; height: clamp(320px, 58vh, 580px); display: block;
     max-width: 100%;
@@ -171,6 +189,7 @@ window.__pubnubLoadPromise = (function () {
     -webkit-touch-callout: none;
     pointer-events: auto;
   }
+  .hw-boards.two .hw-board canvas { height: clamp(200px, 38vh, 400px); }
   .hw-toolbar {
     display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
     gap: 8px; margin-top: 8px; max-width: 100%;
@@ -281,6 +300,7 @@ window.__pubnubLoadPromise = (function () {
     width: 100%; height: 88px; border-radius: 10px; border: 1px solid var(--border);
     background: #fffcf7; overflow: hidden; display: flex; align-items: center; justify-content: center;
   }
+  .answer-row .hw-thumb-wrap.two { height: 120px; }
   .answer-row .hw-thumb {
     width: 100%; height: 100%; object-fit: contain; display: block; background: #fffcf7;
   }
@@ -312,6 +332,7 @@ window.__pubnubLoadPromise = (function () {
     background: #fff; border-radius: 16px; padding: 18px; max-width: min(96vw, 520px);
     width: 100%; box-shadow: var(--shadow); max-height: 90vh; overflow-y: auto;
   }
+  .modal.wide { max-width: min(96vw, 920px); }
   .modal h3 { margin-bottom: 8px; color: var(--primary-dark); }
   #inspect-img {
     width: 100%; border-radius: 12px; background: #faf6f1; border: 1px solid var(--border);
@@ -335,7 +356,16 @@ window.__pubnubLoadPromise = (function () {
     border-radius: 14px; padding: 14px; text-align: center; margin-bottom: 8px;
   }
   .teacher-q-preview .big {
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
     font-size: 1.8rem; font-weight: 800; color: var(--primary-dark); margin: 6px 0;
+  }
+  .fixed-q-preview {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.45rem; font-weight: 800; color: var(--primary-dark); min-height: 2.4em;
+  }
+  .fixed-hint {
+    text-align: center; color: var(--muted); font-size: 0.85rem; font-weight: 600;
+    margin: -2px 8px 8px; line-height: 1.45;
   }
   .custom-q {
     width: 100%; max-width: 960px; background: #fff; border: 2px solid var(--border);
@@ -662,8 +692,17 @@ window.__pubnubLoadPromise = (function () {
       <div class="q-wait" id="q-wait">請等候老師出題；或使用「單機練習」自行練習。</div>
     </div>
     <div class="hw-wrap" id="hw-wrap" style="display:none;">
-      <div class="hw-label">運算區（手寫：可寫約簡步驟；不作自動評分）</div>
-      <canvas id="hw-canvas" width="900" height="580"></canvas>
+      <div class="hw-label" id="hw-label">運算區（手寫：可寫約簡步驟；不作自動評分）</div>
+      <div class="hw-boards" id="hw-boards">
+        <div class="hw-board" id="hw-board-a">
+          <div class="hw-board-label">方法一</div>
+          <canvas id="hw-canvas" width="900" height="580" aria-label="方法一"></canvas>
+        </div>
+        <div class="hw-board" id="hw-board-b" hidden>
+          <div class="hw-board-label">方法二</div>
+          <canvas id="hw-canvas-2" width="900" height="420" aria-label="方法二"></canvas>
+        </div>
+      </div>
       <div class="hw-toolbar" role="toolbar" aria-label="手寫工具">
         <div class="hw-pen-row" role="group" aria-label="筆色">
           <span class="hw-pen-label">筆色</span>
@@ -784,13 +823,19 @@ window.__pubnubLoadPromise = (function () {
   <div class="custom-q" id="teacher-custom-2" style="display:none;">
     <h3>自訂題目：真分數 × 真分數</h3>
     <div class="mini-row">
-      <label>分子<input id="custom-ff-n1" inputmode="numeric" autocomplete="off" aria-label="左分子"></label>
-      <label>分母<input id="custom-ff-d1" inputmode="numeric" autocomplete="off" aria-label="左分母"></label>
+      <div class="fixed-q-preview" id="fixed-ffrac-preview" aria-label="固定題"></div>
+      <button type="button" class="btn btn-primary" id="btn-fixed-ffrac">出固定題</button>
+    </div>
+    <p class="fixed-hint">固定題以直式分數顯示，按「出固定題」即發給全班，稍後加入的學生亦會收到。學生須在方法一、方法二兩格內作答。</p>
+    <div class="mini-row">
+      <label>分子<input id="custom-ff-n1" inputmode="numeric" autocomplete="off" aria-label="左分子" value="18"></label>
+      <label>分母<input id="custom-ff-d1" inputmode="numeric" autocomplete="off" aria-label="左分母" value="25"></label>
       <span class="op-times" aria-hidden="true">×</span>
-      <label>分子<input id="custom-ff-n2" inputmode="numeric" autocomplete="off" aria-label="右分子"></label>
-      <label>分母<input id="custom-ff-d2" inputmode="numeric" autocomplete="off" aria-label="右分母"></label>
+      <label>分子<input id="custom-ff-n2" inputmode="numeric" autocomplete="off" aria-label="右分子" value="5"></label>
+      <label>分母<input id="custom-ff-d2" inputmode="numeric" autocomplete="off" aria-label="右分母" value="12"></label>
       <button type="button" class="btn btn-primary" id="btn-custom-ffrac">出這題</button>
     </div>
+    <p class="fixed-hint">亦可改上面的數字後按「出這題」。同樣以直式分數顯示，並用兩格作答。</p>
   </div>
   <div class="btn-row" style="max-width:960px;margin:0 0 8px;">
     <button class="btn btn-danger btn-block" id="btn-new-round">開新一輪（清除本輪提交）</button>
@@ -1143,18 +1188,26 @@ function buildCustomMixedTimesInt() {
     answer: reduce((whole * den + num) * mult, den), createdAt: new Date().toISOString()
   };
 }
-function buildCustomFracTimesFrac() {
-  var n1 = readPosInt('custom-ff-n1');
-  var d1 = readPosInt('custom-ff-d1');
-  var n2 = readPosInt('custom-ff-n2');
-  var d2 = readPosInt('custom-ff-d2');
+function buildFfracQuestion(n1, d1, n2, d2, twoMethods) {
   if (!properPairOk(n1, d1) || !properPairOk(n2, d2)) return null;
   var ans = reduce(n1 * n2, d1 * d2);
   if (!(ans.n > 0 && ans.d > 1 && ans.n < ans.d)) return null;
   return {
     id: newQId('q2-'), kind: 'ffrac', num: n1, den: d1, num2: n2, den2: d2,
-    mult: 0, whole: 0, answer: ans, createdAt: new Date().toISOString()
+    mult: 0, whole: 0, answer: ans, twoMethods: !!twoMethods,
+    createdAt: new Date().toISOString()
   };
+}
+function buildCustomFracTimesFrac() {
+  return buildFfracQuestion(
+    readPosInt('custom-ff-n1'), readPosInt('custom-ff-d1'),
+    readPosInt('custom-ff-n2'), readPosInt('custom-ff-d2'),
+    true
+  );
+}
+function buildFixedFracTimesFrac() {
+  /* Niki's first fixed release: 18/25 × 5/12. Students use two methods. */
+  return buildFfracQuestion(18, 25, 5, 12, true);
 }
 
 function emptyModeStore() {
@@ -1520,9 +1573,88 @@ var hwRaf = 0;
 var hwSizedOnce = false;
 var hwSizing = false; /* guard: sizeHwCanvas must not recurse via clearHw */
 var hwPenColor = '#2c3e50';
-var hwUndoStack = []; /* ImageData snapshots before each stroke */
+var hwUndoStack = []; /* { key, data } snapshots before each stroke */
 var HW_UNDO_MAX = 40;
 var hwLockTimer = null;
+var hwPads = [];
+var hwPad = null;
+var twoMethodsOn = false;
+
+function commitPad() {
+  if (!hwPad) return;
+  hwPad.cssW = hwCssW;
+  hwPad.cssH = hwCssH;
+  hwPad.dpr = hwDpr;
+  hwPad.sizedOnce = hwSizedOnce;
+  hwPad.dirty = hwDirty;
+}
+function focusPad(pad) {
+  if (!pad || hwPad === pad) return;
+  commitPad();
+  hwPad = pad;
+  hwCanvas = pad.canvas;
+  hwCtx = pad.ctx;
+  hwCssW = pad.cssW;
+  hwCssH = pad.cssH;
+  hwDpr = pad.dpr;
+  hwSizedOnce = pad.sizedOnce;
+  hwDirty = pad.dirty;
+}
+function padByKey(key) {
+  for (var i = 0; i < hwPads.length; i++) {
+    if (hwPads[i].key === key) return hwPads[i];
+  }
+  return null;
+}
+function padFromCanvas(canvas) {
+  for (var i = 0; i < hwPads.length; i++) {
+    if (hwPads[i].canvas === canvas) return hwPads[i];
+  }
+  return hwPad;
+}
+function anyHwDirty() {
+  commitPad();
+  for (var i = 0; i < hwPads.length; i++) {
+    if (hwPads[i].dirty) return true;
+  }
+  return false;
+}
+function dropUndo(key) {
+  hwUndoStack = hwUndoStack.filter(function (s) { return !s || s.key !== key; });
+}
+function eachVisiblePad(fn) {
+  hwPads.forEach(function (p) {
+    if (p.key === 'b' && !twoMethodsOn) return;
+    var board = p.canvas && p.canvas.parentElement;
+    if (board && board.hidden) return;
+    focusPad(p);
+    fn();
+    commitPad();
+  });
+}
+function applyHwLayout(q) {
+  twoMethodsOn = !!(q && q.twoMethods);
+  var boards = document.getElementById('hw-boards');
+  var boardB = document.getElementById('hw-board-b');
+  var label = document.getElementById('hw-label');
+  var wrap = document.getElementById('hw-wrap');
+  var clearBtn = document.getElementById('btn-hw-clear');
+  if (boards) boards.classList.toggle('two', twoMethodsOn);
+  if (wrap) wrap.classList.toggle('two-methods', twoMethodsOn);
+  if (boardB) boardB.hidden = !twoMethodsOn;
+  if (label) {
+    label.textContent = twoMethodsOn
+      ? '請用兩種方法計算，分別寫在方法一與方法二（手寫不作自動評分）。'
+      : '運算區（手寫：可寫約簡步驟；不作自動評分）';
+  }
+  if (clearBtn) clearBtn.textContent = twoMethodsOn ? '清除兩格' : '清除全部';
+  var guessLabel = document.querySelector('#guess-box > label');
+  if (guessLabel) {
+    guessLabel.textContent = twoMethodsOn
+      ? '最終答案（兩種方法的答案；評分只根據此欄）'
+      : '最終答案（評分只根據此欄）';
+  }
+}
 
 function hwPointFromEvent(e) {
   var r = hwCanvas.getBoundingClientRect();
@@ -1604,10 +1736,10 @@ function updateHwUndoBtn() {
 }
 
 function pushHwUndoSnapshot() {
-  if (!hwCanvas || !hwCtx) return;
+  if (!hwCanvas || !hwCtx || !hwPad) return;
   try {
     var snap = hwCtx.getImageData(0, 0, hwCanvas.width, hwCanvas.height);
-    hwUndoStack.push(snap);
+    hwUndoStack.push({ key: hwPad.key, data: snap });
     if (hwUndoStack.length > HW_UNDO_MAX) hwUndoStack.shift();
   } catch (err) {
     /* Security / memory — skip undo for this stroke */
@@ -1616,7 +1748,7 @@ function pushHwUndoSnapshot() {
 }
 
 function undoHwStroke() {
-  if (!hwCanvas || !hwCtx || hwUndoStack.length === 0) {
+  if (!hwUndoStack.length) {
     toast('沒有可撤銷的筆跡', 'bad');
     return;
   }
@@ -1625,17 +1757,24 @@ function undoHwStroke() {
   hwLast = null;
   hwMid = null;
   hwPending = null;
-  var snap = hwUndoStack.pop();
+  var item = hwUndoStack.pop();
+  var pad = padByKey(item && item.key) || hwPad;
+  focusPad(pad);
+  if (!hwCanvas || !hwCtx || !item || !item.data) {
+    toast('沒有可撤銷的筆跡', 'bad');
+    return;
+  }
   try {
     hwCtx.setTransform(1, 0, 0, 1, 0, 0);
-    hwCtx.putImageData(snap, 0, 0);
+    hwCtx.putImageData(item.data, 0, 0);
     hwCtx.setTransform(hwDpr, 0, 0, hwDpr, 0, 0);
+    hwDirty = hwUndoStack.some(function (s) { return s && s.key === pad.key; });
   } catch (err) {
     paintHwBackground();
     hwDirty = false;
   }
-  hwDirty = hwUndoStack.length > 0;
   if (!hwDirty) paintHwBackground();
+  commitPad();
   updateHwUndoBtn();
   toast('已撤銷上一筆', 'ok');
 }
@@ -1657,7 +1796,7 @@ function unlockHwScroll() {
 }
 
 function releaseHwPointer() {
-  /* Drop pen capture so the next tap hits 提交 / 換題, not the canvas. */
+  /* Drop pen capture on every writing cell so the next tap hits 提交 / 換題. */
   if (hwRaf) { cancelAnimationFrame(hwRaf); hwRaf = 0; }
   hwPending = null;
   hwDrawing = false;
@@ -1665,11 +1804,18 @@ function releaseHwPointer() {
   hwMid = null;
   var pid = hwPointerId;
   hwPointerId = null;
-  try {
-    if (hwCanvas && pid != null && hwCanvas.releasePointerCapture) {
-      hwCanvas.releasePointerCapture(pid);
-    }
-  } catch (e) {}
+  var pads = hwPads.length ? hwPads : [];
+  var i;
+  for (i = 0; i < pads.length; i++) {
+    var canvas = pads[i] && pads[i].canvas;
+    if (!canvas || pid == null || !canvas.releasePointerCapture) continue;
+    try {
+      if (!canvas.hasPointerCapture || canvas.hasPointerCapture(pid)) canvas.releasePointerCapture(pid);
+    } catch (e) {}
+  }
+  if (!pads.length && hwCanvas && pid != null && hwCanvas.releasePointerCapture) {
+    try { hwCanvas.releasePointerCapture(pid); } catch (e2) {}
+  }
   unlockHwScroll();
 }
 
@@ -1708,7 +1854,7 @@ function sizeHwCanvas(force) {
       hwCtx.setTransform(1, 0, 0, 1, 0, 0);
       paintHwBackground();
       hwSizedOnce = true;
-      hwUndoStack = [];
+      if (hwPad) dropUndo(hwPad.key);
       updateHwUndoBtn();
     }
     return;
@@ -1746,13 +1892,13 @@ function sizeHwCanvas(force) {
       hwCtx.setTransform(1, 0, 0, 1, 0, 0);
       hwCtx.drawImage(prev, 0, 0, hwCanvas.width, hwCanvas.height);
       hwCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      /* Resize invalidates ImageData undo stack dimensions */
-      hwUndoStack = [];
+      /* Resize invalidates ImageData undo snapshots for this pad */
+      if (hwPad) dropUndo(hwPad.key);
       updateHwUndoBtn();
     } else {
       paintHwBackground();
       hwDirty = false;
-      hwUndoStack = [];
+      if (hwPad) dropUndo(hwPad.key);
       updateHwUndoBtn();
     }
   } finally {
@@ -1760,22 +1906,32 @@ function sizeHwCanvas(force) {
   }
 }
 
-function initHwCanvas() {
-  hwCanvas = document.getElementById('hw-canvas');
-  if (!hwCanvas) return;
+function makeHwPad(canvas, key) {
+  if (!canvas) return null;
+  var ctx = null;
   /* Avoid desynchronized:true — breaks drawing on some Safari / iPad builds */
-  try {
-    hwCtx = hwCanvas.getContext('2d', { alpha: false });
-  } catch (err) {
-    hwCtx = null;
-  }
-  if (!hwCtx) hwCtx = hwCanvas.getContext('2d');
+  try { ctx = canvas.getContext('2d', { alpha: false }); } catch (err) { ctx = null; }
+  if (!ctx) ctx = canvas.getContext('2d');
+  return {
+    key: key, canvas: canvas, ctx: ctx,
+    cssW: 900, cssH: 580, dpr: 1, sizedOnce: false, dirty: false
+  };
+}
+function initHwCanvas() {
+  var c1 = document.getElementById('hw-canvas');
+  var c2 = document.getElementById('hw-canvas-2');
+  if (!c1) return;
+  hwPads = [makeHwPad(c1, 'a')];
+  if (c2) hwPads.push(makeHwPad(c2, 'b'));
+  focusPad(hwPads[0]);
   sizeHwCanvas(true);
+  commitPad();
   setHwPenColor(hwPenColor);
 
   function start(e) {
     if (e.pointerType === 'mouse' && typeof e.button === 'number' && e.button !== 0) return;
     if (e.cancelable) e.preventDefault();
+    focusPad(padFromCanvas(e.currentTarget));
     if (!hwSizedOnce) sizeHwCanvas(true);
     pushHwUndoSnapshot();
     hwDrawing = true;
@@ -1831,12 +1987,9 @@ function initHwCanvas() {
     }
   }
 
-  /* Pointer Events cover mouse + modern touch / Apple Pencil */
+  /* Pointer Events cover mouse + modern touch / Apple Pencil.
+     Canvas listeners are bound per pad below; window listeners stay once. */
   if (window.PointerEvent) {
-    hwCanvas.addEventListener('pointerdown', start);
-    hwCanvas.addEventListener('pointermove', move, { passive: false });
-    hwCanvas.addEventListener('pointerup', end);
-    hwCanvas.addEventListener('pointercancel', end);
     window.addEventListener('pointerup', end, true);
     window.addEventListener('pointercancel', end, true);
     window.addEventListener('pointerdown', function (e) {
@@ -1854,50 +2007,61 @@ function initHwCanvas() {
         setTimeout(function () { ctl.click(); }, 0);
       }
     }, true);
-    hwCanvas.addEventListener('lostpointercapture', function () {
-      if (hwDrawing) end(null);
-      else unlockHwScroll();
-    });
-    /* Extra: stop iOS Safari from scrolling the page under the stroke.
-       Do NOT call start() here — PointerEvent already handles drawing. */
-    hwCanvas.addEventListener('touchstart', function (e) {
-      if (e.cancelable) e.preventDefault();
-    }, { passive: false });
-    hwCanvas.addEventListener('touchmove', function (e) {
-      if (e.cancelable) e.preventDefault();
-    }, { passive: false });
   } else {
-    /* Legacy fallback: mouse + touch */
-    hwCanvas.addEventListener('mousedown', start);
     window.addEventListener('mousemove', move);
     window.addEventListener('mouseup', end);
-    hwCanvas.addEventListener('touchstart', function (e) {
-      if (e.cancelable) e.preventDefault();
-      start(e);
-    }, { passive: false });
-    hwCanvas.addEventListener('touchmove', function (e) {
-      if (e.cancelable) e.preventDefault();
-      move(e);
-    }, { passive: false });
-    hwCanvas.addEventListener('touchend', function (e) {
-      if (e.cancelable) e.preventDefault();
-      end(e);
-    }, { passive: false });
-    hwCanvas.addEventListener('touchcancel', end, { passive: false });
   }
 
+  hwPads.forEach(function (pad) {
+    var canvas = pad.canvas;
+    if (window.PointerEvent) {
+      canvas.addEventListener('pointerdown', start);
+      canvas.addEventListener('pointermove', move, { passive: false });
+      canvas.addEventListener('pointerup', end);
+      canvas.addEventListener('pointercancel', end);
+      canvas.addEventListener('lostpointercapture', function () {
+        if (hwDrawing) end(null);
+        else unlockHwScroll();
+      });
+      canvas.addEventListener('touchstart', function (e) {
+        if (e.cancelable) e.preventDefault();
+      }, { passive: false });
+      canvas.addEventListener('touchmove', function (e) {
+        if (e.cancelable) e.preventDefault();
+      }, { passive: false });
+    } else {
+      canvas.addEventListener('mousedown', start);
+      canvas.addEventListener('touchstart', function (e) {
+        if (e.cancelable) e.preventDefault();
+        start(e);
+      }, { passive: false });
+      canvas.addEventListener('touchmove', function (e) {
+        if (e.cancelable) e.preventDefault();
+        move(e);
+      }, { passive: false });
+      canvas.addEventListener('touchend', function (e) {
+        if (e.cancelable) e.preventDefault();
+        end(e);
+      }, { passive: false });
+      canvas.addEventListener('touchcancel', end, { passive: false });
+    }
+  });
   if (typeof ResizeObserver !== 'undefined') {
     var ro = new ResizeObserver(function () {
-      if (!hwDrawing) sizeHwCanvas(false);
+      if (!hwDrawing) eachVisiblePad(function () { sizeHwCanvas(false); });
     });
-    ro.observe(hwCanvas);
-    if (hwCanvas.parentElement) ro.observe(hwCanvas.parentElement);
+    hwPads.forEach(function (pad) {
+      ro.observe(pad.canvas);
+      if (pad.canvas.parentElement) ro.observe(pad.canvas.parentElement);
+    });
   }
   window.addEventListener('resize', function () {
-    if (!hwDrawing) sizeHwCanvas(false);
+    if (!hwDrawing) eachVisiblePad(function () { sizeHwCanvas(false); });
   });
   window.addEventListener('orientationchange', function () {
-    setTimeout(function () { sizeHwCanvas(true); }, 200);
+    setTimeout(function () {
+      eachVisiblePad(function () { sizeHwCanvas(true); });
+    }, 200);
   });
   /* If tab hides mid-stroke, release lock so Submit stays tappable */
   document.addEventListener('visibilitychange', function () {
@@ -1911,51 +2075,96 @@ function initHwCanvas() {
 }
 
 function clearHw(silent) {
-  if (!hwCanvas || !hwCtx) return;
+  if (!hwPads.length && !hwCanvas) return;
   releaseHwPointer();
   hwLast = null;
   hwMid = null;
   hwPending = null;
   hwPointerId = null;
-  /* Never recurse: paintHwBackground does the wipe; size only if needed */
-  if (!hwSizing) sizeHwCanvas(false);
-  paintHwBackground();
-  hwDirty = false;
+  /* Clear every cell, including a hidden one, so a new 兩格 question cannot
+     reveal leftover ink or a stuck dirty flag. */
+  var pads = hwPads.length ? hwPads.slice() : [];
+  pads.forEach(function (p) {
+    focusPad(p);
+    if (!hwCanvas || !hwCtx) return;
+    var board = hwCanvas.parentElement;
+    var shown = board && !board.hidden;
+    if (shown && !hwSizing) sizeHwCanvas(false);
+    if (hwSizedOnce || shown) paintHwBackground();
+    hwDirty = false;
+    commitPad();
+  });
   hwUndoStack = [];
   updateHwUndoBtn();
-  if (!silent) toast('已清除全部筆跡', 'ok');
+  if (!silent) toast(twoMethodsOn ? '已清除兩格筆跡' : '已清除全部筆跡', 'ok');
 }
 
+function drawPadInto(tctx, pad, x, y, w, h) {
+  tctx.fillStyle = '#fffcf7';
+  tctx.fillRect(x, y, w, h);
+  if (pad && pad.canvas && pad.sizedOnce && pad.canvas.width > 0) {
+    tctx.drawImage(pad.canvas, x, y, w, h);
+  }
+}
 function exportHwDataUrl(maxW, maxH, quality) {
-  if (!hwCanvas || !hwDirty) return '';
-  var w = maxW || 480;
-  var h = maxH || 360;
+  commitPad();
   var q = (typeof quality === 'number') ? quality : 0.5;
   var tmp = document.createElement('canvas');
-  tmp.width = w; tmp.height = h;
   var tctx = tmp.getContext('2d');
-  tctx.fillStyle = '#fffcf7';
-  tctx.fillRect(0, 0, tmp.width, tmp.height);
-  tctx.drawImage(hwCanvas, 0, 0, tmp.width, tmp.height);
+  if (!twoMethodsOn) {
+    var pad = hwPads[0];
+    if (!pad || !pad.dirty) return '';
+    tmp.width = maxW || 480;
+    tmp.height = maxH || 360;
+    drawPadInto(tctx, pad, 0, 0, tmp.width, tmp.height);
+  } else {
+    if (!anyHwDirty()) return '';
+    tmp.width = maxW || 720;
+    tmp.height = maxH || 320;
+    tctx.fillStyle = '#fffaf3';
+    tctx.fillRect(0, 0, tmp.width, tmp.height);
+    var labelH = Math.max(22, Math.round(tmp.height * 0.12));
+    var gap = 8;
+    var cellW = Math.floor((tmp.width - gap) / 2);
+    var cellH = tmp.height - labelH - 4;
+    var paintCell = function (pad, x, title) {
+      tctx.fillStyle = '#2c3e50';
+      tctx.font = 'bold ' + Math.max(13, Math.round(labelH * 0.62)) + 'px "PingFang HK", "Noto Sans TC", sans-serif';
+      tctx.textAlign = 'center';
+      tctx.textBaseline = 'middle';
+      tctx.fillText(title, x + cellW / 2, labelH / 2);
+      tctx.strokeStyle = '#e8d5c0';
+      tctx.lineWidth = 2;
+      tctx.strokeRect(x + 1, labelH + 1, cellW - 2, cellH - 2);
+      drawPadInto(tctx, pad, x + 2, labelH + 2, cellW - 4, cellH - 4);
+    }
+    paintCell(hwPads[0], 0, '方法一');
+    paintCell(hwPads[1], cellW + gap, '方法二');
+  }
   try { return tmp.toDataURL('image/jpeg', q); } catch (e) { return ''; }
 }
 function exportHwThumb() {
   /* Compact thumb for teacher monitor grid + PubNub size limit */
+  if (twoMethodsOn) return exportHwDataUrl(420, 200, 0.46);
   return exportHwDataUrl(220, 160, 0.42);
+}
+function exportHwMedium() {
+  if (twoMethodsOn) return exportHwDataUrl(640, 280, 0.5);
+  return exportHwDataUrl(360, 260, 0.48);
 }
 
 function ensureHwCanvasReady(done) {
-  if (!hwCanvas) { if (done) done(); return; }
-  var needForce = !hwSizedOnce || hwCssW < 8;
+  if (!hwPads.length) { if (done) done(); return; }
   requestAnimationFrame(function () {
-    sizeHwCanvas(needForce);
+    eachVisiblePad(function () {
+      sizeHwCanvas(!hwSizedOnce || hwCssW < 8);
+    });
     requestAnimationFrame(function () {
-      sizeHwCanvas(false);
-      if (!hwDirty) {
-        paintHwBackground();
-        hwUndoStack = [];
-        updateHwUndoBtn();
-      }
+      eachVisiblePad(function () {
+        sizeHwCanvas(false);
+        if (!hwDirty) paintHwBackground();
+      });
+      updateHwUndoBtn();
       if (done) done();
     });
   });
@@ -2380,7 +2589,7 @@ function handleCloudMessage(msg) {
         var sm = document.getElementById('submit-msg');
         if (sm) { sm.textContent = ''; sm.className = 'submit-msg'; }
         clearAnswerInputs();
-        clearHw(true);
+        try { clearHw(true); } catch (eClear) {}
         var submitBtnNow = document.getElementById('btn-submit-answer');
         if (submitBtnNow) {
           submitBtnNow.disabled = false;
@@ -2519,9 +2728,15 @@ function updatePracticeChrome() {
 }
 function stashHw(mode) {
   mode = practiceOf(mode);
-  if (!hwCanvas || !hwCtx || !hwDirty) { hwCache[mode] = ''; return; }
-  try { hwCache[mode] = hwCanvas.toDataURL('image/png'); }
-  catch (e) { hwCache[mode] = ''; }
+  commitPad();
+  if (!anyHwDirty()) { hwCache[mode] = ''; return; }
+  var pack = {};
+  hwPads.forEach(function (p) {
+    if (!p.dirty || !p.canvas) return;
+    if (p.key === 'b' && !twoMethodsOn) return;
+    try { pack[p.key] = p.canvas.toDataURL('image/png'); } catch (e) {}
+  });
+  hwCache[mode] = pack;
 }
 function stashAnswerDraft(mode) {
   mode = practiceOf(mode);
@@ -2559,19 +2774,29 @@ function restoreAnswerDraft(mode) {
 }
 function restoreHw(mode, token) {
   mode = practiceOf(mode);
-  var url = hwCache[mode];
-  if (!url || !hwCtx) return;
-  var img = new Image();
-  img.onload = function () {
-    if (token !== renderToken) return;
-    if (activePractice !== mode) return;
-    hwCtx.setTransform(hwDpr, 0, 0, hwDpr, 0, 0);
-    hwCtx.drawImage(img, 0, 0, hwCssW, hwCssH);
-    hwDirty = true;
-    hwUndoStack = [];
-    updateHwUndoBtn();
-  };
-  img.src = url;
+  var pack = hwCache[mode];
+  if (!pack) return;
+  if (typeof pack === 'string') pack = { a: pack };
+  ['a', 'b'].forEach(function (key) {
+    var url = pack[key];
+    if (!url) return;
+    if (key === 'b' && !twoMethodsOn) return;
+    var img = new Image();
+    img.onload = function () {
+      if (token !== renderToken) return;
+      if (activePractice !== mode) return;
+      var pad = padByKey(key);
+      if (!pad || !pad.ctx) return;
+      focusPad(pad);
+      hwCtx.setTransform(hwDpr, 0, 0, hwDpr, 0, 0);
+      hwCtx.drawImage(img, 0, 0, hwCssW, hwCssH);
+      hwDirty = true;
+      commitPad();
+      dropUndo(key);
+      updateHwUndoBtn();
+    };
+    img.src = url;
+  });
 }
 function showSubmitState() {
   var prev = submissionsMap[currentStudent && currentStudent.no];
@@ -2601,6 +2826,7 @@ function renderStudentQuestion(hardReset) {
   var gb = document.getElementById('guess-box');
   var solo = document.getElementById('solo-tools');
   updatePracticeChrome();
+  applyHwLayout(currentQuestion);
   var key = mode + '|' + (currentQuestion ? currentQuestion.id : '') + '|' + (roundId || '');
   var switched = key !== shownQuestionKey;
   shownQuestionKey = key;
@@ -2696,14 +2922,20 @@ function publishSubmitEntry(entry) {
     try { jsonLen = JSON.stringify(full).length; } catch (e) { jsonLen = 999999; }
     return { full: full, jsonLen: jsonLen };
   }
-  var candidates = [entry.handwriting || '', exportHwThumb(), ''];
+  /* Re-encode only when the submit image is missing or over the cloud limit.
+     A second submit must not wait on several full-canvas exports. */
+  var have = entry.handwriting || '';
+  var candidates = [have];
+  if (!(have && have.length <= 22000 && pack(have).jsonLen <= 28000)) {
+    try { candidates.push(exportHwThumb()); } catch (eThumb) { candidates.push(''); }
+  }
+  candidates.push('');
   var chosen = null;
   for (var i = 0; i < candidates.length; i++) {
     var p = pack(candidates[i]);
     if (p.jsonLen <= 28000 && (!candidates[i] || candidates[i].length <= 22000)) {
       chosen = p.full;
       if (candidates[i]) break;
-      /* keep searching for a non-empty thumb that fits; fall through if empty */
       if (i === candidates.length - 1) chosen = p.full;
     }
   }
@@ -2740,6 +2972,14 @@ function submitStudentAnswer() {
   lastSubmitAt = nowTap;
   // 評分只根據最終答案輸入（手寫不作自動評分）
   var ok = gradeAgainstQuestion(ans, currentQuestion);
+  var hwUrl = '';
+  var hwDirtyNow = false;
+  try {
+    hwDirtyNow = anyHwDirty();
+    hwUrl = exportHwDataUrl();
+  } catch (eExport) {
+    hwUrl = '';
+  }
   var entry = {
     studentNo: currentStudent.no,
     studentName: currentStudent.name,
@@ -2750,8 +2990,9 @@ function submitStudentAnswer() {
     guess: ans.display,
     answerRat: { n: ans.n, d: ans.d },
     correct: ok,
-    handwriting: exportHwDataUrl(),
-    hasHandwriting: hwDirty,
+    handwriting: hwUrl,
+    hasHandwriting: hwDirtyNow,
+    twoMethods: !!(currentQuestion && currentQuestion.twoMethods),
     practice: activePractice,
     at: new Date().toISOString()
   };
@@ -2775,6 +3016,7 @@ function submitStudentAnswer() {
   publishSubmitEntry(entry);
   toast(ok ? '已提交：答對！' : '已提交答案', ok ? 'ok' : 'bad');
   } finally {
+    releaseHwPointer();
     armSubmitButton(mySubmittedRound && mySubmittedRound === roundId
       ? '重新提交／已交（可改答案再交）'
       : '提交答案給老師');
@@ -2908,12 +3150,15 @@ function renderTeacherMonitor() {
       statusClass = e.correct ? 'status-ok' : 'status-bad';
       badge = e.correct ? '<span class="badge-ok">✓ 答對</span>' : '<span class="badge-bad">✗ 答錯</span>';
       guessHtml = '<div class="guess">答案：' + slashDisplayToHtml(e.guess) + '</div>';
+      var twoCls = e.twoMethods ? ' two' : '';
       if (e.handwriting) {
-        thumbHtml = '<div class="hw-thumb-wrap"><img class="hw-thumb" alt="手寫" src="' + String(e.handwriting).replace(/"/g, '&quot;') + '"></div>';
+        thumbHtml = '<div class="hw-thumb-wrap' + twoCls + '"><img class="hw-thumb" alt="' +
+          (e.twoMethods ? '方法一與方法二' : '手寫') + '" src="' + String(e.handwriting).replace(/"/g, '&quot;') + '"></div>';
       } else if (e.hasHandwriting) {
-        thumbHtml = '<div class="hw-thumb-wrap"><div class="hw-thumb-empty">有手寫<br>（點開放大）</div></div>';
+        thumbHtml = '<div class="hw-thumb-wrap' + twoCls + '"><div class="hw-thumb-empty">有手寫<br>（點開放大）</div></div>';
       } else {
-        thumbHtml = '<div class="hw-thumb-wrap"><div class="hw-thumb-empty">無手寫</div></div>';
+        thumbHtml = '<div class="hw-thumb-wrap' + twoCls + '"><div class="hw-thumb-empty">' +
+          (e.twoMethods ? '無手寫<br>方法一／方法二' : '無手寫') + '</div></div>';
       }
     } else {
       thumbHtml = '<div class="hw-thumb-wrap"><div class="hw-thumb-empty">' + (online ? '在線·作答中' : '等候提交') + '</div></div>';
@@ -2938,19 +3183,26 @@ function renderTeacherMonitor() {
 
 function openInspect(entry) {
   if (!entry) return;
+  var modal = document.querySelector('#inspect-modal .modal');
+  if (modal) modal.classList.toggle('wide', !!entry.twoMethods);
   document.getElementById('inspect-title').textContent =
     entry.studentNo + '. ' + entry.studentName + (entry.correct ? '　✓ 答對' : '　✗ 答錯');
   var img = document.getElementById('inspect-img');
   if (entry.handwriting) {
     img.src = entry.handwriting;
+    img.alt = entry.twoMethods ? '方法一與方法二手寫' : '手寫運算';
     img.style.display = 'block';
   } else {
     img.removeAttribute('src');
     img.style.display = 'none';
   }
+  var methodNote = entry.twoMethods
+    ? '<br>手寫分為<strong>方法一</strong>與<strong>方法二</strong>兩格。'
+    : '';
   document.getElementById('inspect-meta').innerHTML =
     '題目：' + (entry.promptHtml || formatPrompt(currentQuestion) || slashDisplayToHtml(entry.prompt) || '—') + '<br>' +
     '最終答案：<strong class="frac-inline-wrap">' + slashDisplayToHtml(entry.guess) + '</strong>' +
+    methodNote +
     '<br><span style="color:var(--muted);font-size:0.85rem;">（評分只根據最終答案輸入；手寫供檢視約簡）</span>';
   document.getElementById('inspect-modal').classList.add('show');
 }
@@ -3110,9 +3362,18 @@ function wire() {
   };
   document.getElementById('btn-custom-ffrac').onclick = function () {
     var q = buildCustomFracTimesFrac();
-    if (!q) { toast('請輸入兩個真分數（分母 2 至 60，分子小於分母）。', 'bad'); return; }
+    if (!q) { toast('請輸入兩個真分數（分母 2 至 60，分子小於分母，答案須為真分數）。', 'bad'); return; }
     startRound(q);
   };
+  document.getElementById('btn-fixed-ffrac').onclick = function () {
+    var q = buildFixedFracTimesFrac();
+    if (!q) { toast('固定題未能建立', 'bad'); return; }
+    startRound(q);
+  };
+  var fixedPreview = document.getElementById('fixed-ffrac-preview');
+  if (fixedPreview) {
+    fixedPreview.innerHTML = formatPrompt({ kind: 'ffrac', num: 18, den: 25, num2: 5, den2: 12 });
+  }
   document.getElementById('btn-new-round').onclick = function () {
     showModal('開新一輪', '將清除本練習本輪所有學生提交（另一練習的題目與提交會保留）。確定？', function () {
       var mode = activePractice;
@@ -3762,7 +4023,7 @@ window.__fracMulPractice = {
       prompt.innerHTML = '先取這塊農地的 ' + fracHtml(ex.n1, ex.d1) + '。';
       how.textContent = '';
     } else if (step === 2) {
-      prompt.innerHTML = '再在這部分之中，用 ' + fracHtml(ex.n2, ex.d2) + ' 種雜交水稻。';
+      prompt.innerHTML = '再在這部分之中，用 ' + fracHtml(ex.n2, ex.d2) + ' 種水稻。';
       how.textContent = '';
     } else {
       prompt.innerHTML = '種稻面積佔成塊農地幾分之幾？怎樣列式？';
@@ -3802,6 +4063,37 @@ window.__fracMulPractice = {
     ctx.fill();
   }
 
+  // Ink box of riceTuft: base is the anchor, grain reaches about 14px above.
+  var TUFT_W = 9;
+  var TUFT_H = 15;
+
+  function plantRiceCell(x, y, w, h) {
+    var padX = Math.max(6, Math.min(12, w * 0.1));
+    var padY = Math.max(5, Math.min(10, h * 0.1));
+    var innerW = w - padX * 2;
+    var innerH = h - padY * 2;
+    if (!(innerW >= TUFT_W) || !(innerH >= TUFT_H)) {
+      riceTuft(x + w / 2, Math.min(y + h - 3, y + h * 0.72));
+      return;
+    }
+    var minGap = 4;
+    var cols = Math.max(1, Math.floor((innerW + minGap) / (TUFT_W + minGap)));
+    var rows = Math.max(1, Math.floor((innerH + minGap) / (TUFT_H + minGap)));
+    var pitchX = cols > 1 ? (innerW - TUFT_W) / (cols - 1) : 0;
+    var pitchY = rows > 1 ? (innerH - TUFT_H) / (rows - 1) : 0;
+    var x0p = x + padX + TUFT_W / 2 + (cols === 1 ? (innerW - TUFT_W) / 2 : 0);
+    var y0p = y + padY + TUFT_H + (rows === 1 ? (innerH - TUFT_H) / 2 : 0);
+    var r, c;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    for (r = 0; r < rows; r++) {
+      for (c = 0; c < cols; c++) riceTuft(x0p + c * pitchX, y0p + r * pitchY);
+    }
+    ctx.restore();
+  }
+
   function draw(S) {
     if (!ctx) return;
     var pad = 18;
@@ -3832,17 +4124,16 @@ window.__fracMulPractice = {
       ctx.fillRect(x0, y0, selW, H);
     }
     if (step >= 2 && selW > 0 && riceH > 0) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(x0, y0, selW, riceH);
-      ctx.clip();
       ctx.fillStyle = '#1f7a3a';
       ctx.fillRect(x0, y0, selW, riceH);
-      var gx, gy;
-      for (gy = y0 + 16; gy < y0 + riceH - 4; gy += 20) {
-        for (gx = x0 + 12; gx < x0 + selW - 4; gx += 16) riceTuft(gx, gy);
+      var cellW = W / ex.d1;
+      var cellH = H / ex.d2;
+      var col, row;
+      for (row = 0; row < ex.n2; row++) {
+        for (col = 0; col < ex.n1; col++) {
+          plantRiceCell(x0 + cellW * col, y0 + cellH * row, cellW, cellH);
+        }
       }
-      ctx.restore();
     }
 
     if (step >= 1) {
