@@ -495,10 +495,64 @@ window.__pubnubLoadPromise = (function () {
     font-size: 0.85rem; font-weight: 600; padding: 4px 0 2px;
   }
 
-  #pane-tab2, #pane-teacher-tab2 {
+  #pane-tab2, #pane-teacher-tab2, .farm-pane {
     width: 100%; display: none; flex-direction: column; align-items: center;
   }
-  #pane-tab2.show, #pane-teacher-tab2.show { display: flex; }
+  #pane-tab2.show, #pane-teacher-tab2.show, .farm-pane.show { display: flex; }
+
+  .farm-card {
+    width: 100%; max-width: min(960px, 100%);
+    background: #fffef8; border: 2px solid #d5e4b4; border-radius: 18px;
+    box-shadow: var(--shadow); padding: 14px 14px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .farm-title {
+    text-align: center; font-weight: 800; color: #2e7d32;
+    font-size: clamp(1.15rem, 3.2vw, 1.4rem);
+  }
+  .farm-body {
+    display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; align-items: flex-start;
+  }
+  .farm-canvas-wrap {
+    flex: 1 1 280px; max-width: 460px; width: 100%; aspect-ratio: 1 / 1;
+  }
+  #farm-canvas {
+    width: 100%; height: 100%; display: block; background: #fffef8; border-radius: 8px;
+    touch-action: none;
+  }
+  .farm-side {
+    flex: 1 1 260px; max-width: 420px; min-width: 240px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 4px;
+  }
+  .farm-eq {
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+    gap: 8px; font-weight: 800; font-size: clamp(1.25rem, 3.5vw, 1.6rem); color: #2e5a1c;
+  }
+  .farm-op { color: #7f8c8d; }
+  .farm-chip {
+    border: 2px solid #c5d6a8; background: #f7fbe9; border-radius: 12px;
+    padding: 4px 8px; cursor: pointer; font: inherit; font-weight: 800; color: #2e7d32;
+  }
+  .farm-chip.selected { border-color: #e67e22; box-shadow: 0 0 0 3px rgba(230,126,34,0.28); }
+  .farm-chip .frac { font-size: 0.95em; }
+  .farm-prompt {
+    background: #f3f8e6; color: #2e5a1c; border-radius: 16px;
+    padding: 10px 14px; font-weight: 700; text-align: center; line-height: 1.5; width: 100%;
+  }
+  .farm-how {
+    color: var(--muted); font-weight: 700; text-align: center; font-size: 0.92rem; min-height: 1.3em;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px;
+  }
+  .farm-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%; }
+  .farm-actions .btn { min-width: 120px; }
+  .farm-legend {
+    display: flex; flex-wrap: wrap; gap: 10px 14px; justify-content: center;
+    font-size: 0.85rem; font-weight: 700; color: var(--text);
+  }
+  .farm-legend i {
+    display: inline-block; width: 16px; height: 16px; border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.15); margin-right: 4px; vertical-align: -2px;
+  }
   #pane-teacher-tab1 { width: 100%; display: flex; flex-direction: column; align-items: center; }
   #pane-teacher-tab1.hide { display: none; }
   #pane-tab1.hide { display: none !important; }
@@ -513,7 +567,7 @@ window.__pubnubLoadPromise = (function () {
       <h1>分數乘法</h1>
       <div class="school">順德聯誼總會何日東小學— 何老師設計</div>
     </div>
-    <p style="text-align:center;color:var(--muted);margin-bottom:8px;">分數乘法一：分數 × 整數　｜　帶分數 × 整數<br>分數乘法二：分數 × 分數<br>分數乘法二教學：分數 × 分數（面積模型）</p>
+    <p style="text-align:center;color:var(--muted);margin-bottom:8px;">分數乘法一：分數 × 整數　｜　帶分數 × 整數<br>分數乘法二：分數 × 分數<br>分數乘法二教學：分數 × 分數（面積模型）<br>分數乘法二農田：正方形農地（種稻）</p>
     <p style="text-align:center;color:var(--muted);">請選擇身份開始</p>
     <div class="role-btns">
       <button class="btn btn-primary" id="btn-student">學生</button>
@@ -596,6 +650,7 @@ window.__pubnubLoadPromise = (function () {
     <button type="button" class="tab active" data-tab="1">分數乘法一</button>
     <button type="button" class="tab" data-tab="2">分數乘法二</button>
     <button type="button" class="tab" data-tab="3">分數乘法二教學</button>
+    <button type="button" class="tab" data-tab="4">分數乘法二農田</button>
   </div>
   <div class="sync-bar" id="student-sync-bar"></div>
   <div class="student-badge" id="student-badge"></div>
@@ -660,6 +715,9 @@ window.__pubnubLoadPromise = (function () {
   <div id="pane-tab2">
     <div id="explorer-host-student" class="exp-host" style="width:100%;display:flex;justify-content:center;"></div>
   </div>
+  <div id="pane-tab-farm" class="farm-pane">
+    <div id="farm-host-student" class="farm-host" style="width:100%;display:flex;justify-content:center;"></div>
+  </div>
 
   <div class="btn-row" style="margin-top:16px;">
     <button class="btn btn-ghost" id="btn-play-join">課堂編號</button>
@@ -681,6 +739,7 @@ window.__pubnubLoadPromise = (function () {
     <button type="button" class="tab active" data-tab="1">分數乘法一</button>
     <button type="button" class="tab" data-tab="2">分數乘法二</button>
     <button type="button" class="tab" data-tab="3">分數乘法二教學</button>
+    <button type="button" class="tab" data-tab="4">分數乘法二農田</button>
   </div>
   <div class="sync-bar">
     <div class="sync-pill" id="teacher-room-pill">課堂：----</div>
@@ -746,6 +805,9 @@ window.__pubnubLoadPromise = (function () {
   <div id="pane-teacher-tab2">
     <div id="explorer-host-teacher" class="exp-host" style="width:100%;max-width:960px;display:flex;justify-content:center;"></div>
   </div>
+  <div id="pane-teacher-tab-farm" class="farm-pane">
+    <div id="farm-host-teacher" class="farm-host" style="width:100%;max-width:960px;display:flex;justify-content:center;"></div>
+  </div>
 </div>
 
 
@@ -794,6 +856,33 @@ window.__pubnubLoadPromise = (function () {
     <button type="button" data-dig="8">8</button>
     <button type="button" data-dig="9">9</button>
     <button type="button" class="zero" data-dig="0">0</button>
+  </div>
+</div>
+
+<div id="farm-shared" class="farm-card" style="display:none;" hidden>
+  <div class="farm-title">正方形農地 · 種稻</div>
+  <div class="farm-body">
+    <div class="farm-canvas-wrap">
+      <canvas id="farm-canvas" width="520" height="520" aria-label="正方形農地面積模型"></canvas>
+    </div>
+    <div class="farm-side">
+      <div class="farm-eq" id="farm-eq" aria-label="種稻算式"></div>
+      <div class="farm-prompt" id="farm-prompt"></div>
+      <div class="farm-how" id="farm-how"></div>
+      <div class="farm-actions">
+        <button type="button" class="btn btn-primary" id="farm-next">下一步</button>
+        <button type="button" class="btn btn-ghost" id="farm-restart">重新講解</button>
+      </div>
+      <div class="farm-actions">
+        <button type="button" class="btn btn-accent" id="farm-ex-main">例一：種稻</button>
+        <button type="button" class="btn btn-accent" id="farm-ex-adv">例二：進階</button>
+      </div>
+    </div>
+  </div>
+  <div class="farm-legend" aria-hidden="true">
+    <span><i style="background:#e4f2c4"></i>成塊農地</span>
+    <span><i style="background:#e2c56a"></i>先取的部分</span>
+    <span><i style="background:#1f7a3a"></i>種稻（重疊）</span>
   </div>
 </div>
 
@@ -3519,7 +3608,14 @@ window.__fracMulPractice = {
   }
 
   // ---- Tab switching ----
-  // 1 分數乘法一（練習）  2 分數乘法二（真分數×真分數）  3 分數乘法二教學（面積模型）
+  // 1 分數乘法一  2 分數乘法二  3 分數乘法二教學  4 分數乘法二農田
+  function hideFarmPane() {
+    ['pane-tab-farm', 'pane-teacher-tab-farm'].forEach(function (id) {
+      var el = $(id);
+      if (el) el.classList.remove('show');
+    });
+    if (window.__fracMulFarm) window.__fracMulFarm.hide();
+  }
   function showPracticePane(p1, pExp) {
     if (p1) {
       p1.classList.remove('hide');
@@ -3541,6 +3637,7 @@ window.__fracMulPractice = {
     });
     var p1 = $('pane-tab1');
     var p2 = $('pane-tab2');
+    hideFarmPane();
     if (n === 1 || n === 2) {
       showPracticePane(p1, p2);
       if (window.__fracMulPractice) window.__fracMulPractice.activate(String(n));
@@ -3551,6 +3648,16 @@ window.__fracMulPractice = {
       requestAnimationFrame(function () {
         mountExplorerInto($('explorer-host-student'));
       });
+    } else if (n === 4) {
+      if (window.__fracMulPractice) window.__fracMulPractice.stash();
+      if (p1) { p1.style.display = 'none'; p1.classList.add('hide'); }
+      if (p2) p2.classList.remove('show');
+      hideExplorer();
+      var pf = $('pane-tab-farm');
+      if (pf) pf.classList.add('show');
+      requestAnimationFrame(function () {
+        if (window.__fracMulFarm) window.__fracMulFarm.mount($('farm-host-student'));
+      });
     }
   }
 
@@ -3560,6 +3667,7 @@ window.__fracMulPractice = {
     });
     var p1 = $('pane-teacher-tab1');
     var p2 = $('pane-teacher-tab2');
+    hideFarmPane();
     if (n === 1 || n === 2) {
       showPracticePane(p1, p2);
       if (window.__fracMulPractice) window.__fracMulPractice.activate(String(n));
@@ -3568,6 +3676,15 @@ window.__fracMulPractice = {
       if (p2) p2.classList.add('show');
       requestAnimationFrame(function () {
         mountExplorerInto($('explorer-host-teacher'));
+      });
+    } else if (n === 4) {
+      if (p1) p1.classList.add('hide');
+      if (p2) p2.classList.remove('show');
+      hideExplorer();
+      var pf = $('pane-teacher-tab-farm');
+      if (pf) pf.classList.add('show');
+      requestAnimationFrame(function () {
+        if (window.__fracMulFarm) window.__fracMulFarm.mount($('farm-host-teacher'));
       });
     }
   }
@@ -3579,6 +3696,231 @@ window.__fracMulPractice = {
     mountStudent: function () { mountExplorerInto($('explorer-host-student')); },
     mountTeacher: function () { mountExplorerInto($('explorer-host-teacher')); }
   };
+})();
+
+/* ===== 分數乘法二農田：正方形農地講解（不經出題同步） ===== */
+(function () {
+  var EXAMPLES = {
+    main: { n1: 1, d1: 2, n2: 1, d2: 3, name: '例一' },
+    adv: { n1: 2, d1: 3, n2: 3, d2: 5, name: '例二' }
+  };
+  var ex = EXAMPLES.main;
+  var step = 3;
+  var highlight = 'product';
+  var canvas, ctx, wired = false;
+
+  function $(id) { return document.getElementById(id); }
+  function product() { return reduce(ex.n1 * ex.n2, ex.d1 * ex.d2); }
+
+  function mount(host) {
+    var shared = $('farm-shared');
+    if (!shared || !host) return;
+    if (shared.parentElement !== host) host.appendChild(shared);
+    shared.hidden = false;
+    shared.style.display = 'flex';
+    if (!wired) { wire(); wired = true; }
+    render();
+  }
+  function hide() {
+    var shared = $('farm-shared');
+    if (!shared) return;
+    shared.hidden = true;
+    shared.style.display = 'none';
+  }
+
+  function chip(part, inner) {
+    var on = highlight === part ? ' selected' : '';
+    return '<button type="button" class="farm-chip' + on + '" data-part="' + part + '">' + inner + '</button>';
+  }
+  function renderEq() {
+    var eq = $('farm-eq');
+    if (!eq) return;
+    var p = product();
+    var second = step >= 2 ? fracHtml(ex.n2, ex.d2) : '?';
+    var prod = step >= 3 ? fracHtml(p.n, p.d) : '?';
+    var first = step >= 1 ? fracHtml(ex.n1, ex.d1) : '農地';
+    eq.innerHTML = chip('first', first) +
+      '<span class="farm-op">×</span>' + chip('second', second) +
+      '<span class="farm-op">=</span>' + chip('product', prod);
+    eq.querySelectorAll('.farm-chip').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var part = b.getAttribute('data-part');
+        highlight = (highlight === part) ? null : part;
+        render();
+      });
+    });
+  }
+  function renderCopy() {
+    var prompt = $('farm-prompt');
+    var how = $('farm-how');
+    var next = $('farm-next');
+    var p = product();
+    if (step <= 0) {
+      prompt.textContent = '農夫有一塊正方形農地。';
+      how.textContent = '';
+    } else if (step === 1) {
+      prompt.innerHTML = '先取這塊農地的 ' + fracHtml(ex.n1, ex.d1) + '。';
+      how.textContent = '';
+    } else if (step === 2) {
+      prompt.innerHTML = '再在這部分之中，用 ' + fracHtml(ex.n2, ex.d2) + ' 種雜交水稻。';
+      how.textContent = '';
+    } else {
+      prompt.innerHTML = '種稻面積佔成塊農地幾分之幾？怎樣列式？';
+      how.innerHTML = fracHtml(ex.n1, ex.d1) + ' × ' + fracHtml(ex.n2, ex.d2) +
+        ' = ' + fracHtml(p.n, p.d) + '　分子相乘，分母相乘。';
+    }
+    if (next) next.disabled = step >= 3;
+  }
+
+  function resize() {
+    if (!canvas) canvas = $('farm-canvas');
+    if (!canvas) return;
+    if (!ctx) ctx = canvas.getContext('2d');
+    var wrap = canvas.parentElement;
+    var size = Math.floor(Math.min(wrap.clientWidth || 420, wrap.clientHeight || 420, 460));
+    if (size < 180) size = 280;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw(size);
+  }
+
+  function riceTuft(x, y) {
+    ctx.strokeStyle = '#e7f6c9';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(x, y); ctx.lineTo(x - 3.5, y - 8);
+    ctx.moveTo(x, y); ctx.lineTo(x, y - 10);
+    ctx.moveTo(x, y); ctx.lineTo(x + 3.5, y - 8);
+    ctx.stroke();
+    ctx.fillStyle = '#f3e27a';
+    ctx.beginPath();
+    ctx.ellipse(x, y - 11, 2, 2.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function draw(S) {
+    if (!ctx) return;
+    var pad = 18;
+    var x0 = pad, y0 = pad + 8, W = S - pad * 2, H = S - pad * 2 - 8;
+    ctx.clearRect(0, 0, S, S);
+
+    ctx.fillStyle = '#f4e7a8';
+    ctx.beginPath();
+    ctx.arc(S - 36, 28, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#e4f2c4';
+    ctx.fillRect(x0, y0, W, H);
+    ctx.strokeStyle = 'rgba(96, 130, 48, 0.22)';
+    ctx.lineWidth = 1;
+    var fy;
+    for (fy = 12; fy < H; fy += 12) {
+      ctx.beginPath();
+      ctx.moveTo(x0, y0 + fy);
+      ctx.lineTo(x0 + W, y0 + fy);
+      ctx.stroke();
+    }
+
+    var selW = step >= 1 ? (W * ex.n1 / ex.d1) : 0;
+    var riceH = step >= 2 ? (H * ex.n2 / ex.d2) : 0;
+    if (step >= 1) {
+      ctx.fillStyle = 'rgba(226, 197, 106, 0.72)';
+      ctx.fillRect(x0, y0, selW, H);
+    }
+    if (step >= 2 && selW > 0 && riceH > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x0, y0, selW, riceH);
+      ctx.clip();
+      ctx.fillStyle = '#1f7a3a';
+      ctx.fillRect(x0, y0, selW, riceH);
+      var gx, gy;
+      for (gy = y0 + 16; gy < y0 + riceH - 4; gy += 20) {
+        for (gx = x0 + 12; gx < x0 + selW - 4; gx += 16) riceTuft(gx, gy);
+      }
+      ctx.restore();
+    }
+
+    if (step >= 1) {
+      ctx.strokeStyle = 'rgba(46, 80, 24, 0.45)';
+      ctx.lineWidth = 1.4;
+      var i;
+      for (i = 1; i < ex.d1; i++) {
+        var lx = x0 + (W / ex.d1) * i;
+        ctx.beginPath(); ctx.moveTo(lx, y0); ctx.lineTo(lx, y0 + H); ctx.stroke();
+      }
+      for (i = 1; i < ex.d2; i++) {
+        var ly = y0 + (H / ex.d2) * i;
+        ctx.beginPath(); ctx.moveTo(x0, ly); ctx.lineTo(x0 + W, ly); ctx.stroke();
+      }
+    }
+
+    var hx = x0, hy = y0, hw = W, hh = H;
+    if (highlight === 'first' && step >= 1) { hw = selW; }
+    else if ((highlight === 'second' || highlight === 'product') && step >= 2) { hw = selW; hh = riceH; }
+    if (highlight && hw > 0 && hh > 0) {
+      ctx.strokeStyle = '#e67e22';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(hx + 2, hy + 2, hw - 4, hh - 4);
+    }
+
+    ctx.strokeStyle = '#6d4c41';
+    ctx.lineWidth = 7;
+    ctx.strokeRect(x0, y0, W, H);
+    ctx.strokeStyle = '#8d6e63';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x0 + 5, y0 + 5, W - 10, H - 10);
+
+    if (step >= 2 && selW > 48 && riceH > 36) {
+      var lx = x0 + selW / 2;
+      var ly = y0 + riceH / 2;
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillRect(lx - 28, ly - 13, 56, 26);
+      ctx.fillStyle = '#145c28';
+      ctx.font = 'bold 15px "PingFang HK", "Noto Sans TC", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('種稻', lx, ly);
+    }
+  }
+
+  function render() {
+    renderEq();
+    renderCopy();
+    resize();
+  }
+  function loadExample(key) {
+    ex = EXAMPLES[key];
+    step = 3;
+    highlight = 'product';
+    render();
+  }
+  function wire() {
+    canvas = $('farm-canvas');
+    ctx = canvas.getContext('2d');
+    $('farm-next').onclick = function () {
+      if (step < 3) step += 1;
+      highlight = step >= 2 ? 'product' : (step === 1 ? 'first' : null);
+      render();
+    };
+    $('farm-restart').onclick = function () {
+      step = 0;
+      highlight = null;
+      render();
+    };
+    $('farm-ex-main').onclick = function () { loadExample('main'); };
+    $('farm-ex-adv').onclick = function () { loadExample('adv'); };
+    window.addEventListener('resize', function () {
+      var shared = $('farm-shared');
+      if (shared && !shared.hidden) resize();
+    });
+  }
+
+  window.__fracMulFarm = { mount: mount, hide: hide, loadExample: loadExample };
 })();
 
 wire();
