@@ -426,9 +426,9 @@ window.__pubnubLoadPromise = (function () {
   }
   .fixed-q-btn {
     display: flex; align-items: center; justify-content: center;
-    min-height: 72px; padding: 12px 8px;
+    min-height: 64px; padding: 14px 8px;
     background: #fff7eb; border: 2px solid #f0d9b5; border-radius: 14px;
-    color: var(--primary-dark); font-family: inherit; font-size: 1.8rem; font-weight: 800;
+    color: var(--primary-dark); font-family: inherit; font-size: 1.25rem; font-weight: 800;
     cursor: pointer;
   }
   .fixed-q-btn:hover { border-color: var(--primary); }
@@ -847,8 +847,13 @@ window.__pubnubLoadPromise = (function () {
   </div>
   <div class="custom-q" id="teacher-custom-2" style="display:none;">
     <h3>指定題</h3>
-    <div class="fixed-q-list" id="fixed-ffrac-list" role="group" aria-label="指定題"></div>
-    <p class="fixed-hint">按第1題至第4題即發給全班，稍後加入的學生亦會收到。第1題用方法一、方法二兩格；第2題至第4題用一格。</p>
+    <div class="fixed-q-list" id="fixed-ffrac-list" role="group" aria-label="指定題">
+      <button type="button" class="fixed-q-btn" data-fixed="0">第1題</button>
+      <button type="button" class="fixed-q-btn" data-fixed="1">第2題</button>
+      <button type="button" class="fixed-q-btn" data-fixed="2">第3題</button>
+      <button type="button" class="fixed-q-btn" data-fixed="3">第4題</button>
+    </div>
+    <p class="fixed-hint">按第1題至第4題即發給全班，稍後加入的學生亦會收到。只有第1題用方法一、方法二兩格；第2題、第3題、第4題各用一格。</p>
   </div>
   <div class="btn-row" style="max-width:960px;margin:0 0 8px;">
     <button class="btn btn-danger btn-block" id="btn-new-round">開新一輪（清除本輪提交）</button>
@@ -3801,10 +3806,6 @@ function wire() {
   };
   var fixedList = document.getElementById('fixed-ffrac-list');
   if (fixedList) {
-    fixedList.innerHTML = FIXED_FFRAC.map(function (_item, i) {
-      return '<button type="button" class="fixed-q-btn" data-fixed="' + i + '" aria-label="第' + (i + 1) + '題">' +
-        (i + 1) + '</button>';
-    }).join('');
     fixedList.querySelectorAll('.fixed-q-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var q = buildFixedFracTimesFrac(Number(btn.getAttribute('data-fixed')));
