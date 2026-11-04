@@ -162,6 +162,14 @@ window.__pubnubLoadPromise = (function () {
   }
   .hw-label { font-size: 0.9rem; color: var(--muted); margin: 2px 6px 6px; font-weight: 600; }
   .hw-boards, .hw-board { display: block; width: 100%; min-width: 0; box-sizing: border-box; }
+  .hw-board { position: relative; }
+  .hw-eraser-ring {
+    position: absolute; width: 36px; height: 36px; border-radius: 50%;
+    border: 3px solid #e67e22; background: rgba(230, 126, 34, 0.16);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95);
+    transform: translate(-50%, -50%); pointer-events: none; display: none; z-index: 3;
+  }
+  .hw-eraser-ring.show { display: block; }
   .hw-boards.two {
     display: grid; grid-template-columns: 1fr; gap: 10px;
   }
@@ -391,9 +399,11 @@ window.__pubnubLoadPromise = (function () {
   }
   #inspect-meta { text-align: center; font-size: 0.95rem; margin: 6px 0 10px; }
   .toast {
-    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(120%);
+    position: fixed; left: 50%; bottom: 24px;
+    transform: translateX(-50%) translateY(calc(100% + 48px));
     background: #2c3e50; color: #fff; padding: 12px 18px; border-radius: 12px;
     font-weight: 600; z-index: 200; transition: transform 0.25s; max-width: 90vw;
+    pointer-events: none;
   }
   .toast.show { transform: translateX(-50%) translateY(0); }
   .toast.ok { background: var(--success); }
@@ -415,18 +425,14 @@ window.__pubnubLoadPromise = (function () {
     gap: 8px; margin: 0 0 8px;
   }
   .fixed-q-btn {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 6px; min-height: 112px; padding: 10px 4px 12px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 72px; padding: 12px 8px;
     background: #fff7eb; border: 2px solid #f0d9b5; border-radius: 14px;
-    color: var(--primary-dark); font-family: inherit; cursor: pointer;
+    color: var(--primary-dark); font-family: inherit; font-size: 1.8rem; font-weight: 800;
+    cursor: pointer;
   }
   .fixed-q-btn:hover { border-color: var(--primary); }
   .fixed-q-btn:active { transform: scale(0.98); }
-  .fixed-q-label { font-weight: 800; font-size: 0.95rem; }
-  .fixed-q-preview {
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.15rem; font-weight: 800; color: var(--primary-dark);
-  }
   @media (max-width: 720px) {
     .fixed-q-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
@@ -716,10 +722,12 @@ window.__pubnubLoadPromise = (function () {
         <div class="hw-board" id="hw-board-a">
           <div class="hw-board-label">方法一</div>
           <canvas id="hw-canvas" width="900" height="580" aria-label="方法一"></canvas>
+          <div class="hw-eraser-ring" aria-hidden="true"></div>
         </div>
         <div class="hw-board" id="hw-board-b" hidden>
           <div class="hw-board-label">方法二</div>
           <canvas id="hw-canvas-2" width="900" height="420" aria-label="方法二"></canvas>
+          <div class="hw-eraser-ring" aria-hidden="true"></div>
         </div>
       </div>
       <div class="hw-toolbar" role="toolbar" aria-label="手寫工具">
@@ -840,7 +848,7 @@ window.__pubnubLoadPromise = (function () {
   <div class="custom-q" id="teacher-custom-2" style="display:none;">
     <h3>指定題</h3>
     <div class="fixed-q-list" id="fixed-ffrac-list" role="group" aria-label="指定題"></div>
-    <p class="fixed-hint">按第1題至第4題即發給全班，稍後加入的學生亦會收到。學生須在方法一、方法二兩格內作答。</p>
+    <p class="fixed-hint">按第1題至第4題即發給全班，稍後加入的學生亦會收到。第1題用方法一、方法二兩格；第2題至第4題用一格。</p>
   </div>
   <div class="btn-row" style="max-width:960px;margin:0 0 8px;">
     <button class="btn btn-danger btn-block" id="btn-new-round">開新一輪（清除本輪提交）</button>
@@ -1194,9 +1202,11 @@ var FIXED_FFRAC = [
   { n1: 2, d1: 5, n2: 3, d2: 8 }
 ];
 function buildFixedFracTimesFrac(index) {
-  var item = FIXED_FFRAC[index == null ? 0 : index];
+  var i = index == null ? 0 : index;
+  var item = FIXED_FFRAC[i];
   if (!item) return null;
-  return buildFfracQuestion(item.n1, item.d1, item.n2, item.d2, true);
+  /* Only 18/25 × 5/12 asks for two methods. The other presets use one cell. */
+  return buildFfracQuestion(item.n1, item.d1, item.n2, item.d2, i === 0);
 }
 
 function emptyModeStore() {
@@ -1366,7 +1376,7 @@ function toast(msg, kind) {
   el.textContent = msg;
   el.className = 'toast show' + (kind ? ' ' + kind : '');
   clearTimeout(toast._t);
-  toast._t = setTimeout(function () { el.classList.remove('show'); }, 2400);
+  toast._t = setTimeout(function () { el.classList.remove('show', 'ok', 'bad'); }, 2400);
 }
 function showModal(title, msg, onOk) {
   document.getElementById('modal-title').textContent = title;
@@ -1801,6 +1811,40 @@ function undoHwStroke() {
   toast('已撤銷上一筆', 'ok');
 }
 
+function hideEraserRings() {
+  document.querySelectorAll('.hw-eraser-ring').forEach(function (el) {
+    el.classList.remove('show');
+  });
+}
+function placeEraserRing(canvas, clientX, clientY) {
+  document.querySelectorAll('.hw-eraser-ring').forEach(function (el) {
+    el.classList.remove('show');
+  });
+  if (!hwErasing || !canvas || !canvas.parentElement) return;
+  var ring = canvas.parentElement.querySelector('.hw-eraser-ring');
+  if (!ring || clientX == null || clientY == null) return;
+  var board = canvas.getBoundingClientRect();
+  var frame = canvas.parentElement.getBoundingClientRect();
+  var pad = null;
+  var i;
+  for (i = 0; i < hwPads.length; i++) {
+    if (hwPads[i] && hwPads[i].canvas === canvas) pad = hwPads[i];
+  }
+  var cssW = (pad && pad.cssW) || board.width || 1;
+  var scale = board.width / cssW;
+  var d = HW_ERASER_R * 2 * (scale > 0 ? scale : 1);
+  ring.style.width = d + 'px';
+  ring.style.height = d + 'px';
+  ring.style.left = (clientX - frame.left) + 'px';
+  ring.style.top = (clientY - frame.top) + 'px';
+  ring.classList.add('show');
+}
+function showEraserRingCentered(canvas) {
+  if (!canvas) return;
+  var r = canvas.getBoundingClientRect();
+  if (!(r.width > 0)) return;
+  placeEraserRing(canvas, r.left + r.width / 2, r.top + r.height / 2);
+}
 function setHwEraser(on) {
   hwErasing = !!on;
   var btn = document.getElementById('btn-hw-eraser');
@@ -1808,10 +1852,12 @@ function setHwEraser(on) {
     btn.classList.toggle('active', hwErasing);
     btn.setAttribute('aria-pressed', hwErasing ? 'true' : 'false');
   }
-  var cursor = hwErasing ? 'cell' : 'crosshair';
+  var cursor = hwErasing ? 'none' : 'crosshair';
   hwPads.forEach(function (p) {
     if (p.canvas) p.canvas.style.cursor = cursor;
   });
+  if (!hwErasing) hideEraserRings();
+  else showEraserRingCentered(document.getElementById('hw-canvas'));
 }
 function setHwPenColor(color) {
   if (!color) return;
@@ -2015,6 +2061,7 @@ function initHwCanvas() {
       }
     } catch (err) {}
     lockHwScroll(true);
+    if (hwErasing && e.clientX != null) placeEraserRing(hwCanvas, e.clientX, e.clientY);
     /* seed a tiny dot so taps register */
     if (hwErasing) {
       eraseDab(hwLast.x, hwLast.y);
@@ -2028,6 +2075,7 @@ function initHwCanvas() {
   }
 
   function move(e) {
+    if (hwErasing && e.clientX != null) placeEraserRing(e.currentTarget || hwCanvas, e.clientX, e.clientY);
     if (!hwDrawing) return;
     if (hwPointerId != null && e.pointerId != null && e.pointerId !== hwPointerId) return;
     if (e.cancelable) e.preventDefault();
@@ -3737,11 +3785,9 @@ function wire() {
   };
   var fixedList = document.getElementById('fixed-ffrac-list');
   if (fixedList) {
-    fixedList.innerHTML = FIXED_FFRAC.map(function (item, i) {
-      var preview = formatPrompt({ kind: 'ffrac', num: item.n1, den: item.d1, num2: item.n2, den2: item.d2 });
-      return '<button type="button" class="fixed-q-btn" data-fixed="' + i + '">' +
-        '<span class="fixed-q-label">第' + (i + 1) + '題</span>' +
-        '<span class="fixed-q-preview">' + preview + '</span></button>';
+    fixedList.innerHTML = FIXED_FFRAC.map(function (_item, i) {
+      return '<button type="button" class="fixed-q-btn" data-fixed="' + i + '" aria-label="第' + (i + 1) + '題">' +
+        (i + 1) + '</button>';
     }).join('');
     fixedList.querySelectorAll('.fixed-q-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
