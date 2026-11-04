@@ -216,13 +216,19 @@ window.__pubnubLoadPromise = (function () {
     box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(230,126,34,0.35);
     transform: scale(1.08);
   }
-  .hw-pen-btn[data-color="#2c3e50"] { background: #2c3e50; }
-  .hw-pen-btn[data-color="#c0392b"] { background: #c0392b; }
+  .hw-pen-btn[data-color="#f57c00"] { background: #f57c00; }
+  .hw-pen-btn[data-color="#d81b60"] { background: #d81b60; }
   .hw-pen-btn[data-color="#8e44ad"] { background: #8e44ad; }
-  .hw-pen-btn[data-color="#2471a3"] { background: #2471a3; }
+  .hw-pen-btn[data-color="#1a73e8"] { background: #1a73e8; }
+  .hw-pen-btn[data-color="#1a1a1a"] { background: #1a1a1a; }
+  .hw-pen-btn[data-color="#1e9e4a"] { background: #1e9e4a; }
   .hw-actions { display: flex; flex-wrap: wrap; gap: 8px; }
   .hw-actions .btn { min-width: 96px; min-height: 44px; }
   .hw-actions .btn:disabled { opacity: 0.45; }
+  #btn-hw-eraser.active {
+    background: #ffe8d1; color: var(--primary-dark);
+    box-shadow: inset 0 0 0 2px var(--primary-dark);
+  }
   .guess-box {
     width: 100%; max-width: 560px; background: #fff; border-radius: 14px;
     border: 2px solid var(--border); padding: 14px; margin-top: 10px;
@@ -291,14 +297,32 @@ window.__pubnubLoadPromise = (function () {
     width: 100%; max-width: 960px;
     display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;
   }
+  .monitor-archive-bar {
+    width: 100%; max-width: 960px; margin: 0 0 10px;
+  }
+  .monitor-archive-bar .btn { min-width: 148px; }
   .archive-note {
     width: 100%; max-width: 960px; color: var(--muted); font-size: 0.88rem;
     font-weight: 600; line-height: 1.5; margin: 0 0 8px;
   }
   .archive-list {
-    width: 100%; max-width: 960px; max-height: 72vh; overflow-y: auto;
-    display: flex; flex-direction: column; gap: 12px; padding: 0 2px 16px;
+    width: 100%; max-width: 960px;
+    display: flex; flex-direction: column; gap: 12px; padding: 0 2px 4px;
   }
+  #inspect-modal { z-index: 120; }
+  .modal.archive-modal {
+    max-width: min(96vw, 960px); padding: 0; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .archive-modal-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 16px 16px 12px; border-bottom: 1px solid var(--border); flex: 0 0 auto;
+  }
+  .archive-modal-head h3 { margin: 0; }
+  .archive-modal-head .btn { flex: 0 0 auto; min-width: 88px; }
+  .archive-modal-body { overflow-y: auto; padding: 12px 16px 16px; flex: 1 1 auto; min-height: 0; }
+  .archive-modal .archive-note,
+  .archive-modal .archive-list { max-width: none; }
   .archive-empty {
     background: #fff; border: 2px dashed var(--border); border-radius: 14px;
     color: var(--muted); font-weight: 700; text-align: center; padding: 18px 12px;
@@ -689,13 +713,15 @@ window.__pubnubLoadPromise = (function () {
       <div class="hw-toolbar" role="toolbar" aria-label="手寫工具">
         <div class="hw-pen-row" role="group" aria-label="筆色">
           <span class="hw-pen-label">筆色</span>
-          <button type="button" class="hw-pen-btn active" data-color="#2c3e50" title="黑色" aria-label="黑色" aria-pressed="true"></button>
-          <button type="button" class="hw-pen-btn" data-color="#c0392b" title="紅色" aria-label="紅色" aria-pressed="false"></button>
+          <button type="button" class="hw-pen-btn" data-color="#f57c00" title="橙色" aria-label="橙色" aria-pressed="false"></button>
+          <button type="button" class="hw-pen-btn" data-color="#d81b60" title="深粉紅色" aria-label="深粉紅色" aria-pressed="false"></button>
           <button type="button" class="hw-pen-btn" data-color="#8e44ad" title="紫色" aria-label="紫色" aria-pressed="false"></button>
-          <button type="button" class="hw-pen-btn" data-color="#2471a3" title="藍色" aria-label="藍色" aria-pressed="false"></button>
+          <button type="button" class="hw-pen-btn" data-color="#1a73e8" title="藍色" aria-label="藍色" aria-pressed="false"></button>
+          <button type="button" class="hw-pen-btn active" data-color="#1a1a1a" title="黑色" aria-label="黑色" aria-pressed="true"></button>
+          <button type="button" class="hw-pen-btn" data-color="#1e9e4a" title="綠色" aria-label="綠色" aria-pressed="false"></button>
         </div>
         <div class="hw-actions">
-          <button class="btn btn-ghost" id="btn-hw-undo" type="button" disabled>撤銷</button>
+          <button class="btn btn-ghost" id="btn-hw-eraser" type="button" aria-pressed="false">擦膠</button>
           <button class="btn btn-ghost" id="btn-hw-clear" type="button">清除全部</button>
         </div>
       </div>
@@ -821,13 +847,12 @@ window.__pubnubLoadPromise = (function () {
   </div>
 
   <div class="gallery-section-title">課堂監察（全班 32 人一覽；已交顯示手寫圖示；評分只根據最終答案）</div>
+  <div class="monitor-archive-bar">
+    <button type="button" class="btn btn-ghost" id="btn-open-archive" aria-haspopup="dialog" aria-controls="archive-modal" aria-expanded="false">課後跟進</button>
+  </div>
   <div class="monitor-stats" id="monitor-stats"></div>
   <div class="monitor-roster" id="monitor-roster" aria-live="polite"></div>
   <div class="answers-list" id="student-answers-list"></div>
-
-  <div class="gallery-section-title">課後跟進（較早題目與作答）</div>
-  <p class="archive-note" id="archive-note"></p>
-  <div class="archive-list" id="archive-list"></div>
   </div><!-- /pane-teacher-tab1 -->
 
   <div id="pane-teacher-tab2">
@@ -890,6 +915,18 @@ window.__pubnubLoadPromise = (function () {
     <p id="modal-msg"></p>
     <div class="btn-row" style="max-width:100%;">
       <button class="btn btn-primary" id="modal-ok">確定</button>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop" id="archive-modal">
+  <div class="modal archive-modal" role="dialog" aria-modal="true" aria-labelledby="archive-modal-title">
+    <div class="archive-modal-head">
+      <h3 id="archive-modal-title">課後跟進（較早題目與作答）</h3>
+      <button type="button" class="btn btn-ghost" id="btn-archive-close">關閉</button>
+    </div>
+    <div class="archive-modal-body">
+      <p class="archive-note" id="archive-note"></p>
+      <div class="archive-list" id="archive-list"></div>
     </div>
   </div>
 </div>
@@ -1481,7 +1518,8 @@ function readAnswerRational() {
   if (answerMode === 'int') {
     var w = String(wholeEl.value || '').trim();
     if (w === '' || !/^-?\d+$/.test(w)) return null;
-    return { n: parseInt(w, 10), d: 1, display: w };
+    var whole = parseInt(w, 10);
+    return { n: whole, d: 1, display: w, form: 'int', entered: { whole: whole } };
   }
   var numS = String(numEl.value || '').trim();
   var denS = String(denEl.value || '').trim();
@@ -1491,17 +1529,38 @@ function readAnswerRational() {
   if (fracKind === 'mixed') {
     var ws = String(wholeEl.value || '').trim();
     if (ws === '' || !/^-?\d+$/.test(ws)) return null;
-    var whole = parseInt(ws, 10);
-    var sign = whole < 0 ? -1 : 1;
-    var improper = Math.abs(whole) * den + Math.abs(num);
-    var r = reduce(sign * improper, den);
-    return { n: r.n, d: r.d, display: whole + ' ' + Math.abs(num) + '/' + den };
+    var wnum = parseInt(ws, 10);
+    var sign = wnum < 0 ? -1 : 1;
+    var improper = Math.abs(wnum) * den + Math.abs(num);
+    return {
+      n: sign * improper, d: den,
+      display: wnum + ' ' + num + '/' + den,
+      form: 'mixed',
+      entered: { whole: wnum, num: num, den: den }
+    };
   }
-  var rr = reduce(num, den);
-  return { n: rr.n, d: rr.d, display: num + '/' + den };
+  return { n: num, d: den, display: num + '/' + den, form: 'frac', entered: { num: num, den: den } };
+}
+/* 最簡才算對。2/8 與 1/4 同值，但學生寫下的不是最簡分數。 */
+function formIsSimplest(ans) {
+  if (!ans || !ans.form) return true;
+  if (ans.form === 'int') return true;
+  var e = ans.entered;
+  if (ans.form === 'frac') {
+    var n = e ? e.num : ans.n;
+    var d = e ? e.den : ans.d;
+    return d > 0 && gcd(n, d) === 1;
+  }
+  if (ans.form === 'mixed') {
+    if (!e || !(e.den > 0)) return false;
+    if (!(e.num > 0) || e.num >= e.den) return false;
+    return gcd(e.num, e.den) === 1;
+  }
+  return false;
 }
 function gradeAgainstQuestion(ans, q) {
   if (!ans || !q || !q.answer) return false;
+  if (!formIsSimplest(ans)) return false;
   return ratEq(ans, q.answer);
 }
 function syncAnswerInputsUI() {
@@ -1539,7 +1598,9 @@ var hwPending = null;
 var hwRaf = 0;
 var hwSizedOnce = false;
 var hwSizing = false; /* guard: sizeHwCanvas must not recurse via clearHw */
-var hwPenColor = '#2c3e50';
+var hwPenColor = '#1a1a1a';
+var hwErasing = false;
+var HW_ERASER_R = 18;
 var hwUndoStack = []; /* { key, data } snapshots before each stroke */
 var HW_UNDO_MAX = 40;
 var hwLockTimer = null;
@@ -1654,6 +1715,10 @@ function hwStrokeStyle(pressure) {
 
 function hwDrawSegment(from, mid, to) {
   if (!from || !to) return;
+  if (hwErasing) {
+    eraseAlong(from, to);
+    return;
+  }
   hwStrokeStyle(to.pressure);
   hwCtx.beginPath();
   if (mid) {
@@ -1681,21 +1746,11 @@ function hwFlushPending() {
 }
 
 function paintHwBackground() {
-  /* Fill + guide lines in current CSS-pixel transform. Does NOT call sizeHwCanvas. */
+  /* Blank paper in the current CSS-pixel transform. Does NOT call sizeHwCanvas. */
   if (!hwCtx) return;
   hwCtx.setTransform(hwDpr, 0, 0, hwDpr, 0, 0);
   hwCtx.fillStyle = '#fffcf7';
   hwCtx.fillRect(0, 0, hwCssW, hwCssH);
-  hwCtx.strokeStyle = '#f0e6d8';
-  hwCtx.lineWidth = 1;
-  var bands = hwCssH >= 520 ? 5 : 6;
-  var step = Math.max(hwCssH >= 520 ? 72 : 40, Math.round(hwCssH / bands));
-  for (var y = step; y < hwCssH; y += step) {
-    hwCtx.beginPath();
-    hwCtx.moveTo(0, y);
-    hwCtx.lineTo(hwCssW, y);
-    hwCtx.stroke();
-  }
 }
 
 function updateHwUndoBtn() {
@@ -1747,14 +1802,50 @@ function undoHwStroke() {
   toast('已撤銷上一筆', 'ok');
 }
 
+function setHwEraser(on) {
+  hwErasing = !!on;
+  var btn = document.getElementById('btn-hw-eraser');
+  if (btn) {
+    btn.classList.toggle('active', hwErasing);
+    btn.setAttribute('aria-pressed', hwErasing ? 'true' : 'false');
+  }
+  var cursor = hwErasing ? 'cell' : 'crosshair';
+  hwPads.forEach(function (p) {
+    if (p.canvas) p.canvas.style.cursor = cursor;
+  });
+}
 function setHwPenColor(color) {
   if (!color) return;
   hwPenColor = color;
+  setHwEraser(false);
   document.querySelectorAll('.hw-pen-btn').forEach(function (b) {
     var on = b.getAttribute('data-color') === color;
     b.classList.toggle('active', on);
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
+}
+function eraseDab(x, y) {
+  if (!hwCtx) return;
+  var r = HW_ERASER_R;
+  hwCtx.save();
+  hwCtx.setTransform(hwDpr, 0, 0, hwDpr, 0, 0);
+  hwCtx.beginPath();
+  hwCtx.arc(x, y, r, 0, Math.PI * 2);
+  hwCtx.clip();
+  hwCtx.fillStyle = '#fffcf7';
+  hwCtx.fillRect(x - r - 2, y - r - 2, r * 2 + 4, r * 2 + 4);
+  hwCtx.restore();
+}
+function eraseAlong(from, to) {
+  if (!from || !to) return;
+  var dx = to.x - from.x;
+  var dy = to.y - from.y;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  var step = Math.max(4, HW_ERASER_R * 0.45);
+  var n = Math.max(1, Math.ceil(dist / step));
+  var i;
+  for (i = 0; i <= n; i++) eraseDab(from.x + (dx * i) / n, from.y + (dy * i) / n);
+  hwDirty = true;
 }
 
 function unlockHwScroll() {
@@ -1896,7 +1987,7 @@ function makeHwPad(canvas, key) {
 function forwardStrokeTarget(el) {
   /* A pen lift must not activate tabs or 返回主目錄 / 返回選名 / 課堂編號. */
   if (!el || !el.closest) return null;
-  return el.closest('#btn-submit-answer, #btn-hw-undo, #btn-hw-clear, .hw-pen-btn');
+  return el.closest('#btn-submit-answer, #btn-hw-eraser, #btn-hw-clear, .hw-pen-btn');
 }
 function initHwCanvas() {
   var c1 = document.getElementById('hw-canvas');
@@ -1914,7 +2005,6 @@ function initHwCanvas() {
     if (e.cancelable) e.preventDefault();
     focusPad(padFromCanvas(e.currentTarget));
     if (!hwSizedOnce) sizeHwCanvas(true);
-    pushHwUndoSnapshot();
     hwDrawing = true;
     hwPointerId = (e.pointerId != null) ? e.pointerId : null;
     hwPending = null;
@@ -1927,10 +2017,14 @@ function initHwCanvas() {
     } catch (err) {}
     lockHwScroll(true);
     /* seed a tiny dot so taps register */
-    hwStrokeStyle(hwLast.pressure);
-    hwCtx.beginPath();
-    hwCtx.arc(hwLast.x, hwLast.y, Math.max(1.1, hwCtx.lineWidth * 0.35), 0, Math.PI * 2);
-    hwCtx.fill();
+    if (hwErasing) {
+      eraseDab(hwLast.x, hwLast.y);
+    } else {
+      hwStrokeStyle(hwLast.pressure);
+      hwCtx.beginPath();
+      hwCtx.arc(hwLast.x, hwLast.y, Math.max(1.1, hwCtx.lineWidth * 0.35), 0, Math.PI * 2);
+      hwCtx.fill();
+    }
     hwDirty = true;
   }
 
@@ -2836,7 +2930,7 @@ function renderTeacherArchive() {
   var list = document.getElementById('archive-list');
   if (!note || !list) return;
   var mode = practiceOf(activePractice);
-  note.textContent = '紀錄存在這台瀏覽器，按課堂編號與日期保存，方便課後跟進。換電腦或清除網站資料後便不再留下。上方仍是本輪的即時監察。';
+  note.textContent = '紀錄存在這台瀏覽器，按課堂編號與日期保存，方便課後跟進。關閉後回到即時監察。換電腦或清除網站資料後便不再留下。';
   if (!roomCode) {
     list.innerHTML = '<div class="archive-empty">進入課堂後，學生的作答會留在這裡。</div>';
     return;
@@ -2897,6 +2991,20 @@ function renderTeacherArchive() {
     });
   });
 }
+function setArchivePanel(open) {
+  var modal = document.getElementById('archive-modal');
+  var btn = document.getElementById('btn-open-archive');
+  if (!modal) return;
+  if (open) renderTeacherArchive();
+  modal.classList.toggle('show', !!open);
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) {
+    var closeBtn = document.getElementById('btn-archive-close');
+    if (closeBtn) closeBtn.focus();
+  } else if (btn) {
+    btn.focus();
+  }
+}
 function ingestSubmission(entry) {
   if (!entry || entry.studentNo == null) return;
   var mode = practiceOf(entry.practice);
@@ -2908,7 +3016,12 @@ function ingestSubmission(entry) {
   var rid = b.roundId || (q && q.id) || null;
   var correct = false;
   if (entry.roundId && q && entry.roundId === rid && entry.answerRat) {
-    correct = ratEq(entry.answerRat, q.answer);
+    correct = gradeAgainstQuestion({
+      n: entry.answerRat.n,
+      d: entry.answerRat.d,
+      form: entry.answerForm,
+      entered: entry.answerEntered
+    }, q);
   } else if (entry.roundId && q && entry.roundId === rid && typeof entry.correct === 'boolean') {
     correct = !!entry.correct;
   }
@@ -3235,6 +3348,8 @@ function submitStudentAnswer() {
     promptHtml: formatPrompt(currentQuestion),
     guess: ans.display,
     answerRat: { n: ans.n, d: ans.d },
+    answerForm: ans.form,
+    answerEntered: ans.entered,
     correct: ok,
     handwriting: hwUrl,
     hasHandwriting: hwDirtyNow,
@@ -3572,7 +3687,7 @@ function wire() {
     openJoinScreen('play');
   };
   document.getElementById('btn-hw-clear').onclick = function () { clearHw(false); };
-  document.getElementById('btn-hw-undo').onclick = function () { undoHwStroke(); };
+  document.getElementById('btn-hw-eraser').onclick = function () { setHwEraser(!hwErasing); };
   document.querySelectorAll('.hw-pen-btn').forEach(function (b) {
     b.addEventListener('click', function () {
       setHwPenColor(b.getAttribute('data-color'));
@@ -3663,6 +3778,21 @@ function wire() {
   document.getElementById('inspect-close').onclick = function () {
     document.getElementById('inspect-modal').classList.remove('show');
   };
+  document.getElementById('btn-open-archive').onclick = function () { setArchivePanel(true); };
+  document.getElementById('btn-archive-close').onclick = function () { setArchivePanel(false); };
+  document.getElementById('archive-modal').addEventListener('click', function (e) {
+    if (e.target === this) setArchivePanel(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var inspect = document.getElementById('inspect-modal');
+    if (inspect && inspect.classList.contains('show')) {
+      inspect.classList.remove('show');
+      return;
+    }
+    var arch = document.getElementById('archive-modal');
+    if (arch && arch.classList.contains('show')) setArchivePanel(false);
+  });
   document.getElementById('pin-input').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') document.getElementById('btn-pin-ok').click();
   });
@@ -3683,7 +3813,10 @@ window.__fracMulPractice = {
     highlight: null, // 'bn'|'bd'|'rn'|'rd'|'pn'|'pd'|null
     editing: null,   // field being edited via keypad
     fillStep: 1,     // 1 bd, 2 bn, 3 rd, 4 rn, 5 done
-    lastTap: { field: null, t: 0 }
+    lastTap: { field: null, t: 0 },
+    /* Canvas stays blank until she taps that part of the fraction. */
+    revealed: { bd: false, bn: false, rd: false, rn: false },
+    anim: null
   };
 
   var PROMPTS = {
@@ -3698,9 +3831,11 @@ window.__fracMulPractice = {
     rd: '填寫右側紅色的分母',
     rn: '填寫右側紅色的分子'
   };
+  var EXPLAIN_PROMPT = '點分母看分割，點分子看斜線。再點可重播。';
 
   var mounted = false;
   var canvas, ctx;
+  var animRaf = 0;
 
   function $(id) { return document.getElementById(id); }
 
@@ -3719,6 +3854,55 @@ window.__fracMulPractice = {
     else if (state.rd == null) state.fillStep = 3;
     else if (state.rn == null) state.fillStep = 4;
     else state.fillStep = 5;
+  }
+
+  function answerRevealed() {
+    return !!(state.revealed.bn && state.revealed.rn &&
+      state.bn != null && state.rn != null && state.bd && state.rd);
+  }
+
+  function easeOut(t) {
+    t = Math.max(0, Math.min(1, t));
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function fieldProgress(field) {
+    if (state.anim && state.anim.field === field) {
+      var t = (performance.now() - state.anim.t0) / state.anim.dur;
+      if (t >= 1) return 1;
+      return easeOut(t);
+    }
+    return state.revealed[field] ? 1 : 0;
+  }
+
+  function stopAnim() {
+    if (animRaf) cancelAnimationFrame(animRaf);
+    animRaf = 0;
+    state.anim = null;
+  }
+
+  function playExplain(field) {
+    if (field !== 'bd' && field !== 'bn' && field !== 'rd' && field !== 'rn') return;
+    if (state[field] == null) return;
+    state.revealed[field] = true;
+    state.highlight = field;
+    state.anim = { field: field, t0: performance.now(), dur: 720 };
+    updateChipsUI();
+    if (animRaf) cancelAnimationFrame(animRaf);
+    function frame() {
+      if (!canvas || !state.anim || state.anim.field !== field) return;
+      var t = (performance.now() - state.anim.t0) / state.anim.dur;
+      drawModel(canvas.clientWidth || 400);
+      if (t < 1 && state.anim && state.anim.field === field) animRaf = requestAnimationFrame(frame);
+      else if (state.anim && state.anim.field === field) state.anim = null;
+    }
+    frame();
+  }
+
+  function clearReveal(field) {
+    state.revealed[field] = false;
+    if (field === 'bd') state.revealed.bn = false;
+    if (field === 'rd') state.revealed.rn = false;
   }
 
   function mountExplorerInto(host) {
@@ -3798,32 +3982,50 @@ window.__fracMulPractice = {
     ctx.restore();
   }
 
-  function strokePartitionLines(x0, y0, W, H) {
-    var bd = state.bd, rd = state.rd;
+  function strokeGrowingLines(x0, y0, W, H, count, vertical, color, progress) {
+    if (!(count > 1) || !(progress > 0)) return;
+    var lines = count - 1;
+    var slot = 0.62;
+    var gap = lines > 1 ? (1 - slot) / (lines - 1) : 0;
     ctx.save();
     ctx.setLineDash([6, 5]);
     ctx.lineWidth = 1.8;
-    var i;
-    if (bd && bd > 1) {
-      ctx.strokeStyle = '#5dade2';
-      for (i = 1; i < bd; i++) {
-        var lx = x0 + (W / bd) * i;
-        ctx.beginPath();
-        ctx.moveTo(lx, y0);
-        ctx.lineTo(lx, y0 + H);
-        ctx.stroke();
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    var i, lp, pos;
+    for (i = 1; i <= lines; i++) {
+      lp = (progress - (i - 1) * gap) / slot;
+      if (lp <= 0) continue;
+      if (lp > 1) lp = 1;
+      if (vertical) {
+        pos = x0 + (W / count) * i;
+        ctx.moveTo(pos, y0);
+        ctx.lineTo(pos, y0 + H * lp);
+      } else {
+        pos = y0 + (H / count) * i;
+        ctx.moveTo(x0, pos);
+        ctx.lineTo(x0 + W * lp, pos);
       }
     }
-    if (rd && rd > 1) {
-      ctx.strokeStyle = '#e74c3c';
-      for (i = 1; i < rd; i++) {
-        var ly = y0 + (H / rd) * i;
-        ctx.beginPath();
-        ctx.moveTo(x0, ly);
-        ctx.lineTo(x0 + W, ly);
-        ctx.stroke();
-      }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function strokePartitionLines(x0, y0, W, H) {
+    if (state.revealed.bd) strokeGrowingLines(x0, y0, W, H, state.bd, true, '#5dade2', fieldProgress('bd'));
+    if (state.revealed.rd) strokeGrowingLines(x0, y0, W, H, state.rd, false, '#e74c3c', fieldProgress('rd'));
+  }
+
+  function withRevealClip(field, x, y, w, h, axis, draw) {
+    ctx.save();
+    if (field && state.anim && state.anim.field === field) {
+      var p = fieldProgress(field);
+      ctx.beginPath();
+      if (axis === 'y') ctx.rect(x, y, w, Math.max(0.01, h * p));
+      else ctx.rect(x, y, Math.max(0.01, w * p), h);
+      ctx.clip();
     }
+    draw();
     ctx.restore();
   }
 
@@ -3834,8 +4036,9 @@ window.__fracMulPractice = {
     var x0 = pad, y0 = pad, W = S - pad * 2, H = S - pad * 2;
 
     ctx.clearRect(0, 0, S, S);
+    ctx.setLineDash([]);
 
-    // Unit square — plain white (陰影 = 斜線 only, no color fills)
+    // Unit square — plain white until she taps a denominator or numerator.
     ctx.lineWidth = 4;
     ctx.strokeStyle = '#2c3e50';
     ctx.fillStyle = '#ffffff';
@@ -3843,93 +4046,42 @@ window.__fracMulPractice = {
     ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
 
     var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
-    var bw = (bd && bn != null && bn > 0) ? (W / bd) * Math.min(bn, bd) : 0;
-    var rh2 = (rd && rn != null && rn > 0) ? (H / rd) * Math.min(rn, rd) : 0;
+    var showBn = state.revealed.bn && bd && bn != null && bn > 0;
+    var showRn = state.revealed.rn && rd && rn != null && rn > 0;
+    var bw = showBn ? (W / bd) * Math.min(bn, bd) : 0;
+    var rh2 = showRn ? (H / rd) * Math.min(rn, rd) : 0;
     var hasOverlap = bw > 0 && rh2 > 0;
 
     // One pitch per visible region. Factor lines stay outside the overlap so
-    // gap 36 and gap 28 are not drawn on top of each other (that beat pattern
-    // is what made the crosshatch look clumped).
+    // gap 36 and gap 28 are not drawn on top of each other.
     if (bw > 0) {
-      var by = y0 + (hasOverlap ? rh2 : 0);
-      var bh = H - (hasOverlap ? rh2 : 0);
-      hatch(x0, by, bw, bh, HATCH_NEUTRAL, -1, 36);
+      withRevealClip('bn', x0, y0, bw, H, 'x', function () {
+        var by = y0 + (hasOverlap ? rh2 : 0);
+        var bh = H - (hasOverlap ? rh2 : 0);
+        hatch(x0, by, bw, bh, HATCH_NEUTRAL, -1, 36);
+      });
     }
     if (rh2 > 0) {
-      var rx = x0 + (hasOverlap ? bw : 0);
-      var rw = W - (hasOverlap ? bw : 0);
-      hatch(rx, y0, rw, rh2, HATCH_NEUTRAL, 1, 36);
+      withRevealClip('rn', x0, y0, W, rh2, 'y', function () {
+        var rx = x0 + (hasOverlap ? bw : 0);
+        var rw = W - (hasOverlap ? bw : 0);
+        hatch(rx, y0, rw, rh2, HATCH_NEUTRAL, 1, 36);
+      });
     }
     if (hasOverlap) {
-      hatch(x0, y0, bw, rh2, HATCH_NEUTRAL, -1, 28);
-      hatch(x0, y0, bw, rh2, HATCH_NEUTRAL, 1, 28);
+      var overlapField = (state.anim && (state.anim.field === 'bn' || state.anim.field === 'rn')) ? state.anim.field : null;
+      withRevealClip(overlapField, x0, y0, bw, rh2, overlapField === 'rn' ? 'y' : 'x', function () {
+        hatch(x0, y0, bw, rh2, HATCH_NEUTRAL, -1, 28);
+        hatch(x0, y0, bw, rh2, HATCH_NEUTRAL, 1, 28);
+      });
     }
 
-    // Dashed blue/red partition lines (grid guides matching equation chips)
     strokePartitionLines(x0, y0, W, H);
 
-    // Click highlight: denser neutral 斜線 + dark outline (no gold wash)
-    applyHighlight(x0, y0, W, H);
-
-    // Outer border on top
     ctx.lineWidth = 4;
     ctx.strokeStyle = '#2c3e50';
     ctx.setLineDash([]);
     ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
-  }
-
-  function applyHighlight(x0, y0, W, H) {
-    var hl = state.highlight;
-    if (!hl || !isComplete()) return;
-    var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
-    if (!bd || !rd) return;
-    var cw = W / bd, rh = H / rd;
-
-    // Target region by clicked digit
-    // bd / rd / pd → whole square
-    // bn → left num1 columns, full height
-    // rn → top num2 rows, full width
-    // pn → overlap cells only
-    var rx = x0, ry = y0, rw = W, rhR = H;
-    var denserDir = 0; // 0 = crosshatch, -1 = \\, 1 = //
-    if (hl === 'bn') {
-      rw = cw * Math.min(bn, bd);
-      denserDir = -1;
-    } else if (hl === 'rn') {
-      rhR = rh * Math.min(rn, rd);
-      denserDir = 1;
-    } else if (hl === 'pn') {
-      rw = cw * Math.min(bn, bd);
-      rhR = rh * Math.min(rn, rd);
-      denserDir = 0;
-    } else if (hl === 'bd' || hl === 'rd' || hl === 'pd') {
-      denserDir = 0;
-    } else {
-      return;
-    }
-
-    // One centered gap-22 pattern in the target rect. Clearing first avoids
-    // stacking 22 on 36/28, which clumps the stripes.
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(rx, ry, rw, rhR);
-    if (denserDir === 0) {
-      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, -1, 22, 2.0);
-      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, 1, 22, 2.0);
-    } else {
-      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, denserDir, 22, 2.0);
-    }
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(rx, ry, rw, rhR);
-    ctx.clip();
-    strokePartitionLines(x0, y0, W, H);
-    ctx.restore();
-
-    // Dark outline of the target region
-    ctx.strokeStyle = HATCH_NEUTRAL;
-    ctx.lineWidth = 3.5;
-    ctx.setLineDash([]);
-    ctx.strokeRect(rx + 1.5, ry + 1.5, rw - 3, rhR - 3);
   }
 
   function setDigitText(field, val) {
@@ -3944,8 +4096,9 @@ window.__fracMulPractice = {
     setDigitText('rn', state.rn);
     setDigitText('rd', state.rd);
     var p = product();
-    setDigitText('pn', p ? p.n : null);
-    setDigitText('pd', p ? p.d : null);
+    var showAnswer = answerRevealed();
+    setDigitText('pn', showAnswer && p ? p.n : null);
+    setDigitText('pd', showAnswer && p ? p.d : null);
 
     var blue = $('exp-chip-blue');
     var red = $('exp-chip-red');
@@ -3957,7 +4110,7 @@ window.__fracMulPractice = {
     }
     syncChip(blue, state.bn != null || state.bd != null, 'blue');
     syncChip(red, state.rn != null || state.rd != null, 'red');
-    syncChip(purple, !!p, 'purple');
+    syncChip(purple, showAnswer && !!p, 'purple');
 
     // selection ring on chip owning highlight
     var map = { bn: blue, bd: blue, rn: red, rd: red, pn: purple, pd: purple };
@@ -3986,9 +4139,9 @@ window.__fracMulPractice = {
 
     var prompt = $('exp-prompt');
     var filled = state.fillStep === 5;
-    prompt.hidden = filled;
-    prompt.setAttribute('aria-hidden', filled ? 'true' : 'false');
-    prompt.textContent = filled ? '' : (PROMPTS[state.fillStep] || '');
+    prompt.hidden = false;
+    prompt.setAttribute('aria-hidden', 'false');
+    prompt.textContent = filled ? EXPLAIN_PROMPT : (PROMPTS[state.fillStep] || '');
   }
 
   function renderAll() {
@@ -3999,6 +4152,7 @@ window.__fracMulPractice = {
   function openKeypad(field) {
     // Product fields are not editable
     if (field === 'pn' || field === 'pd') return;
+    stopAnim();
     state.highlight = null;
     state.editing = field;
     var bd = $('exp-keypad-backdrop');
@@ -4007,6 +4161,7 @@ window.__fracMulPractice = {
     bd.classList.add('show');
     bd.setAttribute('aria-hidden', 'false');
     updateChipsUI();
+    if (canvas) drawModel(canvas.clientWidth || 400);
   }
 
   function closeKeypad() {
@@ -4027,6 +4182,8 @@ window.__fracMulPractice = {
     }
     // Soft warn if numerator > denominator but still allow (visual still works)
     state[f] = n;
+    clearReveal(f);
+    stopAnim();
 
     // If denominator shrinks below numerator, keep as-is (teacher may explain)
     recomputeStep();
@@ -4039,6 +4196,8 @@ window.__fracMulPractice = {
     state.highlight = null;
     state.editing = null;
     state.fillStep = 1;
+    state.revealed = { bd: false, bn: false, rd: false, rn: false };
+    stopAnim();
     closeKeypad();
     renderAll();
   }
@@ -4049,30 +4208,28 @@ window.__fracMulPractice = {
 
   function onDigitPointer(field, isDouble) {
     if (field === 'pn' || field === 'pd') {
-      if (isComplete()) {
+      if (answerRevealed()) {
         state.highlight = (state.highlight === field) ? null : field;
         renderAll();
       }
       return;
     }
 
-    /* While the equation is unfinished, any filled number can be corrected
-       with one tap. An empty later number still follows the step prompt. */
-    if (!isComplete()) {
-      var expected = fieldForStep(state.fillStep);
-      if (state[field] != null || field === expected) openKeypad(field);
-      else if (expected) openKeypad(expected);
+    if (state[field] == null) {
+      if (!isComplete()) {
+        var expected = fieldForStep(state.fillStep);
+        openKeypad(field === expected ? field : (expected || field));
+      }
       return;
     }
 
-    /* Finished: first tap explains that part with斜線; tapping the same
-       number again opens the keypad so it can be changed. */
-    if (isDouble || state.highlight === field) {
+    /* A filled number replays its picture. A quick second tap still opens
+       the keypad so a wrong digit can be corrected without 重新開始. */
+    if (isDouble) {
       openKeypad(field);
       return;
     }
-    state.highlight = field;
-    renderAll();
+    playExplain(field);
   }
 
   function handleDigitEvent(field) {
@@ -4084,26 +4241,59 @@ window.__fracMulPractice = {
 
   function wireExplorer() {
     document.querySelectorAll('#exp-eq .digit-hit').forEach(function (el) {
+      var holdTimer = 0;
+      var holdOpened = false;
+      function cancelHold() {
+        if (holdTimer) clearTimeout(holdTimer);
+        holdTimer = 0;
+      }
+      el.addEventListener('pointerdown', function () {
+        cancelHold();
+        holdOpened = false;
+        var field = el.getAttribute('data-field');
+        if (field === 'pn' || field === 'pd') return;
+        holdTimer = setTimeout(function () {
+          holdTimer = 0;
+          if (state[field] == null) return;
+          holdOpened = true;
+          openKeypad(field);
+        }, 550);
+      });
+      el.addEventListener('pointerup', cancelHold);
+      el.addEventListener('pointerleave', cancelHold);
+      el.addEventListener('pointercancel', cancelHold);
       el.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
+        if (holdOpened) { holdOpened = false; return; }
         handleDigitEvent(el.getAttribute('data-field'));
       });
     });
-    // Chip click (background) selects highlight for that factor when complete
     ['exp-chip-blue', 'exp-chip-red', 'exp-chip-purple'].forEach(function (id) {
       var chip = $(id);
       if (!chip) return;
       chip.addEventListener('click', function (e) {
         if (e.target.classList.contains('digit-hit')) return;
-        if (!isComplete()) {
-          var expected = fieldForStep(state.fillStep);
-          if (expected) openKeypad(expected);
+        var color = chip.getAttribute('data-chip');
+        if (color === 'purple') {
+          if (answerRevealed()) {
+            state.highlight = state.highlight === 'pn' ? null : 'pn';
+            renderAll();
+          }
           return;
         }
-        var def = { blue: 'bn', red: 'rn', purple: 'pn' }[chip.getAttribute('data-chip')];
-        state.highlight = def;
-        renderAll();
+        var numF = color === 'blue' ? 'bn' : 'rn';
+        var denF = color === 'blue' ? 'bd' : 'rd';
+        if (state[denF] == null && state[numF] == null) {
+          if (!isComplete()) {
+            var expected = fieldForStep(state.fillStep);
+            if (expected) openKeypad(expected);
+          }
+          return;
+        }
+        if (state[denF] != null && !state.revealed[denF]) playExplain(denF);
+        else if (state[numF] != null) playExplain(numF);
+        else playExplain(denF);
       });
     });
 
