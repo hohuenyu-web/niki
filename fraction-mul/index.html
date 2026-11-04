@@ -223,6 +223,10 @@ window.__pubnubLoadPromise = (function () {
   .hw-actions { display: flex; flex-wrap: wrap; gap: 8px; }
   .hw-actions .btn { min-width: 96px; min-height: 44px; }
   .hw-actions .btn:disabled { opacity: 0.45; }
+  #btn-hw-eraser.active {
+    background: #ffe8d1; color: var(--primary-dark);
+    box-shadow: inset 0 0 0 2px var(--primary-dark);
+  }
   .guess-box {
     width: 100%; max-width: 560px; background: #fff; border-radius: 14px;
     border: 2px solid var(--border); padding: 14px; margin-top: 10px;
@@ -695,7 +699,7 @@ window.__pubnubLoadPromise = (function () {
           <button type="button" class="hw-pen-btn" data-color="#2471a3" title="藍色" aria-label="藍色" aria-pressed="false"></button>
         </div>
         <div class="hw-actions">
-          <button class="btn btn-ghost" id="btn-hw-undo" type="button" disabled>撤銷</button>
+          <button class="btn btn-ghost" id="btn-hw-eraser" type="button" aria-pressed="false">擦膠</button>
           <button class="btn btn-ghost" id="btn-hw-clear" type="button">清除全部</button>
         </div>
       </div>
@@ -1540,6 +1544,8 @@ var hwRaf = 0;
 var hwSizedOnce = false;
 var hwSizing = false; /* guard: sizeHwCanvas must not recurse via clearHw */
 var hwPenColor = '#2c3e50';
+var hwErasing = false;
+var HW_ERASER_R = 18;
 var hwUndoStack = []; /* { key, data } snapshots before each stroke */
 var HW_UNDO_MAX = 40;
 var hwLockTimer = null;
@@ -1654,6 +1660,10 @@ function hwStrokeStyle(pressure) {
 
 function hwDrawSegment(from, mid, to) {
   if (!from || !to) return;
+  if (hwErasing) {
+    eraseAlong(from, to);
+    return;
+  }
   hwStrokeStyle(to.pressure);
   hwCtx.beginPath();
   if (mid) {
@@ -1747,14 +1757,62 @@ function undoHwStroke() {
   toast('已撤銷上一筆', 'ok');
 }
 
+function setHwEraser(on) {
+  hwErasing = !!on;
+  var btn = document.getElementById('btn-hw-eraser');
+  if (btn) {
+    btn.classList.toggle('active', hwErasing);
+    btn.setAttribute('aria-pressed', hwErasing ? 'true' : 'false');
+  }
+  var cursor = hwErasing ? 'cell' : 'crosshair';
+  hwPads.forEach(function (p) {
+    if (p.canvas) p.canvas.style.cursor = cursor;
+  });
+}
 function setHwPenColor(color) {
   if (!color) return;
   hwPenColor = color;
+  setHwEraser(false);
   document.querySelectorAll('.hw-pen-btn').forEach(function (b) {
     var on = b.getAttribute('data-color') === color;
     b.classList.toggle('active', on);
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
+}
+function eraseDab(x, y) {
+  if (!hwCtx) return;
+  var r = HW_ERASER_R;
+  var bands = hwCssH >= 520 ? 5 : 6;
+  var gap = Math.max(hwCssH >= 520 ? 72 : 40, Math.round(hwCssH / bands));
+  hwCtx.save();
+  hwCtx.setTransform(hwDpr, 0, 0, hwDpr, 0, 0);
+  hwCtx.beginPath();
+  hwCtx.arc(x, y, r, 0, Math.PI * 2);
+  hwCtx.clip();
+  hwCtx.fillStyle = '#fffcf7';
+  hwCtx.fillRect(x - r - 2, y - r - 2, r * 2 + 4, r * 2 + 4);
+  hwCtx.strokeStyle = '#f0e6d8';
+  hwCtx.lineWidth = 1;
+  var gy;
+  for (gy = gap; gy < hwCssH; gy += gap) {
+    if (gy < y - r || gy > y + r) continue;
+    hwCtx.beginPath();
+    hwCtx.moveTo(Math.max(0, x - r), gy);
+    hwCtx.lineTo(Math.min(hwCssW, x + r), gy);
+    hwCtx.stroke();
+  }
+  hwCtx.restore();
+}
+function eraseAlong(from, to) {
+  if (!from || !to) return;
+  var dx = to.x - from.x;
+  var dy = to.y - from.y;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  var step = Math.max(4, HW_ERASER_R * 0.45);
+  var n = Math.max(1, Math.ceil(dist / step));
+  var i;
+  for (i = 0; i <= n; i++) eraseDab(from.x + (dx * i) / n, from.y + (dy * i) / n);
+  hwDirty = true;
 }
 
 function unlockHwScroll() {
@@ -1896,7 +1954,7 @@ function makeHwPad(canvas, key) {
 function forwardStrokeTarget(el) {
   /* A pen lift must not activate tabs or 返回主目錄 / 返回選名 / 課堂編號. */
   if (!el || !el.closest) return null;
-  return el.closest('#btn-submit-answer, #btn-hw-undo, #btn-hw-clear, .hw-pen-btn');
+  return el.closest('#btn-submit-answer, #btn-hw-eraser, #btn-hw-clear, .hw-pen-btn');
 }
 function initHwCanvas() {
   var c1 = document.getElementById('hw-canvas');
@@ -1914,7 +1972,6 @@ function initHwCanvas() {
     if (e.cancelable) e.preventDefault();
     focusPad(padFromCanvas(e.currentTarget));
     if (!hwSizedOnce) sizeHwCanvas(true);
-    pushHwUndoSnapshot();
     hwDrawing = true;
     hwPointerId = (e.pointerId != null) ? e.pointerId : null;
     hwPending = null;
@@ -1927,10 +1984,14 @@ function initHwCanvas() {
     } catch (err) {}
     lockHwScroll(true);
     /* seed a tiny dot so taps register */
-    hwStrokeStyle(hwLast.pressure);
-    hwCtx.beginPath();
-    hwCtx.arc(hwLast.x, hwLast.y, Math.max(1.1, hwCtx.lineWidth * 0.35), 0, Math.PI * 2);
-    hwCtx.fill();
+    if (hwErasing) {
+      eraseDab(hwLast.x, hwLast.y);
+    } else {
+      hwStrokeStyle(hwLast.pressure);
+      hwCtx.beginPath();
+      hwCtx.arc(hwLast.x, hwLast.y, Math.max(1.1, hwCtx.lineWidth * 0.35), 0, Math.PI * 2);
+      hwCtx.fill();
+    }
     hwDirty = true;
   }
 
@@ -3572,7 +3633,7 @@ function wire() {
     openJoinScreen('play');
   };
   document.getElementById('btn-hw-clear').onclick = function () { clearHw(false); };
-  document.getElementById('btn-hw-undo').onclick = function () { undoHwStroke(); };
+  document.getElementById('btn-hw-eraser').onclick = function () { setHwEraser(!hwErasing); };
   document.querySelectorAll('.hw-pen-btn').forEach(function (b) {
     b.addEventListener('click', function () {
       setHwPenColor(b.getAttribute('data-color'));
