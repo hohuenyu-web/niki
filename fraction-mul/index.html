@@ -1318,8 +1318,10 @@ function openJoinScreen(origin) {
   if (back) back.textContent = joinOrigin === 'play' ? '返回練習' : '返回選名';
   showScreen('screen-join');
 }
-function returnToSiteHome() {
-  try { releaseHwPointer(); } catch (e) {}
+function returnToSiteHome(e) {
+  /* Programmatic clicks (a pen stroke forwarded onto a button) must not leave the class. */
+  if (e && e.isTrusted === false) return;
+  try { releaseHwPointer(); } catch (err) {}
   stopCloud();
   showScreen('screen-landing');
 }
@@ -1891,6 +1893,11 @@ function makeHwPad(canvas, key) {
     cssW: 900, cssH: 580, dpr: 1, sizedOnce: false, dirty: false
   };
 }
+function forwardStrokeTarget(el) {
+  /* A pen lift must not activate tabs or 返回主目錄 / 返回選名 / 課堂編號. */
+  if (!el || !el.closest) return null;
+  return el.closest('#btn-submit-answer, #btn-hw-undo, #btn-hw-clear, .hw-pen-btn');
+}
 function initHwCanvas() {
   var c1 = document.getElementById('hw-canvas');
   var c2 = document.getElementById('hw-canvas-2');
@@ -1956,7 +1963,7 @@ function initHwCanvas() {
     updateHwUndoBtn();
     if (outside && e) {
       var under = document.elementFromPoint(e.clientX, e.clientY);
-      var ctl = under && under.closest && under.closest('button, .tab');
+      var ctl = forwardStrokeTarget(under);
       if (ctl) setTimeout(function () { ctl.click(); }, 0);
     }
   }
@@ -1973,7 +1980,7 @@ function initHwCanvas() {
       var inside = e.clientX >= box.left && e.clientX <= box.right && e.clientY >= box.top && e.clientY <= box.bottom;
       if (inside) return;
       var under = document.elementFromPoint(e.clientX, e.clientY);
-      var ctl = under && under.closest && under.closest('button, .tab');
+      var ctl = forwardStrokeTarget(under);
       releaseHwPointer();
       if (ctl) {
         if (e.cancelable) e.preventDefault();
@@ -2343,6 +2350,36 @@ function teacherSnapshotPayload() {
   };
 }
 var snapshotReplyAt = 0;
+var syncReplayDepth = 0;
+var syncReplayQuestionId = null;
+function historyDedupeKey(payload) {
+  if (!payload || typeof payload !== 'object') return '';
+  var q = payload.question || {};
+  var entry = payload.entry || {};
+  return [
+    payload.type || '',
+    payload.ts || '',
+    payload.practice || entry.practice || '',
+    payload.rev || q.rev || '',
+    payload.roundId || q.id || entry.roundId || '',
+    payload.studentNo != null ? payload.studentNo : (entry.studentNo != null ? entry.studentNo : '')
+  ].join('|');
+}
+function beginSyncReplay() {
+  if (syncReplayDepth === 0) {
+    syncReplayQuestionId = currentQuestion && currentQuestion.id || null;
+  }
+  syncReplayDepth += 1;
+}
+function endSyncReplay() {
+  syncReplayDepth = Math.max(0, syncReplayDepth - 1);
+  if (syncReplayDepth) return;
+  if (role !== 'student' || soloPractice) return;
+  var active = document.querySelector('.screen.active');
+  if (!active || active.id !== 'screen-play') return;
+  var nowId = currentQuestion && currentQuestion.id || null;
+  if (nowId !== syncReplayQuestionId) renderStudentQuestion(true);
+}
 function teacherSendSnapshot(reason) {
   if (role !== 'teacher' || !isHost || !roomCode || !syncReady) return Promise.resolve(false);
   var now = Date.now();
@@ -2380,12 +2417,17 @@ async function pollRestHistory() {
     if (!r.ok) return;
     var data = await r.json();
     if (Array.isArray(data) && Array.isArray(data[0])) {
-      data[0].forEach(function (payload, i) {
-        var k = (data[1] || '') + ':' + i + ':' + (payload && payload.ts) + ':' + (payload && payload.type);
-        if (restSeenKeys[k]) return;
-        restSeenKeys[k] = true;
-        try { handleCloudMessage(payload); } catch (e) {}
-      });
+      beginSyncReplay();
+      try {
+        data[0].forEach(function (payload) {
+          var k = historyDedupeKey(payload);
+          if (!k || restSeenKeys[k]) return;
+          restSeenKeys[k] = true;
+          try { handleCloudMessage(payload); } catch (e) {}
+        });
+      } finally {
+        endSyncReplay();
+      }
       var rk = Object.keys(restSeenKeys);
       if (rk.length > 500) {
         rk.slice(0, rk.length - 350).forEach(function (x) { delete restSeenKeys[x]; });
@@ -2548,7 +2590,14 @@ function handleCloudMessage(msg) {
       if (role === 'teacher') renderTeacherMonitor();
       return;
     }
+    var nextId = msg.question && msg.question.id;
+    var curId = bucket(mode).question && bucket(mode).question.id;
+    if (rev && rev === (modeRev[mode] || 0) && curId && nextId && curId !== nextId) return;
     acceptRev(mode, rev);
+    if (syncReplayDepth > 0) {
+      if (msg.question) applyQuestionFor(mode, msg.question, msg.roundId, false);
+      return;
+    }
     var b = bucket(mode);
     b.submissions = {};
     b.mySubmittedRound = null;
@@ -2582,6 +2631,11 @@ function handleCloudMessage(msg) {
     return;
   }
   if (msg.type === 'wipe') {
+    /* A wipe stored in channel history must not clear students who already have a live question. */
+    if (syncReplayDepth > 0) return;
+    var wipeTs = Number(msg.ts) || 0;
+    var newest = Math.max(modeRev['1'] || 0, modeRev['2'] || 0);
+    if (newest && (!wipeTs || wipeTs < newest)) return;
     activePractice = activePractice || '1';
     resetAllPracticeMemory();
     wipeAllClassroomLocal();
@@ -2611,6 +2665,7 @@ function applySnapshotMessage(msg) {
     var mode = practiceOf(item.mode);
     var pack = item.pack || {};
     var rev = messageRev(pack, pack.question);
+    if (role === 'student' && !pack.question && bucket(mode).question) return;
     if (isStaleRev(mode, rev)) return;
     acceptRev(mode, rev);
     if (role === 'student') {
@@ -2895,7 +2950,7 @@ function applyQuestionFor(mode, q, rid, resetStudentUi) {
     roundId = b.roundId;
     submissionsMap = b.submissions;
     mySubmittedRound = b.mySubmittedRound;
-    if (role === 'student' && (resetStudentUi || changed)) renderStudentQuestion(true);
+    if (role === 'student' && syncReplayDepth === 0 && (resetStudentUi || changed)) renderStudentQuestion(true);
     if (role === 'teacher' && (resetStudentUi || changed)) renderTeacherQuestion();
   }
 }
@@ -3460,7 +3515,7 @@ function wire() {
     monitorFilter = null;
     document.getElementById('room-status').textContent = '連接雲端中…';
     await connectRoom(code, true);
-    publishCloud({ type: 'wipe' });
+    publishCloud({ type: 'wipe', ts: Date.now() }, { history: false });
     showScreen('screen-gallery');
     renderTeacherMonitor();
     toast('課堂 ' + code + ' 已就緒', 'ok');
@@ -3507,8 +3562,15 @@ function wire() {
     var q = genForPractice(activePractice);
     applyQuestionFor(activePractice, q, q.id, true);
   };
-  document.getElementById('btn-play-back').onclick = function () { stopCloud(); showScreen('screen-names'); };
-  document.getElementById('btn-play-join').onclick = function () { openJoinScreen('play'); };
+  document.getElementById('btn-play-back').onclick = function (e) {
+    if (e && e.isTrusted === false) return;
+    stopCloud();
+    showScreen('screen-names');
+  };
+  document.getElementById('btn-play-join').onclick = function (e) {
+    if (e && e.isTrusted === false) return;
+    openJoinScreen('play');
+  };
   document.getElementById('btn-hw-clear').onclick = function () { clearHw(false); };
   document.getElementById('btn-hw-undo').onclick = function () { undoHwStroke(); };
   document.querySelectorAll('.hw-pen-btn').forEach(function (b) {
@@ -3530,7 +3592,8 @@ function wire() {
     });
   });
   document.querySelectorAll('#student-tabs .tab').forEach(function (tab) {
-    tab.addEventListener('click', function () {
+    tab.addEventListener('click', function (e) {
+      if (e && e.isTrusted === false) return;
       if (tab.classList.contains('disabled')) return;
       var n = parseInt(tab.getAttribute('data-tab'), 10);
       if (window.__fracMulExplorer) window.__fracMulExplorer.setStudentTab(n);
