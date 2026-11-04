@@ -556,64 +556,11 @@ window.__pubnubLoadPromise = (function () {
     font-size: 0.85rem; font-weight: 600; padding: 4px 0 2px;
   }
 
-  #pane-tab2, #pane-teacher-tab2, .farm-pane {
+  #pane-tab2, #pane-teacher-tab2 {
     width: 100%; display: none; flex-direction: column; align-items: center;
   }
-  #pane-tab2.show, #pane-teacher-tab2.show, .farm-pane.show { display: flex; }
+  #pane-tab2.show, #pane-teacher-tab2.show { display: flex; }
 
-  .farm-card {
-    width: 100%; max-width: min(960px, 100%);
-    background: #fffef8; border: 2px solid #d5e4b4; border-radius: 18px;
-    box-shadow: var(--shadow); padding: 14px 14px 16px;
-    display: flex; flex-direction: column; gap: 10px;
-  }
-  .farm-title {
-    text-align: center; font-weight: 800; color: #2e7d32;
-    font-size: clamp(1.15rem, 3.2vw, 1.4rem);
-  }
-  .farm-body {
-    display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; align-items: flex-start;
-  }
-  .farm-canvas-wrap {
-    flex: 1 1 280px; max-width: 460px; width: 100%; aspect-ratio: 1 / 1;
-  }
-  #farm-canvas {
-    width: 100%; height: 100%; display: block; background: #fff; border-radius: 8px;
-    touch-action: none; -webkit-user-select: none; user-select: none;
-  }
-  .farm-side {
-    flex: 1 1 260px; max-width: 420px; min-width: 240px;
-    display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 4px;
-  }
-  .farm-eq {
-    display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
-    gap: 8px; font-weight: 800; font-size: clamp(1.25rem, 3.5vw, 1.6rem); color: #2e5a1c;
-  }
-  .farm-op { color: #7f8c8d; }
-  .farm-chip {
-    border: 2px solid #c5d6a8; background: #f7fbe9; border-radius: 12px;
-    padding: 4px 8px; cursor: pointer; font: inherit; font-weight: 800; color: #2e7d32;
-  }
-  .farm-chip.selected { border-color: #e67e22; box-shadow: 0 0 0 3px rgba(230,126,34,0.28); }
-  .farm-chip .frac { font-size: 0.95em; }
-  .farm-prompt {
-    background: #f3f8e6; color: #2e5a1c; border-radius: 16px;
-    padding: 10px 14px; font-weight: 700; text-align: center; line-height: 1.5; width: 100%;
-  }
-  .farm-how {
-    color: var(--muted); font-weight: 700; text-align: center; font-size: 0.92rem; min-height: 1.3em;
-    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px;
-  }
-  .farm-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%; }
-  .farm-actions .btn { min-width: 120px; }
-  .farm-legend {
-    display: flex; flex-wrap: wrap; gap: 10px 14px; justify-content: center;
-    font-size: 0.85rem; font-weight: 700; color: var(--text);
-  }
-  .farm-legend i {
-    display: inline-block; width: 16px; height: 16px; border-radius: 4px;
-    border: 1px solid rgba(0,0,0,0.15); margin-right: 4px; vertical-align: -2px;
-  }
   #pane-teacher-tab1 { width: 100%; display: flex; flex-direction: column; align-items: center; }
   #pane-teacher-tab1.hide { display: none; }
   #pane-tab1.hide { display: none !important; }
@@ -717,7 +664,6 @@ window.__pubnubLoadPromise = (function () {
     <button type="button" class="tab active" data-tab="1">分數乘法一</button>
     <button type="button" class="tab" data-tab="2">分數乘法二</button>
     <button type="button" class="tab" data-tab="3">分數乘法二教學</button>
-    <button type="button" class="tab" data-tab="4">分數乘法二農田</button>
   </div>
   <div class="sync-bar" id="student-sync-bar"></div>
   <div class="student-badge" id="student-badge"></div>
@@ -791,9 +737,6 @@ window.__pubnubLoadPromise = (function () {
   <div id="pane-tab2">
     <div id="explorer-host-student" class="exp-host" style="width:100%;display:flex;justify-content:center;"></div>
   </div>
-  <div id="pane-tab-farm" class="farm-pane">
-    <div id="farm-host-student" class="farm-host" style="width:100%;display:flex;justify-content:center;"></div>
-  </div>
 
   <div class="btn-row" style="margin-top:16px;">
     <button class="btn btn-ghost" id="btn-play-join">課堂編號</button>
@@ -815,7 +758,6 @@ window.__pubnubLoadPromise = (function () {
     <button type="button" class="tab active" data-tab="1">分數乘法一</button>
     <button type="button" class="tab" data-tab="2">分數乘法二</button>
     <button type="button" class="tab" data-tab="3">分數乘法二教學</button>
-    <button type="button" class="tab" data-tab="4">分數乘法二農田</button>
   </div>
   <div class="sync-bar">
     <div class="sync-pill" id="teacher-room-pill">課堂：----</div>
@@ -891,9 +833,6 @@ window.__pubnubLoadPromise = (function () {
   <div id="pane-teacher-tab2">
     <div id="explorer-host-teacher" class="exp-host" style="width:100%;max-width:960px;display:flex;justify-content:center;"></div>
   </div>
-  <div id="pane-teacher-tab-farm" class="farm-pane">
-    <div id="farm-host-teacher" class="farm-host" style="width:100%;max-width:960px;display:flex;justify-content:center;"></div>
-  </div>
 </div>
 
 
@@ -932,63 +871,6 @@ window.__pubnubLoadPromise = (function () {
 <div class="exp-keypad-backdrop" id="exp-keypad-backdrop" aria-hidden="true">
   <div class="exp-keypad" id="exp-keypad" role="dialog" aria-label="數字鍵盤">
     <div class="exp-keypad-hint" id="exp-keypad-hint">請選擇數字</div>
-    <button type="button" data-dig="1">1</button>
-    <button type="button" data-dig="2">2</button>
-    <button type="button" data-dig="3">3</button>
-    <button type="button" data-dig="4">4</button>
-    <button type="button" data-dig="5">5</button>
-    <button type="button" data-dig="6">6</button>
-    <button type="button" data-dig="7">7</button>
-    <button type="button" data-dig="8">8</button>
-    <button type="button" data-dig="9">9</button>
-    <button type="button" class="zero" data-dig="0">0</button>
-  </div>
-</div>
-
-<div id="farm-shared" class="farm-card" style="display:none;" hidden>
-  <div class="farm-title">正方形農地 · 種稻</div>
-  <div class="farm-body">
-    <div class="farm-canvas-wrap">
-      <canvas id="farm-canvas" width="520" height="520" aria-label="正方形農地面積模型"></canvas>
-    </div>
-    <div class="farm-side">
-      <div class="farm-eq exp-eq" id="farm-eq" aria-label="種稻算式">
-        <div class="exp-chip blue empty" data-chip="blue" id="farm-chip-blue">
-          <span class="exp-num"><span class="digit-hit" data-field="bn">?</span></span>
-          <span class="exp-den"><span class="digit-hit" data-field="bd">?</span></span>
-        </div>
-        <span class="exp-op" aria-hidden="true">×</span>
-        <div class="exp-chip red empty" data-chip="red" id="farm-chip-red">
-          <span class="exp-num"><span class="digit-hit" data-field="rn">?</span></span>
-          <span class="exp-den"><span class="digit-hit" data-field="rd">?</span></span>
-        </div>
-        <span class="exp-op" aria-hidden="true">=</span>
-        <div class="exp-chip purple empty" data-chip="purple" id="farm-chip-purple">
-          <span class="exp-num"><span class="digit-hit" data-field="pn">?</span></span>
-          <span class="exp-den"><span class="digit-hit" data-field="pd">?</span></span>
-        </div>
-      </div>
-      <div class="farm-prompt" id="farm-prompt">第一步：先填寫左側分母，把這塊正方形農地直向分開。</div>
-      <div class="farm-how" id="farm-how"></div>
-      <div class="farm-actions">
-        <button type="button" class="btn btn-ghost" id="farm-restart">重新開始</button>
-      </div>
-      <div class="farm-actions">
-        <button type="button" class="btn btn-accent" id="farm-ex-main">例一：種稻</button>
-        <button type="button" class="btn btn-accent" id="farm-ex-adv">例二：進階</button>
-      </div>
-    </div>
-  </div>
-  <div class="farm-legend">
-    <span>直向斜線：先取的部分</span>
-    <span>橫向斜線：種稻的部分</span>
-    <span>交叉斜線：種稻面積</span>
-  </div>
-</div>
-
-<div class="exp-keypad-backdrop" id="farm-keypad-backdrop" aria-hidden="true">
-  <div class="exp-keypad" id="farm-keypad" role="dialog" aria-label="數字鍵盤">
-    <div class="exp-keypad-hint" id="farm-keypad-hint">請選擇數字</div>
     <button type="button" data-dig="1">1</button>
     <button type="button" data-dig="2">2</button>
     <button type="button" data-dig="3">3</button>
@@ -4179,14 +4061,7 @@ window.__fracMulPractice = {
   }
 
   // ---- Tab switching ----
-  // 1 分數乘法一  2 分數乘法二  3 分數乘法二教學  4 分數乘法二農田
-  function hideFarmPane() {
-    ['pane-tab-farm', 'pane-teacher-tab-farm'].forEach(function (id) {
-      var el = $(id);
-      if (el) el.classList.remove('show');
-    });
-    if (window.__fracMulFarm) window.__fracMulFarm.hide();
-  }
+  // 1 分數乘法一  2 分數乘法二  3 分數乘法二教學
   function showPracticePane(p1, pExp) {
     if (p1) {
       p1.classList.remove('hide');
@@ -4208,7 +4083,6 @@ window.__fracMulPractice = {
     });
     var p1 = $('pane-tab1');
     var p2 = $('pane-tab2');
-    hideFarmPane();
     if (n === 1 || n === 2) {
       showPracticePane(p1, p2);
       if (window.__fracMulPractice) window.__fracMulPractice.activate(String(n));
@@ -4219,16 +4093,6 @@ window.__fracMulPractice = {
       requestAnimationFrame(function () {
         mountExplorerInto($('explorer-host-student'));
       });
-    } else if (n === 4) {
-      if (window.__fracMulPractice) window.__fracMulPractice.stash();
-      if (p1) { p1.style.display = 'none'; p1.classList.add('hide'); }
-      if (p2) p2.classList.remove('show');
-      hideExplorer();
-      var pf = $('pane-tab-farm');
-      if (pf) pf.classList.add('show');
-      requestAnimationFrame(function () {
-        if (window.__fracMulFarm) window.__fracMulFarm.mount($('farm-host-student'));
-      });
     }
   }
 
@@ -4238,7 +4102,6 @@ window.__fracMulPractice = {
     });
     var p1 = $('pane-teacher-tab1');
     var p2 = $('pane-teacher-tab2');
-    hideFarmPane();
     if (n === 1 || n === 2) {
       showPracticePane(p1, p2);
       if (window.__fracMulPractice) window.__fracMulPractice.activate(String(n));
@@ -4247,15 +4110,6 @@ window.__fracMulPractice = {
       if (p2) p2.classList.add('show');
       requestAnimationFrame(function () {
         mountExplorerInto($('explorer-host-teacher'));
-      });
-    } else if (n === 4) {
-      if (p1) p1.classList.add('hide');
-      if (p2) p2.classList.remove('show');
-      hideExplorer();
-      var pf = $('pane-teacher-tab-farm');
-      if (pf) pf.classList.add('show');
-      requestAnimationFrame(function () {
-        if (window.__fracMulFarm) window.__fracMulFarm.mount($('farm-host-teacher'));
       });
     }
   }
@@ -4267,417 +4121,6 @@ window.__fracMulPractice = {
     mountStudent: function () { mountExplorerInto($('explorer-host-student')); },
     mountTeacher: function () { mountExplorerInto($('explorer-host-teacher')); }
   };
-})();
-
-/* ===== 分數乘法二農田：正方形農地，填數與斜線陰影（不經出題同步） ===== */
-(function () {
-  var EXAMPLES = {
-    main: { n1: 1, d1: 2, n2: 1, d2: 3 },
-    adv: { n1: 2, d1: 3, n2: 3, d2: 5 }
-  };
-  var PROMPTS = {
-    1: '第一步：先填寫左側分母，把這塊正方形農地直向分開。',
-    2: '第二步：再填寫左側分子，用斜線標出先取的部分。',
-    3: '第三步：再填寫右側分母，把農地橫向分開。',
-    4: '第四步：再填寫右側分子，用斜線標出種稻的部分。'
-  };
-  var FIELD_HINT = {
-    bd: '填寫左側分母',
-    bn: '填寫左側分子',
-    rd: '填寫右側分母',
-    rn: '填寫右側分子'
-  };
-  var HATCH_NEUTRAL = '#2c3e50';
-  var state = {
-    bn: null, bd: null, rn: null, rd: null,
-    highlight: null,
-    editing: null,
-    fillStep: 1,
-    lastTap: { field: null, t: 0 }
-  };
-  var canvas, ctx, wired = false;
-
-  function $(id) { return document.getElementById(id); }
-  function product() {
-    if (state.bn == null || state.bd == null || state.rn == null || state.rd == null) return null;
-    return { n: state.bn * state.rn, d: state.bd * state.rd };
-  }
-  function isComplete() {
-    return state.bn != null && state.bd != null && state.rn != null && state.rd != null;
-  }
-  function recomputeStep() {
-    if (state.bd == null) state.fillStep = 1;
-    else if (state.bn == null) state.fillStep = 2;
-    else if (state.rd == null) state.fillStep = 3;
-    else if (state.rn == null) state.fillStep = 4;
-    else state.fillStep = 5;
-  }
-  function fieldForStep(step) {
-    return { 1: 'bd', 2: 'bn', 3: 'rd', 4: 'rn' }[step];
-  }
-
-  function mount(host) {
-    var shared = $('farm-shared');
-    if (!shared || !host) return;
-    if (shared.parentElement !== host) host.appendChild(shared);
-    shared.hidden = false;
-    shared.style.display = 'flex';
-    if (!wired) { wire(); wired = true; }
-    render();
-  }
-  function hide() {
-    closeKeypad();
-    var shared = $('farm-shared');
-    if (!shared) return;
-    shared.hidden = true;
-    shared.style.display = 'none';
-  }
-
-  function setDigitText(field, val) {
-    var el = document.querySelector('#farm-eq .digit-hit[data-field="' + field + '"]');
-    if (!el) return;
-    el.textContent = (val == null) ? '?' : String(val);
-  }
-  function updateChips() {
-    setDigitText('bn', state.bn);
-    setDigitText('bd', state.bd);
-    setDigitText('rn', state.rn);
-    setDigitText('rd', state.rd);
-    var p = product();
-    setDigitText('pn', p ? p.n : null);
-    setDigitText('pd', p ? p.d : null);
-    var blue = $('farm-chip-blue');
-    var red = $('farm-chip-red');
-    var purple = $('farm-chip-purple');
-    function syncChip(el, hasAny, colorClass) {
-      el.classList.remove('empty', 'selected', 'blue', 'red', 'purple');
-      el.classList.add(colorClass);
-      if (!hasAny) el.classList.add('empty');
-    }
-    syncChip(blue, state.bn != null || state.bd != null, 'blue');
-    syncChip(red, state.rn != null || state.rd != null, 'red');
-    syncChip(purple, !!p, 'purple');
-    var map = { bn: blue, bd: blue, rn: red, rd: red, pn: purple, pd: purple };
-    if (state.highlight && map[state.highlight]) map[state.highlight].classList.add('selected');
-    recomputeStep();
-    var expectField = null;
-    if (state.fillStep >= 1 && state.fillStep <= 4) expectField = fieldForStep(state.fillStep);
-    document.querySelectorAll('#farm-eq .digit-hit').forEach(function (d) {
-      var f = d.getAttribute('data-field');
-      d.classList.toggle('editing', state.editing === f);
-      d.classList.toggle('expect', expectField === f && state.editing == null);
-    });
-    blue.classList.toggle('editing-digit', state.editing === 'bn' || state.editing === 'bd');
-    red.classList.toggle('editing-digit', state.editing === 'rn' || state.editing === 'rd');
-    if (expectField && !state.highlight) {
-      if (expectField === 'bn' || expectField === 'bd') blue.classList.add('selected');
-      if (expectField === 'rn' || expectField === 'rd') red.classList.add('selected');
-    }
-    var prompt = $('farm-prompt');
-    var how = $('farm-how');
-    if (state.fillStep === 5 && p) {
-      prompt.textContent = '種稻面積佔成塊農地幾分之幾？怎樣列式？';
-      var r = reduce(p.n, p.d);
-      var html = fracHtml(state.bn, state.bd) + ' × ' + fracHtml(state.rn, state.rd) +
-        ' = ' + fracHtml(p.n, p.d) + '　分子相乘，分母相乘。';
-      if (r.n !== p.n || r.d !== p.d) html += '約簡後是 ' + fracHtml(r.n, r.d) + '。';
-      how.innerHTML = html;
-    } else {
-      prompt.textContent = PROMPTS[state.fillStep] || '';
-      how.innerHTML = '';
-    }
-  }
-
-  function resize() {
-    if (!canvas) canvas = $('farm-canvas');
-    if (!canvas) return;
-    if (!ctx) ctx = canvas.getContext('2d');
-    var wrap = canvas.parentElement;
-    var size = Math.floor(Math.min(wrap.clientWidth || 420, wrap.clientHeight || 420, 460));
-    if (size < 180) size = 280;
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(size * dpr);
-    canvas.height = Math.round(size * dpr);
-    canvas.style.width = size + 'px';
-    canvas.style.height = size + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    draw(size);
-  }
-
-  function hatch(x, y, w, h, color, dir, gap, lineWidth) {
-    gap = gap || 8;
-    if (!(w > 0) || !(h > 0) || !(gap > 0)) return;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    ctx.clip();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth || 1.6;
-    ctx.beginPath();
-    var span = w + h;
-    var rem = span % gap;
-    if (rem < 0) rem += gap;
-    if (gap - rem < 0.05) rem = 0;
-    var margin = rem / 2;
-    var i;
-    var start = -h + margin;
-    var end = w - margin;
-    if (dir < 0) {
-      for (i = start; i <= end + 0.01; i += gap) {
-        ctx.moveTo(x + i, y);
-        ctx.lineTo(x + i + h, y + h);
-      }
-    } else {
-      for (i = start; i <= end + 0.01; i += gap) {
-        ctx.moveTo(x + i, y + h);
-        ctx.lineTo(x + i + h, y);
-      }
-    }
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  function strokePartitionLines(x0, y0, W, H) {
-    var bd = state.bd, rd = state.rd;
-    ctx.save();
-    ctx.setLineDash([6, 5]);
-    ctx.lineWidth = 1.8;
-    var i;
-    if (bd && bd > 1) {
-      ctx.strokeStyle = '#5dade2';
-      for (i = 1; i < bd; i++) {
-        var lx = x0 + (W / bd) * i;
-        ctx.beginPath();
-        ctx.moveTo(lx, y0);
-        ctx.lineTo(lx, y0 + H);
-        ctx.stroke();
-      }
-    }
-    if (rd && rd > 1) {
-      ctx.strokeStyle = '#e74c3c';
-      for (i = 1; i < rd; i++) {
-        var ly = y0 + (H / rd) * i;
-        ctx.beginPath();
-        ctx.moveTo(x0, ly);
-        ctx.lineTo(x0 + W, ly);
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
-  }
-
-  function applyHighlight(x0, y0, W, H) {
-    var hl = state.highlight;
-    if (!hl || !isComplete()) return;
-    var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
-    if (!bd || !rd) return;
-    var cw = W / bd, rh = H / rd;
-    var rx = x0, ry = y0, rw = W, rhR = H;
-    var denserDir = 0;
-    if (hl === 'bn') {
-      rw = cw * Math.min(bn, bd);
-      denserDir = -1;
-    } else if (hl === 'rn') {
-      rhR = rh * Math.min(rn, rd);
-      denserDir = 1;
-    } else if (hl === 'pn') {
-      rw = cw * Math.min(bn, bd);
-      rhR = rh * Math.min(rn, rd);
-      denserDir = 0;
-    } else if (hl === 'bd' || hl === 'rd' || hl === 'pd') {
-      denserDir = 0;
-    } else {
-      return;
-    }
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(rx, ry, rw, rhR);
-    if (denserDir === 0) {
-      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, -1, 22, 2.0);
-      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, 1, 22, 2.0);
-    } else {
-      hatch(rx, ry, rw, rhR, HATCH_NEUTRAL, denserDir, 22, 2.0);
-    }
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(rx, ry, rw, rhR);
-    ctx.clip();
-    strokePartitionLines(x0, y0, W, H);
-    ctx.restore();
-    ctx.strokeStyle = HATCH_NEUTRAL;
-    ctx.lineWidth = 3.5;
-    ctx.setLineDash([]);
-    ctx.strokeRect(rx + 1.5, ry + 1.5, rw - 3, rhR - 3);
-  }
-
-  function draw(S) {
-    if (!ctx) return;
-    var pad = 18;
-    var x0 = pad, y0 = pad, W = S - pad * 2, H = S - pad * 2;
-    ctx.clearRect(0, 0, S, S);
-
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = '#2c3e50';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(x0, y0, W, H);
-    ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
-
-    var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
-    var bw = (bd && bn != null && bn > 0) ? (W / bd) * Math.min(bn, bd) : 0;
-    var rh2 = (rd && rn != null && rn > 0) ? (H / rd) * Math.min(rn, rd) : 0;
-    var hasOverlap = bw > 0 && rh2 > 0;
-    if (bw > 0) {
-      var by = y0 + (hasOverlap ? rh2 : 0);
-      var bh = H - (hasOverlap ? rh2 : 0);
-      hatch(x0, by, bw, bh, HATCH_NEUTRAL, -1, 36);
-    }
-    if (rh2 > 0) {
-      var rx = x0 + (hasOverlap ? bw : 0);
-      var rw = W - (hasOverlap ? bw : 0);
-      hatch(rx, y0, rw, rh2, HATCH_NEUTRAL, 1, 36);
-    }
-    if (hasOverlap) {
-      hatch(x0, y0, bw, rh2, HATCH_NEUTRAL, -1, 28);
-      hatch(x0, y0, bw, rh2, HATCH_NEUTRAL, 1, 28);
-    }
-    strokePartitionLines(x0, y0, W, H);
-    applyHighlight(x0, y0, W, H);
-
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = '#2c3e50';
-    ctx.setLineDash([]);
-    ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
-    ctx.strokeStyle = '#6d4c41';
-    ctx.lineWidth = 6;
-    ctx.strokeRect(x0 - 5, y0 - 5, W + 10, H + 10);
-  }
-
-  function render() {
-    updateChips();
-    resize();
-  }
-  function openKeypad(field) {
-    if (field === 'pn' || field === 'pd') return;
-    state.highlight = null;
-    state.editing = field;
-    var bd = $('farm-keypad-backdrop');
-    var hint = $('farm-keypad-hint');
-    if (hint) hint.textContent = FIELD_HINT[field] || '請選擇數字';
-    if (bd) {
-      bd.classList.add('show');
-      bd.setAttribute('aria-hidden', 'false');
-    }
-    updateChips();
-  }
-  function closeKeypad() {
-    state.editing = null;
-    var bd = $('farm-keypad-backdrop');
-    if (!bd) return;
-    bd.classList.remove('show');
-    bd.setAttribute('aria-hidden', 'true');
-  }
-  function applyDigit(n) {
-    var f = state.editing;
-    if (!f) return;
-    if ((f === 'bd' || f === 'rd') && n === 0) {
-      if (typeof toast === 'function') toast('分母不能為 0', 'bad');
-      return;
-    }
-    state[f] = n;
-    recomputeStep();
-    closeKeypad();
-    render();
-  }
-  function resetFarm() {
-    state.bn = state.bd = state.rn = state.rd = null;
-    state.highlight = null;
-    state.editing = null;
-    state.fillStep = 1;
-    closeKeypad();
-    render();
-  }
-  function loadExample(key) {
-    var ex = EXAMPLES[key];
-    if (!ex) return;
-    state.bd = ex.d1;
-    state.bn = ex.n1;
-    state.rd = ex.d2;
-    state.rn = ex.n2;
-    state.highlight = null;
-    state.editing = null;
-    recomputeStep();
-    closeKeypad();
-    render();
-  }
-  function onDigitPointer(field, isDouble) {
-    if (field === 'pn' || field === 'pd') {
-      if (isComplete()) {
-        state.highlight = (state.highlight === field) ? null : field;
-        render();
-      }
-      return;
-    }
-    if (!isComplete()) {
-      var expected = fieldForStep(state.fillStep);
-      if (state[field] != null || field === expected) openKeypad(field);
-      else if (expected) openKeypad(expected);
-      return;
-    }
-    if (isDouble || state.highlight === field) {
-      openKeypad(field);
-      return;
-    }
-    state.highlight = field;
-    render();
-  }
-  function handleDigitEvent(field) {
-    var now = Date.now();
-    var isDouble = (state.lastTap.field === field && (now - state.lastTap.t) < 350);
-    state.lastTap = { field: field, t: now };
-    onDigitPointer(field, isDouble);
-  }
-  function wire() {
-    canvas = $('farm-canvas');
-    ctx = canvas.getContext('2d');
-    document.querySelectorAll('#farm-eq .digit-hit').forEach(function (el) {
-      el.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleDigitEvent(el.getAttribute('data-field'));
-      });
-    });
-    ['farm-chip-blue', 'farm-chip-red', 'farm-chip-purple'].forEach(function (id) {
-      var chip = $(id);
-      if (!chip) return;
-      chip.addEventListener('click', function (e) {
-        if (e.target.classList.contains('digit-hit')) return;
-        if (!isComplete()) {
-          var expected = fieldForStep(state.fillStep);
-          if (expected) openKeypad(expected);
-          return;
-        }
-        var def = { blue: 'bn', red: 'rn', purple: 'pn' }[chip.getAttribute('data-chip')];
-        state.highlight = def;
-        render();
-      });
-    });
-    $('farm-restart').onclick = resetFarm;
-    $('farm-ex-main').onclick = function () { loadExample('main'); };
-    $('farm-ex-adv').onclick = function () { loadExample('adv'); };
-    $('farm-keypad').addEventListener('click', function (e) {
-      var btn = e.target.closest('button[data-dig]');
-      if (!btn) return;
-      applyDigit(parseInt(btn.getAttribute('data-dig'), 10));
-    });
-    $('farm-keypad-backdrop').addEventListener('click', function (e) {
-      if (e.target === $('farm-keypad-backdrop')) closeKeypad();
-    });
-    window.addEventListener('resize', function () {
-      var shared = $('farm-shared');
-      if (shared && !shared.hidden) resize();
-    });
-  }
-
-  window.__fracMulFarm = { mount: mount, hide: hide, loadExample: loadExample };
 })();
 
 wire();
