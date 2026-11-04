@@ -164,12 +164,15 @@ window.__pubnubLoadPromise = (function () {
   .hw-boards, .hw-board { display: block; width: 100%; min-width: 0; box-sizing: border-box; }
   .hw-board { position: relative; }
   .hw-eraser-ring {
-    position: absolute; width: 36px; height: 36px; border-radius: 50%;
-    border: 3px solid #e67e22; background: rgba(230, 126, 34, 0.16);
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95);
-    transform: translate(-50%, -50%); pointer-events: none; display: none; z-index: 3;
+    position: absolute; width: 64px; height: 64px; border-radius: 50%;
+    border: 4px solid #e67e22; background: rgba(230, 126, 34, 0.22);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95);
+    transform: translate(-50%, -50%) translateZ(0);
+    -webkit-transform: translate(-50%, -50%) translateZ(0);
+    pointer-events: none; z-index: 20;
+    visibility: hidden; opacity: 0;
   }
-  .hw-eraser-ring.show { display: block; }
+  .hw-eraser-ring.show { visibility: visible; opacity: 1; }
   .hw-boards.two {
     display: grid; grid-template-columns: 1fr; gap: 10px;
   }
@@ -1615,7 +1618,7 @@ var hwSizedOnce = false;
 var hwSizing = false; /* guard: sizeHwCanvas must not recurse via clearHw */
 var hwPenColor = '#1a1a1a';
 var hwErasing = false;
-var HW_ERASER_R = 18;
+var HW_ERASER_R = 32;
 var hwUndoStack = []; /* { key, data } snapshots before each stroke */
 var HW_UNDO_MAX = 40;
 var hwLockTimer = null;
@@ -1834,6 +1837,12 @@ function hideEraserRings() {
     el.classList.remove('show');
   });
 }
+function eraserClientPoint(e) {
+  var t = (e && e.touches && e.touches[0]) || (e && e.changedTouches && e.changedTouches[0]) || null;
+  if (t && t.clientX != null) return { x: t.clientX, y: t.clientY };
+  if (e && e.clientX != null && e.clientY != null) return { x: e.clientX, y: e.clientY };
+  return null;
+}
 function placeEraserRing(canvas, clientX, clientY) {
   document.querySelectorAll('.hw-eraser-ring').forEach(function (el) {
     el.classList.remove('show');
@@ -1850,12 +1859,31 @@ function placeEraserRing(canvas, clientX, clientY) {
   }
   var cssW = (pad && pad.cssW) || board.width || 1;
   var scale = board.width / cssW;
-  var d = HW_ERASER_R * 2 * (scale > 0 ? scale : 1);
+  var d = Math.max(64, HW_ERASER_R * 2 * (scale > 0 ? scale : 1));
   ring.style.width = d + 'px';
   ring.style.height = d + 'px';
   ring.style.left = (clientX - frame.left) + 'px';
   ring.style.top = (clientY - frame.top) + 'px';
   ring.classList.add('show');
+}
+function placeEraserRingAtCanvasPoint(canvas, x, y) {
+  if (!canvas) return;
+  var r = canvas.getBoundingClientRect();
+  if (!(r.width > 0) || !(r.height > 0)) return;
+  var pad = null;
+  var i;
+  for (i = 0; i < hwPads.length; i++) {
+    if (hwPads[i] && hwPads[i].canvas === canvas) pad = hwPads[i];
+  }
+  var cssW = (pad && pad.cssW) || r.width;
+  var cssH = (pad && pad.cssH) || r.height;
+  placeEraserRing(canvas, r.left + (x / cssW) * r.width, r.top + (y / cssH) * r.height);
+}
+function trackEraserEvent(e, canvas) {
+  if (!hwErasing) return;
+  var p = eraserClientPoint(e);
+  var target = canvas || (e && e.currentTarget) || hwCanvas;
+  if (p) placeEraserRing(target, p.x, p.y);
 }
 function showEraserRingCentered(canvas) {
   if (!canvas) return;
@@ -2079,7 +2107,8 @@ function initHwCanvas() {
       }
     } catch (err) {}
     lockHwScroll(true);
-    if (hwErasing && e.clientX != null) placeEraserRing(hwCanvas, e.clientX, e.clientY);
+    trackEraserEvent(e, hwCanvas);
+    if (hwErasing && hwLast) placeEraserRingAtCanvasPoint(hwCanvas, hwLast.x, hwLast.y);
     /* seed a tiny dot so taps register */
     if (hwErasing) {
       eraseDab(hwLast.x, hwLast.y);
@@ -2093,11 +2122,14 @@ function initHwCanvas() {
   }
 
   function move(e) {
-    if (hwErasing && e.clientX != null) placeEraserRing(e.currentTarget || hwCanvas, e.clientX, e.clientY);
-    if (!hwDrawing) return;
+    if (!hwDrawing) {
+      trackEraserEvent(e, e.currentTarget || hwCanvas);
+      return;
+    }
     if (hwPointerId != null && e.pointerId != null && e.pointerId !== hwPointerId) return;
     if (e.cancelable) e.preventDefault();
     hwPending = hwPointFromEvent(e);
+    if (hwErasing && hwPending) placeEraserRingAtCanvasPoint(e.currentTarget || hwCanvas, hwPending.x, hwPending.y);
     if (!hwRaf) hwRaf = requestAnimationFrame(hwFlushPending);
   }
 
@@ -2165,18 +2197,25 @@ function initHwCanvas() {
       });
       canvas.addEventListener('touchstart', function (e) {
         if (e.cancelable) e.preventDefault();
+        trackEraserEvent(e, canvas);
       }, { passive: false });
       canvas.addEventListener('touchmove', function (e) {
         if (e.cancelable) e.preventDefault();
+        trackEraserEvent(e, canvas);
       }, { passive: false });
+      canvas.addEventListener('touchend', function (e) {
+        trackEraserEvent(e, canvas);
+      }, { passive: true });
     } else {
       canvas.addEventListener('mousedown', start);
       canvas.addEventListener('touchstart', function (e) {
         if (e.cancelable) e.preventDefault();
+        trackEraserEvent(e, canvas);
         start(e);
       }, { passive: false });
       canvas.addEventListener('touchmove', function (e) {
         if (e.cancelable) e.preventDefault();
+        trackEraserEvent(e, canvas);
         move(e);
       }, { passive: false });
       canvas.addEventListener('touchend', function (e) {
