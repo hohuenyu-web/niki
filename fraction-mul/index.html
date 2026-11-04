@@ -156,11 +156,12 @@ window.__pubnubLoadPromise = (function () {
   .hw-wrap {
     width: 100%; max-width: min(900px, 100%); background: #fff; border: 2px solid var(--border);
     border-radius: 14px; padding: 8px; margin-top: 4px;
+    align-self: stretch; min-width: 0; box-sizing: border-box;
     overscroll-behavior: none;
     -webkit-user-select: none; user-select: none;
   }
   .hw-label { font-size: 0.9rem; color: var(--muted); margin: 2px 6px 6px; font-weight: 600; }
-  .hw-boards { display: block; width: 100%; }
+  .hw-boards, .hw-board { display: block; width: 100%; min-width: 0; box-sizing: border-box; }
   .hw-boards.two {
     display: grid; grid-template-columns: 1fr; gap: 10px;
   }
@@ -178,9 +179,9 @@ window.__pubnubLoadPromise = (function () {
     margin: 0 2px 4px; font-size: 1rem;
   }
   .hw-board canvas {
-    /* Tall writing pad: more room for 約簡 steps; capped for iPad landscape */
+    /* Tall writing pad: more room for 約簡 steps; wider on iPad below */
     width: 100%; height: clamp(320px, 58vh, 580px); display: block;
-    max-width: 100%;
+    max-width: 100%; min-width: 0;
     background: #fffcf7; border-radius: 10px; cursor: crosshair;
     border: 1px dashed #e8d5c0;
     touch-action: none;
@@ -190,6 +191,12 @@ window.__pubnubLoadPromise = (function () {
     pointer-events: auto;
   }
   .hw-boards.two .hw-board canvas { height: clamp(200px, 38vh, 400px); }
+  /* iPad / tablet: the ruled writing area should use the screen, not a narrow column */
+  @media (min-width: 768px) {
+    .hw-wrap { max-width: min(1240px, 100%); }
+    .hw-board canvas { height: clamp(460px, 66vh, 740px); }
+    .hw-boards.two .hw-board canvas { height: clamp(280px, 48vh, 520px); }
+  }
   .hw-toolbar {
     display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
     gap: 8px; margin-top: 8px; max-width: 100%;
@@ -283,6 +290,30 @@ window.__pubnubLoadPromise = (function () {
   .answers-list {
     width: 100%; max-width: 960px;
     display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;
+  }
+  .archive-note {
+    width: 100%; max-width: 960px; color: var(--muted); font-size: 0.88rem;
+    font-weight: 600; line-height: 1.5; margin: 0 0 8px;
+  }
+  .archive-list {
+    width: 100%; max-width: 960px; max-height: 72vh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 12px; padding: 0 2px 16px;
+  }
+  .archive-empty {
+    background: #fff; border: 2px dashed var(--border); border-radius: 14px;
+    color: var(--muted); font-weight: 700; text-align: center; padding: 18px 12px;
+  }
+  .archive-round {
+    background: #fff; border: 2px solid var(--border); border-radius: 14px; padding: 12px;
+  }
+  .archive-round.current { border-color: #f0d9b5; background: #fffaf3; }
+  .archive-q { font-weight: 800; font-size: 1.05rem; margin-bottom: 4px; }
+  .archive-meta {
+    color: var(--muted); font-size: 0.85rem; font-weight: 700; margin-bottom: 8px;
+    display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center;
+  }
+  .archive-students {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;
   }
   .answer-row {
     background: #fff; border: 2px solid var(--border); border-radius: 14px;
@@ -793,6 +824,10 @@ window.__pubnubLoadPromise = (function () {
   <div class="monitor-stats" id="monitor-stats"></div>
   <div class="monitor-roster" id="monitor-roster" aria-live="polite"></div>
   <div class="answers-list" id="student-answers-list"></div>
+
+  <div class="gallery-section-title">課後跟進（較早題目與作答）</div>
+  <p class="archive-note" id="archive-note"></p>
+  <div class="archive-list" id="archive-list"></div>
   </div><!-- /pane-teacher-tab1 -->
 
   <div id="pane-teacher-tab2">
@@ -1651,7 +1686,8 @@ function paintHwBackground() {
   hwCtx.fillRect(0, 0, hwCssW, hwCssH);
   hwCtx.strokeStyle = '#f0e6d8';
   hwCtx.lineWidth = 1;
-  var step = Math.max(40, Math.round(hwCssH / 6));
+  var bands = hwCssH >= 520 ? 5 : 6;
+  var step = Math.max(hwCssH >= 520 ? 72 : 40, Math.round(hwCssH / bands));
   for (var y = step; y < hwCssH; y += step) {
     hwCtx.beginPath();
     hwCtx.moveTo(0, y);
@@ -1769,13 +1805,20 @@ function sizeHwCanvas(force) {
     var wrapStyle = window.getComputedStyle(wrap);
     if (wrapStyle.display === 'none' || wrapStyle.visibility === 'hidden') return;
   }
-  /* force: clear pinned px so CSS height:clamp(…vh) / wrap width can reflow */
+  /* force: clear pinned px so CSS height:clamp(…vh) can reflow.
+     Width is taken from the board, not the canvas: a pinned canvas width
+     would otherwise stay narrow after the iPad card grows. */
   if (force) {
     hwCanvas.style.width = '';
     hwCanvas.style.height = '';
   }
-  var rect = hwCanvas.getBoundingClientRect();
-  var cssW = rect.width;
+  var board = hwCanvas.parentElement;
+  var padX = 0;
+  if (board) {
+    var bs = window.getComputedStyle(board);
+    padX = (parseFloat(bs.paddingLeft) || 0) + (parseFloat(bs.paddingRight) || 0);
+  }
+  var cssW = board ? Math.max(0, board.clientWidth - padX) : 0;
   if (!cssW || cssW < 8) {
     if (!hwSizedOnce) {
       hwCanvas.width = 900;
@@ -1789,8 +1832,9 @@ function sizeHwCanvas(force) {
     }
     return;
   }
-  var cssH = rect.height;
-  if (!cssH || cssH < 8) cssH = Math.min(580, Math.max(320, cssW * 0.65));
+  hwCanvas.style.height = '';
+  var cssH = hwCanvas.getBoundingClientRect().height;
+  if (!cssH || cssH < 8) cssH = Math.min(740, Math.max(320, cssW * 0.62));
   var dpr = Math.min(window.devicePixelRatio || 1, 3);
   var need =
     force ||
@@ -2582,6 +2626,222 @@ function applySnapshotMessage(msg) {
   if (role === 'teacher') renderTeacherMonitor();
 }
 
+var ARCHIVE_KEY = 'hyt-fracmul-archive-v1';
+var ARCHIVE_MAX_ROUNDS = 24;
+var ARCHIVE_THUMB_MAX = 14000;
+
+function archiveDay(iso) {
+  var d = iso ? new Date(iso) : new Date();
+  if (isNaN(d.getTime())) d = new Date();
+  var m = d.getMonth() + 1;
+  var day = d.getDate();
+  return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+}
+function archiveClock(iso) {
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  var hh = d.getHours();
+  var mm = d.getMinutes();
+  return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+}
+function archiveDayLabel(day) {
+  var p = String(day || '').split('-');
+  if (p.length !== 3) return day || '';
+  return Number(p[0]) + '年' + Number(p[1]) + '月' + Number(p[2]) + '日';
+}
+function loadArchive() {
+  try {
+    var raw = localStorage.getItem(ARCHIVE_KEY);
+    if (!raw) return { rooms: {} };
+    var data = JSON.parse(raw);
+    if (!data || typeof data !== 'object' || !data.rooms) return { rooms: {} };
+    return data;
+  } catch (e) { return { rooms: {} }; }
+}
+function archiveRounds(data, code, mode) {
+  var room = data.rooms && data.rooms[code];
+  var list = [];
+  if (!room) return list;
+  Object.keys(room).forEach(function (day) {
+    var arr = room[day] && room[day][mode];
+    if (!arr) return;
+    arr.forEach(function (round) { list.push({ day: day, round: round }); });
+  });
+  list.sort(function (a, b) {
+    return String(b.round.at || '').localeCompare(String(a.round.at || ''));
+  });
+  return list;
+}
+function removeArchiveRound(data, code, day, mode, rid) {
+  var bag = data.rooms[code] && data.rooms[code][day];
+  if (!bag || !bag[mode]) return;
+  bag[mode] = bag[mode].filter(function (r) { return r.roundId !== rid; });
+}
+function shrinkArchive(data) {
+  var rooms = data.rooms || {};
+  var flat = [];
+  Object.keys(rooms).forEach(function (code) {
+    ['1', '2'].forEach(function (mode) {
+      archiveRounds(data, code, mode).forEach(function (item) { flat.push({ code: code, mode: mode, item: item }); });
+    });
+  });
+  flat.sort(function (a, b) {
+    return String(a.item.round.at || '').localeCompare(String(b.item.round.at || ''));
+  });
+  var i;
+  for (i = 0; i < flat.length; i++) {
+    var subs = flat[i].item.round.submissions || [];
+    var changed = false;
+    subs.forEach(function (s) {
+      if (s && s.handwriting) { s.handwriting = ''; changed = true; }
+    });
+    if (changed) return true;
+  }
+  if (flat.length) {
+    var oldest = flat[0];
+    removeArchiveRound(data, oldest.code, oldest.item.day, oldest.mode, oldest.item.round.roundId);
+    return true;
+  }
+  return false;
+}
+function saveArchive(data) {
+  var json;
+  try { json = JSON.stringify(data); } catch (e) { return false; }
+  var guard = 0;
+  while (json.length > 1500000 && guard < 40 && shrinkArchive(data)) {
+    guard += 1;
+    try { json = JSON.stringify(data); } catch (e2) { return false; }
+  }
+  try {
+    localStorage.setItem(ARCHIVE_KEY, json);
+    return true;
+  } catch (e3) {
+    if (shrinkArchive(data)) return saveArchive(data);
+    return false;
+  }
+}
+function recordTeacherArchive(entry) {
+  /* Separate from the live store. Full ink there filled localStorage and stuck the next submit. */
+  if (role !== 'teacher' || !roomCode || !entry || entry.studentNo == null) return;
+  var mode = practiceOf(entry.practice);
+  var rid = entry.roundId || entry.questionId;
+  if (!rid) return;
+  var data = loadArchive();
+  if (!data.rooms[roomCode]) data.rooms[roomCode] = {};
+  var day = archiveDay(entry.at);
+  if (!data.rooms[roomCode][day]) data.rooms[roomCode][day] = {};
+  if (!data.rooms[roomCode][day][mode]) data.rooms[roomCode][day][mode] = [];
+  var rounds = data.rooms[roomCode][day][mode];
+  var round = null;
+  var i;
+  for (i = 0; i < rounds.length; i++) {
+    if (rounds[i].roundId === rid) { round = rounds[i]; break; }
+  }
+  if (!round) {
+    round = { roundId: rid, at: entry.at || new Date().toISOString(), prompt: '', promptHtml: '', submissions: [] };
+    rounds.push(round);
+  }
+  if (entry.at && (!round.at || String(entry.at) < String(round.at))) round.at = entry.at;
+  if (entry.prompt) round.prompt = entry.prompt;
+  if (entry.promptHtml) round.promptHtml = entry.promptHtml;
+  var thumb = (entry.handwriting && String(entry.handwriting).length <= ARCHIVE_THUMB_MAX) ? entry.handwriting : '';
+  var sub = {
+    studentNo: Number(entry.studentNo),
+    studentName: entry.studentName || '',
+    guess: entry.guess || '',
+    correct: !!entry.correct,
+    at: entry.at || new Date().toISOString(),
+    twoMethods: !!entry.twoMethods,
+    hasHandwriting: !!(thumb || entry.hasHandwriting),
+    handwriting: thumb
+  };
+  var found = false;
+  for (i = 0; i < round.submissions.length; i++) {
+    if (round.submissions[i].studentNo === sub.studentNo) {
+      if (!sub.handwriting && round.submissions[i].handwriting) {
+        sub.handwriting = round.submissions[i].handwriting;
+        sub.hasHandwriting = true;
+      }
+      round.submissions[i] = sub;
+      found = true;
+      break;
+    }
+  }
+  if (!found) round.submissions.push(sub);
+  var all = archiveRounds(data, roomCode, mode);
+  while (all.length > ARCHIVE_MAX_ROUNDS) {
+    var old = all.pop();
+    removeArchiveRound(data, roomCode, old.day, mode, old.round.roundId);
+    all = archiveRounds(data, roomCode, mode);
+  }
+  saveArchive(data);
+}
+function renderTeacherArchive() {
+  var note = document.getElementById('archive-note');
+  var list = document.getElementById('archive-list');
+  if (!note || !list) return;
+  var mode = practiceOf(activePractice);
+  note.textContent = '紀錄存在這台瀏覽器，按課堂編號與日期保存，方便課後跟進。換電腦或清除網站資料後便不再留下。上方仍是本輪的即時監察。';
+  if (!roomCode) {
+    list.innerHTML = '<div class="archive-empty">進入課堂後，學生的作答會留在這裡。</div>';
+    return;
+  }
+  var data = loadArchive();
+  var rounds = archiveRounds(data, roomCode, mode);
+  if (!rounds.length) {
+    list.innerHTML = '<div class="archive-empty">課堂 ' + roomCode + ' 尚未有' +
+      (mode === '2' ? '分數乘法二' : '分數乘法一') + '的作答紀錄。學生提交後，即使開新一輪也會留在這裡。</div>';
+    return;
+  }
+  var liveId = roundId || (currentQuestion && currentQuestion.id) || '';
+  list.innerHTML = rounds.map(function (item) {
+    var round = item.round;
+    var subs = (round.submissions || []).slice().sort(function (a, b) { return a.studentNo - b.studentNo; });
+    var okN = subs.filter(function (s) { return s.correct; }).length;
+    var current = String(round.roundId) === String(liveId);
+    var qHtml = round.promptHtml || slashDisplayToHtml(round.prompt) || '（題目未記下）';
+    var cards = subs.map(function (s) {
+      var status = s.correct ? 'status-ok' : 'status-bad';
+      var badge = s.correct ? '<span class="badge-ok">✓ 答對</span>' : '<span class="badge-bad">✗ 答錯</span>';
+      var thumb;
+      if (s.handwriting) {
+        thumb = '<div class="hw-thumb-wrap"><img class="hw-thumb" alt="手寫" src="' +
+          String(s.handwriting).replace(/"/g, '&quot;') + '"></div>';
+      } else if (s.hasHandwriting) {
+        thumb = '<div class="hw-thumb-wrap"><div class="hw-thumb-empty">有手寫<br>（當時未存下圖）</div></div>';
+      } else {
+        thumb = '<div class="hw-thumb-wrap"><div class="hw-thumb-empty">無手寫</div></div>';
+      }
+      return '<div class="answer-row ' + status + '" data-round="' + String(round.roundId).replace(/"/g, '') +
+        '" data-no="' + s.studentNo + '">' +
+        '<div class="meta">' + s.studentNo + '. ' + (s.studentName || '') + '</div>' +
+        thumb +
+        '<div class="guess">答案：' + slashDisplayToHtml(s.guess) + '</div>' +
+        '<div class="row-status">' + badge + '<span style="color:var(--muted);font-size:0.75rem;">' +
+        archiveClock(s.at) + '</span></div></div>';
+    }).join('');
+    return '<article class="archive-round' + (current ? ' current' : '') + '">' +
+      '<div class="archive-q">' + qHtml + '</div>' +
+      '<div class="archive-meta"><span>' + archiveDayLabel(item.day) + ' ' + archiveClock(round.at) + '</span>' +
+      '<span>已交 ' + subs.length + ' 人</span><span>答對 ' + okN + ' 人</span>' +
+      (current ? '<span class="badge-ok">本輪</span>' : '') + '</div>' +
+      '<div class="archive-students">' + cards + '</div></article>';
+  }).join('');
+  list.querySelectorAll('.answer-row').forEach(function (row) {
+    row.addEventListener('click', function () {
+      var rid = row.getAttribute('data-round');
+      var no = Number(row.getAttribute('data-no'));
+      var found = null;
+      rounds.forEach(function (item) {
+        if (String(item.round.roundId) !== String(rid)) return;
+        (item.round.submissions || []).forEach(function (s) {
+          if (s.studentNo === no) found = Object.assign({ prompt: item.round.prompt, promptHtml: item.round.promptHtml }, s);
+        });
+      });
+      if (found) openInspect(found);
+    });
+  });
+}
 function ingestSubmission(entry) {
   if (!entry || entry.studentNo == null) return;
   var mode = practiceOf(entry.practice);
@@ -2608,6 +2868,7 @@ function ingestSubmission(entry) {
   b.submissions[no] = entry;
   if (mode === activePractice) submissionsMap = b.submissions;
   upsertSubmission(entry, mode);
+  try { recordTeacherArchive(entry); } catch (eArch) {}
 }
 function applyQuestion(q, rid, resetStudentUi) {
   applyQuestionFor(activePractice, q, rid, resetStudentUi);
@@ -3061,6 +3322,7 @@ function renderTeacherMonitor() {
   /* ONE view: all 32 students — submitted + not-yet — with handwriting thumbs */
   if (!currentQuestion) {
     listEl.innerHTML = '<div class="empty-msg card" style="grid-column:1/-1;">請先出題。出題後會一次過顯示全班 32 人進度與手寫圖示。</div>';
+    renderTeacherArchive();
     return;
   }
   var cards = STUDENTS.map(function (st) {
@@ -3109,6 +3371,7 @@ function renderTeacherMonitor() {
       else toast('此學生尚未提交', 'bad');
     });
   });
+  renderTeacherArchive();
 }
 
 function openInspect(entry) {
