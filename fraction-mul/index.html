@@ -216,10 +216,12 @@ window.__pubnubLoadPromise = (function () {
     box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(230,126,34,0.35);
     transform: scale(1.08);
   }
-  .hw-pen-btn[data-color="#2c3e50"] { background: #2c3e50; }
-  .hw-pen-btn[data-color="#c0392b"] { background: #c0392b; }
+  .hw-pen-btn[data-color="#f57c00"] { background: #f57c00; }
+  .hw-pen-btn[data-color="#d81b60"] { background: #d81b60; }
   .hw-pen-btn[data-color="#8e44ad"] { background: #8e44ad; }
-  .hw-pen-btn[data-color="#2471a3"] { background: #2471a3; }
+  .hw-pen-btn[data-color="#1a73e8"] { background: #1a73e8; }
+  .hw-pen-btn[data-color="#1a1a1a"] { background: #1a1a1a; }
+  .hw-pen-btn[data-color="#1e9e4a"] { background: #1e9e4a; }
   .hw-actions { display: flex; flex-wrap: wrap; gap: 8px; }
   .hw-actions .btn { min-width: 96px; min-height: 44px; }
   .hw-actions .btn:disabled { opacity: 0.45; }
@@ -693,10 +695,12 @@ window.__pubnubLoadPromise = (function () {
       <div class="hw-toolbar" role="toolbar" aria-label="手寫工具">
         <div class="hw-pen-row" role="group" aria-label="筆色">
           <span class="hw-pen-label">筆色</span>
-          <button type="button" class="hw-pen-btn active" data-color="#2c3e50" title="黑色" aria-label="黑色" aria-pressed="true"></button>
-          <button type="button" class="hw-pen-btn" data-color="#c0392b" title="紅色" aria-label="紅色" aria-pressed="false"></button>
+          <button type="button" class="hw-pen-btn" data-color="#f57c00" title="橙色" aria-label="橙色" aria-pressed="false"></button>
+          <button type="button" class="hw-pen-btn" data-color="#d81b60" title="深粉紅色" aria-label="深粉紅色" aria-pressed="false"></button>
           <button type="button" class="hw-pen-btn" data-color="#8e44ad" title="紫色" aria-label="紫色" aria-pressed="false"></button>
-          <button type="button" class="hw-pen-btn" data-color="#2471a3" title="藍色" aria-label="藍色" aria-pressed="false"></button>
+          <button type="button" class="hw-pen-btn" data-color="#1a73e8" title="藍色" aria-label="藍色" aria-pressed="false"></button>
+          <button type="button" class="hw-pen-btn active" data-color="#1a1a1a" title="黑色" aria-label="黑色" aria-pressed="true"></button>
+          <button type="button" class="hw-pen-btn" data-color="#1e9e4a" title="綠色" aria-label="綠色" aria-pressed="false"></button>
         </div>
         <div class="hw-actions">
           <button class="btn btn-ghost" id="btn-hw-eraser" type="button" aria-pressed="false">擦膠</button>
@@ -1543,7 +1547,7 @@ var hwPending = null;
 var hwRaf = 0;
 var hwSizedOnce = false;
 var hwSizing = false; /* guard: sizeHwCanvas must not recurse via clearHw */
-var hwPenColor = '#2c3e50';
+var hwPenColor = '#1a1a1a';
 var hwErasing = false;
 var HW_ERASER_R = 18;
 var hwUndoStack = []; /* { key, data } snapshots before each stroke */
