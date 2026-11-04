@@ -1669,8 +1669,20 @@ function eachVisiblePad(fn) {
     commitPad();
   });
 }
+function questionUsesTwoMethods(q) {
+  /* Only the preset 18/25 × 5/12 uses two cells. A stale twoMethods:true
+     on any other fraction (older teacher page) must not open 方法一／方法二. */
+  if (!q || q.kind !== 'ffrac') return false;
+  return Number(q.num) === 18 && Number(q.den) === 25 &&
+    Number(q.num2) === 5 && Number(q.den2) === 12;
+}
+function stampTwoMethods(q) {
+  if (!q) return q;
+  q.twoMethods = questionUsesTwoMethods(q);
+  return q;
+}
 function applyHwLayout(q) {
-  twoMethodsOn = !!(q && q.twoMethods);
+  twoMethodsOn = questionUsesTwoMethods(q);
   var boards = document.getElementById('hw-boards');
   var boardB = document.getElementById('hw-board-b');
   var label = document.getElementById('hw-label');
@@ -2519,7 +2531,9 @@ function endSyncReplay() {
   var active = document.querySelector('.screen.active');
   if (!active || active.id !== 'screen-play') return;
   var nowId = currentQuestion && currentQuestion.id || null;
-  if (nowId !== syncReplayQuestionId) renderStudentQuestion(true);
+  if (nowId !== syncReplayQuestionId || questionUsesTwoMethods(currentQuestion) !== twoMethodsOn) {
+    renderStudentQuestion(nowId !== syncReplayQuestionId);
+  }
 }
 function teacherSendSnapshot(reason) {
   if (role !== 'teacher' || !isHost || !roomCode || !syncReady) return Promise.resolve(false);
@@ -3097,6 +3111,8 @@ function applyQuestionFor(mode, q, rid, resetStudentUi) {
   var changed = String(newRid || '') !== String(prevRid || '');
   if (!changed && q && prevQ && q.id && prevQ.id && q.id !== prevQ.id) changed = true;
   if (!changed && !!q !== !!prevQ) changed = true;
+  if (!changed && q && questionUsesTwoMethods(q) !== questionUsesTwoMethods(prevQ)) changed = true;
+  if (q) stampTwoMethods(q);
   b.question = q || null;
   b.roundId = newRid;
   setLocalQuestion(b.question, b.roundId, mode);
