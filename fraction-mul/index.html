@@ -1361,7 +1361,13 @@ function setLocalQuestion(q, rid, mode) {
   } catch (e) {}
 }
 
+var studentLeaveOk = false;
 function showScreen(id) {
+  var active = document.querySelector('.screen.active');
+  var onPlay = active && active.id === 'screen-play';
+  var leaving = id === 'screen-landing' || id === 'screen-names' || id === 'screen-join';
+  /* A live student stays on the question unless they themselves tap 返回. */
+  if (role === 'student' && !soloPractice && onPlay && leaving && !studentLeaveOk) return;
   document.querySelectorAll('.screen').forEach(function (el) { el.classList.remove('active'); });
   var s = document.getElementById(id);
   if (s) s.classList.add('active');
@@ -1375,10 +1381,15 @@ function openJoinScreen(origin) {
 }
 function returnToSiteHome(e) {
   /* Programmatic clicks (a pen stroke forwarded onto a button) must not leave the class. */
-  if (e && e.isTrusted === false) return;
-  try { releaseHwPointer(); } catch (err) {}
-  stopCloud();
-  showScreen('screen-landing');
+  if (!e || e.isTrusted === false) return;
+  studentLeaveOk = true;
+  try {
+    try { releaseHwPointer(); } catch (err) {}
+    stopCloud();
+    showScreen('screen-landing');
+  } finally {
+    studentLeaveOk = false;
+  }
 }
 function toast(msg, kind) {
   var el = document.getElementById('toast');
@@ -1461,9 +1472,12 @@ function messageRev(msg, q) {
   return Number((msg && msg.rev) || (q && q.rev) || 0) || 0;
 }
 function isStaleRev(mode, rev) {
+  mode = practiceOf(mode);
   rev = Number(rev) || 0;
-  var have = modeRev[practiceOf(mode)] || 0;
-  if (!rev) return have > 0;
+  var have = modeRev[mode] || 0;
+  var b = bucket(mode);
+  /* A message with no rev must not replace a question the student already has. */
+  if (!rev) return have > 0 || !!(b && b.question);
   return rev < have;
 }
 function acceptRev(mode, rev) {
@@ -2784,6 +2798,8 @@ function handleCloudMessage(msg) {
     var mode = practiceOf(msg.practice);
     var rev = messageRev(msg, msg.question);
     if (isStaleRev(mode, rev)) return;
+    /* An empty new-round must not clear the question a student is answering. */
+    if (!msg.question && bucket(mode).question) return;
     var sameEpoch = !!(rev && rev === (modeRev[mode] || 0) && msg.question &&
       bucket(mode).question && msg.question.id === bucket(mode).question.id);
     if (sameEpoch) {
@@ -2867,6 +2883,12 @@ function applySnapshotMessage(msg) {
     var rev = messageRev(pack, pack.question);
     if (role === 'student' && !pack.question && bucket(mode).question) return;
     if (isStaleRev(mode, rev)) return;
+    if (role === 'student' && pack.question && bucket(mode).question) {
+      var curQ = bucket(mode).question;
+      var sameQ = String(pack.question.id || '') === String(curQ.id || '');
+      /* Same rev but a different question is a replay of an older round. Keep the current one. */
+      if (!sameQ && rev <= (modeRev[mode] || 0)) return;
+    }
     acceptRev(mode, rev);
     if (role === 'student') {
       applyQuestionFor(mode, pack.question || null, pack.roundId, false);
@@ -3421,6 +3443,7 @@ function publishSubmitEntry(entry) {
   });
 }
 var lastSubmitAt = 0;
+var submitBusy = false;
 function armSubmitButton(label) {
   var submitBtn = document.getElementById('btn-submit-answer');
   if (!submitBtn) return;
@@ -3428,6 +3451,8 @@ function armSubmitButton(label) {
   submitBtn.textContent = label || '提交答案給老師';
 }
 function submitStudentAnswer() {
+  if (submitBusy) return;
+  submitBusy = true;
   releaseHwPointer();
   try {
   if (!currentStudent) { toast('請先選擇姓名', 'bad'); return; }
@@ -3443,7 +3468,8 @@ function submitStudentAnswer() {
   var hwDirtyNow = false;
   try {
     hwDirtyNow = anyHwDirty();
-    hwUrl = exportHwDataUrl();
+    /* One small jpeg. A full-canvas export on the 2nd submit froze iPad. */
+    hwUrl = exportHwThumb();
   } catch (eExport) {
     hwUrl = '';
   }
@@ -3485,6 +3511,7 @@ function submitStudentAnswer() {
   publishSubmitEntry(entry);
   toast(ok ? '已提交：答對！' : '已提交答案', ok ? 'ok' : 'bad');
   } finally {
+    submitBusy = false;
     releaseHwPointer();
     armSubmitButton(mySubmittedRound && mySubmittedRound === roundId
       ? '重新提交／已交（可改答案再交）'
@@ -3786,13 +3813,20 @@ function wire() {
     applyQuestionFor(activePractice, q, q.id, true);
   };
   document.getElementById('btn-play-back').onclick = function (e) {
-    if (e && e.isTrusted === false) return;
-    stopCloud();
-    showScreen('screen-names');
+    if (!e || e.isTrusted === false) return;
+    studentLeaveOk = true;
+    try {
+      stopCloud();
+      showScreen('screen-names');
+    } finally {
+      studentLeaveOk = false;
+    }
   };
   document.getElementById('btn-play-join').onclick = function (e) {
-    if (e && e.isTrusted === false) return;
-    openJoinScreen('play');
+    if (!e || e.isTrusted === false) return;
+    studentLeaveOk = true;
+    try { openJoinScreen('play'); }
+    finally { studentLeaveOk = false; }
   };
   document.getElementById('btn-hw-clear').onclick = function () { clearHw(false); };
   document.getElementById('btn-hw-eraser').onclick = function () { setHwEraser(!hwErasing); };
