@@ -266,10 +266,6 @@ window.__pubnubLoadPromise = (function () {
     display: flex; justify-content: space-between; align-items: flex-start;
     gap: 12px; flex-wrap: wrap; width: 100%; max-width: 960px; margin-bottom: 8px;
   }
-  .gallery-section-title {
-    width: 100%; max-width: 960px; font-weight: 800; color: var(--primary-dark);
-    margin: 14px 0 8px; font-size: 1.05rem;
-  }
   .monitor-stats {
     display: flex; flex-wrap: wrap; gap: 8px; width: 100%; max-width: 960px; margin-bottom: 8px;
   }
@@ -298,7 +294,7 @@ window.__pubnubLoadPromise = (function () {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;
   }
   .monitor-archive-bar {
-    width: 100%; max-width: 960px; margin: 0 0 10px;
+    width: 100%; max-width: 960px; margin: 8px 0 10px;
   }
   .monitor-archive-bar .btn { min-width: 148px; }
   .archive-note {
@@ -850,7 +846,6 @@ window.__pubnubLoadPromise = (function () {
     <button class="btn btn-danger btn-block" id="btn-new-round">開新一輪（清除本輪提交）</button>
   </div>
 
-  <div class="gallery-section-title">課堂監察（全班 32 人一覽；已交顯示手寫圖示；評分只根據最終答案）</div>
   <div class="monitor-archive-bar">
     <button type="button" class="btn btn-ghost" id="btn-open-archive" aria-haspopup="dialog" aria-controls="archive-modal" aria-expanded="false">課後跟進</button>
   </div>
