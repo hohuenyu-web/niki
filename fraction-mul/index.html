@@ -840,7 +840,7 @@ window.__pubnubLoadPromise = (function () {
   <div class="custom-q" id="teacher-custom-2" style="display:none;">
     <h3>指定題</h3>
     <div class="fixed-q-list" id="fixed-ffrac-list" role="group" aria-label="指定題"></div>
-    <p class="fixed-hint">按第1題至第4題即發給全班，稍後加入的學生亦會收到。學生須在方法一、方法二兩格內作答。</p>
+    <p class="fixed-hint">按第1題至第4題即發給全班，稍後加入的學生亦會收到。第1題用方法一、方法二兩格；第2題至第4題用一格。</p>
   </div>
   <div class="btn-row" style="max-width:960px;margin:0 0 8px;">
     <button class="btn btn-danger btn-block" id="btn-new-round">開新一輪（清除本輪提交）</button>
@@ -1194,9 +1194,11 @@ var FIXED_FFRAC = [
   { n1: 2, d1: 5, n2: 3, d2: 8 }
 ];
 function buildFixedFracTimesFrac(index) {
-  var item = FIXED_FFRAC[index == null ? 0 : index];
+  var i = index == null ? 0 : index;
+  var item = FIXED_FFRAC[i];
   if (!item) return null;
-  return buildFfracQuestion(item.n1, item.d1, item.n2, item.d2, true);
+  /* Only 18/25 × 5/12 asks for two methods. The other presets use one cell. */
+  return buildFfracQuestion(item.n1, item.d1, item.n2, item.d2, i === 0);
 }
 
 function emptyModeStore() {
