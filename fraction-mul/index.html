@@ -1695,21 +1695,11 @@ function hwFlushPending() {
 }
 
 function paintHwBackground() {
-  /* Fill + guide lines in current CSS-pixel transform. Does NOT call sizeHwCanvas. */
+  /* Blank paper in the current CSS-pixel transform. Does NOT call sizeHwCanvas. */
   if (!hwCtx) return;
   hwCtx.setTransform(hwDpr, 0, 0, hwDpr, 0, 0);
   hwCtx.fillStyle = '#fffcf7';
   hwCtx.fillRect(0, 0, hwCssW, hwCssH);
-  hwCtx.strokeStyle = '#f0e6d8';
-  hwCtx.lineWidth = 1;
-  var bands = hwCssH >= 520 ? 5 : 6;
-  var step = Math.max(hwCssH >= 520 ? 72 : 40, Math.round(hwCssH / bands));
-  for (var y = step; y < hwCssH; y += step) {
-    hwCtx.beginPath();
-    hwCtx.moveTo(0, y);
-    hwCtx.lineTo(hwCssW, y);
-    hwCtx.stroke();
-  }
 }
 
 function updateHwUndoBtn() {
@@ -1786,8 +1776,6 @@ function setHwPenColor(color) {
 function eraseDab(x, y) {
   if (!hwCtx) return;
   var r = HW_ERASER_R;
-  var bands = hwCssH >= 520 ? 5 : 6;
-  var gap = Math.max(hwCssH >= 520 ? 72 : 40, Math.round(hwCssH / bands));
   hwCtx.save();
   hwCtx.setTransform(hwDpr, 0, 0, hwDpr, 0, 0);
   hwCtx.beginPath();
@@ -1795,16 +1783,6 @@ function eraseDab(x, y) {
   hwCtx.clip();
   hwCtx.fillStyle = '#fffcf7';
   hwCtx.fillRect(x - r - 2, y - r - 2, r * 2 + 4, r * 2 + 4);
-  hwCtx.strokeStyle = '#f0e6d8';
-  hwCtx.lineWidth = 1;
-  var gy;
-  for (gy = gap; gy < hwCssH; gy += gap) {
-    if (gy < y - r || gy > y + r) continue;
-    hwCtx.beginPath();
-    hwCtx.moveTo(Math.max(0, x - r), gy);
-    hwCtx.lineTo(Math.min(hwCssW, x + r), gy);
-    hwCtx.stroke();
-  }
   hwCtx.restore();
 }
 function eraseAlong(from, to) {
