@@ -1518,7 +1518,8 @@ function readAnswerRational() {
   if (answerMode === 'int') {
     var w = String(wholeEl.value || '').trim();
     if (w === '' || !/^-?\d+$/.test(w)) return null;
-    return { n: parseInt(w, 10), d: 1, display: w };
+    var whole = parseInt(w, 10);
+    return { n: whole, d: 1, display: w, form: 'int', entered: { whole: whole } };
   }
   var numS = String(numEl.value || '').trim();
   var denS = String(denEl.value || '').trim();
@@ -1528,17 +1529,38 @@ function readAnswerRational() {
   if (fracKind === 'mixed') {
     var ws = String(wholeEl.value || '').trim();
     if (ws === '' || !/^-?\d+$/.test(ws)) return null;
-    var whole = parseInt(ws, 10);
-    var sign = whole < 0 ? -1 : 1;
-    var improper = Math.abs(whole) * den + Math.abs(num);
-    var r = reduce(sign * improper, den);
-    return { n: r.n, d: r.d, display: whole + ' ' + Math.abs(num) + '/' + den };
+    var wnum = parseInt(ws, 10);
+    var sign = wnum < 0 ? -1 : 1;
+    var improper = Math.abs(wnum) * den + Math.abs(num);
+    return {
+      n: sign * improper, d: den,
+      display: wnum + ' ' + num + '/' + den,
+      form: 'mixed',
+      entered: { whole: wnum, num: num, den: den }
+    };
   }
-  var rr = reduce(num, den);
-  return { n: rr.n, d: rr.d, display: num + '/' + den };
+  return { n: num, d: den, display: num + '/' + den, form: 'frac', entered: { num: num, den: den } };
+}
+/* 最簡才算對。2/8 與 1/4 同值，但學生寫下的不是最簡分數。 */
+function formIsSimplest(ans) {
+  if (!ans || !ans.form) return true;
+  if (ans.form === 'int') return true;
+  var e = ans.entered;
+  if (ans.form === 'frac') {
+    var n = e ? e.num : ans.n;
+    var d = e ? e.den : ans.d;
+    return d > 0 && gcd(n, d) === 1;
+  }
+  if (ans.form === 'mixed') {
+    if (!e || !(e.den > 0)) return false;
+    if (!(e.num > 0) || e.num >= e.den) return false;
+    return gcd(e.num, e.den) === 1;
+  }
+  return false;
 }
 function gradeAgainstQuestion(ans, q) {
   if (!ans || !q || !q.answer) return false;
+  if (!formIsSimplest(ans)) return false;
   return ratEq(ans, q.answer);
 }
 function syncAnswerInputsUI() {
@@ -2994,7 +3016,12 @@ function ingestSubmission(entry) {
   var rid = b.roundId || (q && q.id) || null;
   var correct = false;
   if (entry.roundId && q && entry.roundId === rid && entry.answerRat) {
-    correct = ratEq(entry.answerRat, q.answer);
+    correct = gradeAgainstQuestion({
+      n: entry.answerRat.n,
+      d: entry.answerRat.d,
+      form: entry.answerForm,
+      entered: entry.answerEntered
+    }, q);
   } else if (entry.roundId && q && entry.roundId === rid && typeof entry.correct === 'boolean') {
     correct = !!entry.correct;
   }
@@ -3321,6 +3348,8 @@ function submitStudentAnswer() {
     promptHtml: formatPrompt(currentQuestion),
     guess: ans.display,
     answerRat: { n: ans.n, d: ans.d },
+    answerForm: ans.form,
+    answerEntered: ans.entered,
     correct: ok,
     handwriting: hwUrl,
     hasHandwriting: hwDirtyNow,
