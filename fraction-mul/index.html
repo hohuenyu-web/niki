@@ -1202,7 +1202,7 @@ function buildFfracQuestion(n1, d1, n2, d2, twoMethods) {
   };
 }
 var FIXED_FFRAC = [
-  { n1: 18, d1: 25, n2: 5, d2: 12 },
+  { n1: 14, d1: 15, n2: 5, d2: 21 },
   { n1: 5, d1: 9, n2: 6, d2: 25 },
   { n1: 4, d1: 15, n2: 9, d2: 10 },
   { n1: 2, d1: 5, n2: 3, d2: 8 }
@@ -1211,7 +1211,7 @@ function buildFixedFracTimesFrac(index) {
   var i = index == null ? 0 : index;
   var item = FIXED_FFRAC[i];
   if (!item) return null;
-  /* Only 18/25 × 5/12 asks for two methods. The other presets use one cell. */
+  /* Only 14/15 × 5/21 (第1題) asks for two methods. The other presets use one cell. */
   return buildFfracQuestion(item.n1, item.d1, item.n2, item.d2, i === 0);
 }
 
@@ -1676,11 +1676,11 @@ function eachVisiblePad(fn) {
   });
 }
 function questionUsesTwoMethods(q) {
-  /* Only the preset 18/25 × 5/12 uses two cells. A stale twoMethods:true
-     on any other fraction (older teacher page) must not open 方法一／方法二. */
+  /* Only preset 1, 14/15 × 5/21, uses two cells. A stale twoMethods:true
+     on any other fraction must not open 方法一／方法二. */
   if (!q || q.kind !== 'ffrac') return false;
-  return Number(q.num) === 18 && Number(q.den) === 25 &&
-    Number(q.num2) === 5 && Number(q.den2) === 12;
+  return Number(q.num) === 14 && Number(q.den) === 15 &&
+    Number(q.num2) === 5 && Number(q.den2) === 21;
 }
 function stampTwoMethods(q) {
   if (!q) return q;
