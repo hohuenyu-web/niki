@@ -423,18 +423,14 @@ window.__pubnubLoadPromise = (function () {
     gap: 8px; margin: 0 0 8px;
   }
   .fixed-q-btn {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 6px; min-height: 112px; padding: 10px 4px 12px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 72px; padding: 12px 8px;
     background: #fff7eb; border: 2px solid #f0d9b5; border-radius: 14px;
-    color: var(--primary-dark); font-family: inherit; cursor: pointer;
+    color: var(--primary-dark); font-family: inherit; font-size: 1.8rem; font-weight: 800;
+    cursor: pointer;
   }
   .fixed-q-btn:hover { border-color: var(--primary); }
   .fixed-q-btn:active { transform: scale(0.98); }
-  .fixed-q-label { font-weight: 800; font-size: 0.95rem; }
-  .fixed-q-preview {
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.15rem; font-weight: 800; color: var(--primary-dark);
-  }
   @media (max-width: 720px) {
     .fixed-q-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
@@ -3787,11 +3783,9 @@ function wire() {
   };
   var fixedList = document.getElementById('fixed-ffrac-list');
   if (fixedList) {
-    fixedList.innerHTML = FIXED_FFRAC.map(function (item, i) {
-      var preview = formatPrompt({ kind: 'ffrac', num: item.n1, den: item.d1, num2: item.n2, den2: item.d2 });
-      return '<button type="button" class="fixed-q-btn" data-fixed="' + i + '">' +
-        '<span class="fixed-q-label">第' + (i + 1) + '題</span>' +
-        '<span class="fixed-q-preview">' + preview + '</span></button>';
+    fixedList.innerHTML = FIXED_FFRAC.map(function (_item, i) {
+      return '<button type="button" class="fixed-q-btn" data-fixed="' + i + '" aria-label="第' + (i + 1) + '題">' +
+        (i + 1) + '</button>';
     }).join('');
     fixedList.querySelectorAll('.fixed-q-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
