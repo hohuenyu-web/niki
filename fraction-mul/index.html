@@ -156,11 +156,12 @@ window.__pubnubLoadPromise = (function () {
   .hw-wrap {
     width: 100%; max-width: min(900px, 100%); background: #fff; border: 2px solid var(--border);
     border-radius: 14px; padding: 8px; margin-top: 4px;
+    align-self: stretch; min-width: 0; box-sizing: border-box;
     overscroll-behavior: none;
     -webkit-user-select: none; user-select: none;
   }
   .hw-label { font-size: 0.9rem; color: var(--muted); margin: 2px 6px 6px; font-weight: 600; }
-  .hw-boards { display: block; width: 100%; }
+  .hw-boards, .hw-board { display: block; width: 100%; min-width: 0; box-sizing: border-box; }
   .hw-boards.two {
     display: grid; grid-template-columns: 1fr; gap: 10px;
   }
@@ -178,9 +179,9 @@ window.__pubnubLoadPromise = (function () {
     margin: 0 2px 4px; font-size: 1rem;
   }
   .hw-board canvas {
-    /* Tall writing pad: more room for 約簡 steps; capped for iPad landscape */
+    /* Tall writing pad: more room for 約簡 steps; wider on iPad below */
     width: 100%; height: clamp(320px, 58vh, 580px); display: block;
-    max-width: 100%;
+    max-width: 100%; min-width: 0;
     background: #fffcf7; border-radius: 10px; cursor: crosshair;
     border: 1px dashed #e8d5c0;
     touch-action: none;
@@ -190,6 +191,12 @@ window.__pubnubLoadPromise = (function () {
     pointer-events: auto;
   }
   .hw-boards.two .hw-board canvas { height: clamp(200px, 38vh, 400px); }
+  /* iPad / tablet: the ruled writing area should use the screen, not a narrow column */
+  @media (min-width: 768px) {
+    .hw-wrap { max-width: min(1240px, 100%); }
+    .hw-board canvas { height: clamp(460px, 66vh, 740px); }
+    .hw-boards.two .hw-board canvas { height: clamp(280px, 48vh, 520px); }
+  }
   .hw-toolbar {
     display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
     gap: 8px; margin-top: 8px; max-width: 100%;
@@ -1769,7 +1776,8 @@ function paintHwBackground() {
   hwCtx.fillRect(0, 0, hwCssW, hwCssH);
   hwCtx.strokeStyle = '#f0e6d8';
   hwCtx.lineWidth = 1;
-  var step = Math.max(40, Math.round(hwCssH / 6));
+  var bands = hwCssH >= 520 ? 5 : 6;
+  var step = Math.max(hwCssH >= 520 ? 72 : 40, Math.round(hwCssH / bands));
   for (var y = step; y < hwCssH; y += step) {
     hwCtx.beginPath();
     hwCtx.moveTo(0, y);
@@ -1887,13 +1895,20 @@ function sizeHwCanvas(force) {
     var wrapStyle = window.getComputedStyle(wrap);
     if (wrapStyle.display === 'none' || wrapStyle.visibility === 'hidden') return;
   }
-  /* force: clear pinned px so CSS height:clamp(…vh) / wrap width can reflow */
+  /* force: clear pinned px so CSS height:clamp(…vh) can reflow.
+     Width is taken from the board, not the canvas: a pinned canvas width
+     would otherwise stay narrow after the iPad card grows. */
   if (force) {
     hwCanvas.style.width = '';
     hwCanvas.style.height = '';
   }
-  var rect = hwCanvas.getBoundingClientRect();
-  var cssW = rect.width;
+  var board = hwCanvas.parentElement;
+  var padX = 0;
+  if (board) {
+    var bs = window.getComputedStyle(board);
+    padX = (parseFloat(bs.paddingLeft) || 0) + (parseFloat(bs.paddingRight) || 0);
+  }
+  var cssW = board ? Math.max(0, board.clientWidth - padX) : 0;
   if (!cssW || cssW < 8) {
     if (!hwSizedOnce) {
       hwCanvas.width = 900;
@@ -1907,8 +1922,9 @@ function sizeHwCanvas(force) {
     }
     return;
   }
-  var cssH = rect.height;
-  if (!cssH || cssH < 8) cssH = Math.min(580, Math.max(320, cssW * 0.65));
+  hwCanvas.style.height = '';
+  var cssH = hwCanvas.getBoundingClientRect().height;
+  if (!cssH || cssH < 8) cssH = Math.min(740, Math.max(320, cssW * 0.62));
   var dpr = Math.min(window.devicePixelRatio || 1, 3);
   var need =
     force ||
