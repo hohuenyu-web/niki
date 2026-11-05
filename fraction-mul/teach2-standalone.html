@@ -51,6 +51,34 @@
     box-shadow: inset 0 0 0 2px rgba(255,255,255,0.5);
     flex-shrink: 0;
   }
+  .exp-modes {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  }
+  .exp-mode-btn {
+    border: 2px solid #d5dde8; background: #f7f9fc; border-radius: 999px;
+    padding: 8px 14px; font-weight: 800; font-family: inherit; cursor: pointer;
+    color: #5d6d7e; font-size: 0.95rem; min-height: 44px;
+  }
+  .exp-mode-btn:hover { background: #eef3f8; }
+  .exp-mode-btn.active {
+    border-color: #2c5aa0; background: #eaf2fb; color: #2c5aa0;
+  }
+  .exp-eq.mixed { font-size: clamp(1.15rem, 3.2vw, 1.65rem); }
+  .exp-whole[hidden] { display: none !important; }
+  .exp-whole { line-height: 1; }
+  .exp-chip.as-mixed {
+    display: inline-grid;
+    grid-template-columns: auto auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    justify-items: center;
+    column-gap: 4px;
+  }
+  .exp-chip.as-mixed .exp-whole { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
+  .exp-chip.as-mixed .exp-num { grid-column: 2; grid-row: 1; }
+  .exp-chip.as-mixed .exp-den { grid-column: 2; grid-row: 2; }
+  .exp-chip.as-int .exp-num,
+  .exp-chip.as-int .exp-den { display: none !important; }
   .exp-body {
     display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; justify-content: center;
   }
@@ -59,6 +87,7 @@
     aspect-ratio: 1 / 1; width: 100%;
     position: relative;
   }
+  .exp-canvas-wrap.compact { aspect-ratio: auto; height: auto; }
   #exp-canvas {
     width: 100%; height: 100%; display: block;
     background: #fff; border-radius: 4px;
@@ -159,6 +188,10 @@
 
   <div id="explorer-shared" class="exp-card">
     <div class="exp-title"><span class="exp-ico" aria-hidden="true"></span>分數乘法探索器</div>
+    <div class="exp-modes" role="group" aria-label="題型">
+      <button type="button" class="exp-mode-btn active" id="exp-mode-proper" data-mode="proper" aria-pressed="true">真分數 × 真分數</button>
+      <button type="button" class="exp-mode-btn" id="exp-mode-mixed" data-mode="mixed" aria-pressed="false">帶分數 × 真分數</button>
+    </div>
     <div class="exp-body">
       <div class="exp-canvas-wrap">
         <canvas id="exp-canvas" width="560" height="560" aria-label="分數乘法面積模型"></canvas>
@@ -166,6 +199,7 @@
       <div class="exp-right">
         <div class="exp-eq" id="exp-eq" aria-label="分數乘法算式">
           <div class="exp-chip blue empty" data-chip="blue" id="exp-chip-blue">
+            <span class="exp-whole" id="exp-blue-whole" hidden><span class="digit-hit" data-field="bw">?</span></span>
             <span class="exp-num"><span class="digit-hit" data-field="bn">?</span></span>
             <span class="exp-den"><span class="digit-hit" data-field="bd">?</span></span>
           </div>
@@ -176,6 +210,7 @@
           </div>
           <span class="exp-op">=</span>
           <div class="exp-chip purple empty" data-chip="purple" id="exp-chip-purple">
+            <span class="exp-whole" id="exp-purple-whole" hidden><span class="digit-hit" data-field="pw">?</span></span>
             <span class="exp-num"><span class="digit-hit" data-field="pn">?</span></span>
             <span class="exp-den"><span class="digit-hit" data-field="pd">?</span></span>
           </div>
@@ -210,9 +245,13 @@
 /* 分數乘法二教學（獨立頁）
    從課堂頁的面積模型抽出，可離線開啟或整份嵌入。
    沒有 PubNub、課堂編號、老師監察、學生提交，也沒有其他分頁。
-   先點分母出分割線，再點分子出斜線。四個數填完不會立刻顯示答案。
-   再點已填的數字會重播該步。斜線旁的三句說明已刪，不要加回。
+   預設是真分數 × 真分數：先點分母出分割線，再點分子出斜線。
+   可切換帶分數 × 真分數：左側多填一個整數。點整數出整數格，
+   點分母把每一格直向分割（看成假分數），點分子出斜線，再乘右側真分數。
+   數字填完不會立刻顯示答案。再點已填的數字會重播該步。
+   斜線旁的三句說明已刪，不要加回。
    乘積按分子相乘、分母相乘直接顯示，本教學頁不另約成最簡。
+   帶分數的積若大於或等於 1，改寫成帶分數（餘數不約簡）；剛好是整數就只顯示整數。
    順德聯誼總會何日東小學
 */
 function toast(msg, kind) {
@@ -226,13 +265,14 @@ function toast(msg, kind) {
 
 (function () {
   var state = {
-    bn: null, bd: null, rn: null, rd: null,
+    mode: (location.hash === '#mixed') ? 'mixed' : 'proper',
+    bw: null, bn: null, bd: null, rn: null, rd: null,
     highlight: null,
     editing: null,
-    fillStep: 1,     // 1 bd, 2 bn, 3 rd, 4 rn, 5 done
+    fillStep: 1,     // proper: 1 bd, 2 bn, 3 rd, 4 rn, 5 done
     lastTap: { field: null, t: 0 },
     /* Canvas stays blank until that part of the fraction is tapped. */
-    revealed: { bd: false, bn: false, rd: false, rn: false },
+    revealed: { bw: false, bd: false, bn: false, rd: false, rn: false },
     anim: null
   };
 
@@ -242,13 +282,34 @@ function toast(msg, kind) {
     3: '第三步：再填寫右側紅色的分母',
     4: '第四步：再填寫右側紅色的分子'
   };
+  var PROMPTS_MIXED = {
+    1: '第一步：先填寫左側藍色的整數',
+    2: '第二步：再填寫左側藍色的分母',
+    3: '第三步：再填寫左側藍色的分子',
+    4: '第四步：再填寫右側紅色的分母',
+    5: '第五步：再填寫右側紅色的分子'
+  };
   var FIELD_HINT = {
     bd: '填寫左側藍色的分母',
     bn: '填寫左側藍色的分子',
     rd: '填寫右側紅色的分母',
     rn: '填寫右側紅色的分子'
   };
+  var FIELD_HINT_MIXED = {
+    bw: '填寫左側藍色的整數',
+    bd: '填寫左側藍色的分母',
+    bn: '填寫左側藍色的分子',
+    rd: '填寫右側紅色的分母',
+    rn: '填寫右側紅色的分子'
+  };
   var EXPLAIN_PROMPT = '點分母看分割，點分子看斜線。再點可重播。';
+  var EXPLAIN_PROMPT_MIXED = '點整數看整數格，點分母看分割，點分子看斜線。再點可重播。';
+
+  function isMixed() { return state.mode === 'mixed'; }
+
+  function promptsForMode() { return isMixed() ? PROMPTS_MIXED : PROMPTS; }
+
+  function doneStep() { return isMixed() ? 6 : 5; }
 
   var canvas, ctx;
   var animRaf = 0;
@@ -256,15 +317,43 @@ function toast(msg, kind) {
   function $(id) { return document.getElementById(id); }
 
   function product() {
+    if (isMixed()) {
+      if (state.bw == null || state.bn == null || state.bd == null || state.rn == null || state.rd == null) return null;
+      /* 帶分數先化假分數：(整數×分母+分子)/分母，再與真分數分子乘分子、分母乘分母。不約簡。 */
+      return { n: (state.bw * state.bd + state.bn) * state.rn, d: state.bd * state.rd };
+    }
     if (state.bn == null || state.bd == null || state.rn == null || state.rd == null) return null;
     return { n: state.bn * state.rn, d: state.bd * state.rd };
   }
 
+  /* kind: frac | mixed | int. Proper mode always stays a single fraction, even if improper. */
+  function formatProduct(p) {
+    if (!p) return null;
+    if (!isMixed()) return { kind: 'frac', n: p.n, d: p.d };
+    if (p.d > 0 && p.n >= p.d) {
+      var w = Math.floor(p.n / p.d);
+      var rem = p.n % p.d;
+      if (rem === 0) return { kind: 'int', w: w };
+      return { kind: 'mixed', w: w, n: rem, d: p.d };
+    }
+    return { kind: 'frac', n: p.n, d: p.d };
+  }
+
   function isComplete() {
+    if (isMixed() && state.bw == null) return false;
     return state.bn != null && state.bd != null && state.rn != null && state.rd != null;
   }
 
   function recomputeStep() {
+    if (isMixed()) {
+      if (state.bw == null) state.fillStep = 1;
+      else if (state.bd == null) state.fillStep = 2;
+      else if (state.bn == null) state.fillStep = 3;
+      else if (state.rd == null) state.fillStep = 4;
+      else if (state.rn == null) state.fillStep = 5;
+      else state.fillStep = 6;
+      return;
+    }
     if (state.bd == null) state.fillStep = 1;
     else if (state.bn == null) state.fillStep = 2;
     else if (state.rd == null) state.fillStep = 3;
@@ -273,6 +362,7 @@ function toast(msg, kind) {
   }
 
   function answerRevealed() {
+    if (isMixed() && !state.bw) return false;
     return !!(state.revealed.bn && state.revealed.rn &&
       state.bn != null && state.rn != null && state.bd && state.rd);
   }
@@ -298,13 +388,15 @@ function toast(msg, kind) {
   }
 
   function playExplain(field) {
-    if (field !== 'bd' && field !== 'bn' && field !== 'rd' && field !== 'rn') return;
+    if (field !== 'bw' && field !== 'bd' && field !== 'bn' && field !== 'rd' && field !== 'rn') return;
     if (state[field] == null) return;
     state.revealed[field] = true;
     state.highlight = field;
     state.anim = { field: field, t0: performance.now(), dur: 720 };
     updateChipsUI();
     if (animRaf) cancelAnimationFrame(animRaf);
+    /* 帶分數的格數變了，畫布改成橫向一列，不要再留著正方形空白。 */
+    if (isMixed()) resizeCanvas();
     function frame() {
       if (!canvas || !state.anim || state.anim.field !== field) return;
       var t = (performance.now() - state.anim.t0) / state.anim.dur;
@@ -324,9 +416,27 @@ function toast(msg, kind) {
   function resizeCanvas() {
     if (!canvas) return;
     var wrap = canvas.parentElement;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var slots = (isMixed() && state.bw != null) ? mixedLayoutSlots() : 1;
+    if (isMixed() && slots > 1) {
+      wrap.classList.add('compact');
+      var cssW = Math.floor(wrap.clientWidth || 480);
+      if (cssW > 560) cssW = 560;
+      if (cssW < 200) cssW = 280;
+      var pad = 14;
+      var unit = (cssW - pad * 2) / slots;
+      var cssH = Math.ceil(unit + pad * 2);
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawModel(cssW, cssH);
+      return;
+    }
+    wrap.classList.remove('compact');
     var size = Math.floor(Math.min(wrap.clientWidth || 480, wrap.clientHeight || 480, 560));
     if (size < 200) size = 280;
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(size * dpr);
     canvas.height = Math.round(size * dpr);
     canvas.style.width = size + 'px';
@@ -417,7 +527,12 @@ function toast(msg, kind) {
     ctx.restore();
   }
 
-  function drawModel(cssSize) {
+  function drawModel(cssSize, cssHeight) {
+    if (isMixed()) drawMixedModel(cssSize, cssHeight);
+    else drawProperModel(cssSize);
+  }
+
+  function drawProperModel(cssSize) {
     if (!ctx) return;
     var S = cssSize || (canvas.clientWidth || 400);
     var pad = 10;
@@ -469,6 +584,120 @@ function toast(msg, kind) {
     ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
   }
 
+  /* 帶分數畫成整數格，再加一格給真分數部分。直向按該分母分割（化假分數），橫向是右側真分數。 */
+  function mixedStructure() {
+    if (state.bw == null) return null;
+    var any = state.revealed.bw || state.revealed.bd || state.revealed.bn || state.revealed.rd || state.revealed.rn;
+    if (!any) return null;
+    var frac = state.bd != null && (state.revealed.bd || state.revealed.bn || state.revealed.rd || state.revealed.rn);
+    return { wholes: state.bw, frac: !!frac };
+  }
+
+  function mixedLayoutSlots() {
+    var struct = mixedStructure();
+    if (!struct) return 1;
+    return struct.wholes + (struct.frac ? 1 : 0);
+  }
+
+  function drawMixedModel(cssSize, cssHeight) {
+    if (!ctx) return;
+    var SW = cssSize || canvas.clientWidth || 400;
+    var SH = cssHeight || canvas.clientHeight || SW;
+    ctx.clearRect(0, 0, SW, SH);
+    ctx.setLineDash([]);
+
+    var struct = mixedStructure();
+    if (!struct) {
+      var pad0 = 10;
+      var side = Math.min(SW, SH) - pad0 * 2;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#2c3e50';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(pad0, pad0, side, side);
+      ctx.strokeRect(pad0 + 1, pad0 + 1, side - 2, side - 2);
+      return;
+    }
+
+    var pad = 14;
+    var wholes = struct.wholes;
+    var slots = wholes + (struct.frac ? 1 : 0);
+    var availW = SW - pad * 2;
+    var availH = SH - pad * 2;
+    var unit = Math.min(availW / slots, availH);
+    var totalW = unit * slots;
+    var x0 = pad + (availW - totalW) / 2;
+    var y0 = pad;
+
+    var clipBw = state.anim && state.anim.field === 'bw';
+    if (clipBw) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x0, y0, Math.max(0.01, totalW * fieldProgress('bw')), unit);
+      ctx.clip();
+    }
+
+    var i;
+    ctx.fillStyle = '#ffffff';
+    for (i = 0; i < slots; i++) ctx.fillRect(x0 + i * unit, y0, unit, unit);
+
+    var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
+    var showBn = state.revealed.bn && bd && bn != null && bn > 0;
+    var showRn = state.revealed.rn && rd && rn != null && rn > 0;
+    var bnUse = showBn ? Math.min(bn, bd) : 0;
+    var blueW = 0;
+    if (showBn) {
+      blueW = wholes * unit;
+      if (struct.frac) blueW += (unit / bd) * bnUse;
+    }
+    var redH = showRn ? (unit / rd) * Math.min(rn, rd) : 0;
+    var hasOverlap = blueW > 0 && redH > 0;
+    var gapH = Math.max(6, Math.min(22, unit / 6));
+
+    if (blueW > 0) {
+      withRevealClip('bn', x0, y0, blueW, unit, 'x', function () {
+        var by = y0 + (hasOverlap ? redH : 0);
+        var bh = unit - (hasOverlap ? redH : 0);
+        hatch(x0, by, blueW, bh, HATCH_NEUTRAL, -1, gapH);
+      });
+    }
+    if (redH > 0) {
+      withRevealClip('rn', x0, y0, totalW, redH, 'y', function () {
+        var rx = x0 + (hasOverlap ? blueW : 0);
+        var rw = totalW - (hasOverlap ? blueW : 0);
+        hatch(rx, y0, rw, redH, HATCH_NEUTRAL, 1, gapH);
+      });
+    }
+    if (hasOverlap) {
+      var overlapField = (state.anim && (state.anim.field === 'bn' || state.anim.field === 'rn')) ? state.anim.field : null;
+      withRevealClip(overlapField, x0, y0, blueW, redH, overlapField === 'rn' ? 'y' : 'x', function () {
+        var og = Math.max(5, gapH * 0.75);
+        hatch(x0, y0, blueW, redH, HATCH_NEUTRAL, -1, og);
+        hatch(x0, y0, blueW, redH, HATCH_NEUTRAL, 1, og);
+      });
+    }
+
+    if (state.revealed.bd && bd > 1) {
+      var lp = fieldProgress('bd');
+      var lineSlots = struct.frac ? slots : wholes;
+      for (i = 0; i < lineSlots; i++) {
+        strokeGrowingLines(x0 + i * unit, y0, unit, unit, bd, true, '#5dade2', lp);
+      }
+    }
+    if (state.revealed.rd && rd > 1) {
+      strokeGrowingLines(x0, y0, totalW, unit, rd, false, '#e74c3c', fieldProgress('rd'));
+    }
+
+    ctx.setLineDash([]);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#2c3e50';
+    for (i = 0; i < slots; i++) {
+      var sx = x0 + i * unit;
+      ctx.strokeRect(sx + 1, y0 + 1, unit - 2, unit - 2);
+    }
+
+    if (clipBw) ctx.restore();
+  }
+
   function setDigitText(field, val) {
     var el = document.querySelector('#exp-eq .digit-hit[data-field="' + field + '"]');
     if (!el) return;
@@ -476,54 +705,92 @@ function toast(msg, kind) {
   }
 
   function updateChipsUI() {
+    setDigitText('bw', state.bw);
     setDigitText('bn', state.bn);
     setDigitText('bd', state.bd);
     setDigitText('rn', state.rn);
     setDigitText('rd', state.rd);
     var p = product();
     var showAnswer = answerRevealed();
-    setDigitText('pn', showAnswer && p ? p.n : null);
-    setDigitText('pd', showAnswer && p ? p.d : null);
+    var fmt = showAnswer ? formatProduct(p) : null;
 
     var blue = $('exp-chip-blue');
     var red = $('exp-chip-red');
     var purple = $('exp-chip-purple');
+    var blueWhole = $('exp-blue-whole');
+    var purpleWhole = $('exp-purple-whole');
     function syncChip(el, hasAny, colorClass) {
       el.classList.remove('empty', 'selected', 'blue', 'red', 'purple');
       el.classList.add(colorClass);
       if (!hasAny) el.classList.add('empty');
     }
-    syncChip(blue, state.bn != null || state.bd != null, 'blue');
+    syncChip(blue, state.bn != null || state.bd != null || (isMixed() && state.bw != null), 'blue');
     syncChip(red, state.rn != null || state.rd != null, 'red');
     syncChip(purple, showAnswer && !!p, 'purple');
 
-    var map = { bn: blue, bd: blue, rn: red, rd: red, pn: purple, pd: purple };
+    blue.classList.toggle('as-mixed', isMixed());
+    blueWhole.hidden = !isMixed();
+    purple.classList.remove('as-mixed', 'as-int');
+    if (!fmt || fmt.kind === 'frac') {
+      purpleWhole.hidden = true;
+      setDigitText('pw', null);
+      setDigitText('pn', fmt ? fmt.n : null);
+      setDigitText('pd', fmt ? fmt.d : null);
+    } else if (fmt.kind === 'int') {
+      purple.classList.add('as-int');
+      purpleWhole.hidden = false;
+      setDigitText('pw', fmt.w);
+      setDigitText('pn', null);
+      setDigitText('pd', null);
+    } else {
+      purple.classList.add('as-mixed');
+      purpleWhole.hidden = false;
+      setDigitText('pw', fmt.w);
+      setDigitText('pn', fmt.n);
+      setDigitText('pd', fmt.d);
+    }
+
+    var map = { bw: blue, bn: blue, bd: blue, rn: red, rd: red, pw: purple, pn: purple, pd: purple };
     if (state.highlight && map[state.highlight]) {
       map[state.highlight].classList.add('selected');
     }
 
     recomputeStep();
     var expectField = null;
-    if (state.fillStep >= 1 && state.fillStep <= 4) {
-      expectField = { 1: 'bd', 2: 'bn', 3: 'rd', 4: 'rn' }[state.fillStep];
+    if (state.fillStep >= 1 && state.fillStep < doneStep()) {
+      expectField = fieldForStep(state.fillStep);
     }
     document.querySelectorAll('#exp-eq .digit-hit').forEach(function (d) {
       var f = d.getAttribute('data-field');
       d.classList.toggle('editing', state.editing === f);
       d.classList.toggle('expect', expectField === f && state.editing == null);
     });
-    blue.classList.toggle('editing-digit', state.editing === 'bn' || state.editing === 'bd');
+    blue.classList.toggle('editing-digit', state.editing === 'bn' || state.editing === 'bd' || state.editing === 'bw');
     red.classList.toggle('editing-digit', state.editing === 'rn' || state.editing === 'rd');
     if (expectField && !state.highlight) {
-      if (expectField === 'bn' || expectField === 'bd') blue.classList.add('selected');
+      if (expectField === 'bw' || expectField === 'bn' || expectField === 'bd') blue.classList.add('selected');
       if (expectField === 'rn' || expectField === 'rd') red.classList.add('selected');
     }
 
+    var properBtn = $('exp-mode-proper');
+    var mixedBtn = $('exp-mode-mixed');
+    if (properBtn && mixedBtn) {
+      properBtn.classList.toggle('active', !isMixed());
+      mixedBtn.classList.toggle('active', isMixed());
+      properBtn.setAttribute('aria-pressed', isMixed() ? 'false' : 'true');
+      mixedBtn.setAttribute('aria-pressed', isMixed() ? 'true' : 'false');
+    }
+    var eq = $('exp-eq');
+    eq.classList.toggle('mixed', isMixed());
+    eq.setAttribute('aria-label', isMixed() ? '帶分數乘真分數算式' : '分數乘法算式');
+
     var prompt = $('exp-prompt');
-    var filled = state.fillStep === 5;
+    var filled = state.fillStep === doneStep();
     prompt.hidden = false;
     prompt.setAttribute('aria-hidden', 'false');
-    prompt.textContent = filled ? EXPLAIN_PROMPT : (PROMPTS[state.fillStep] || '');
+    prompt.textContent = filled
+      ? (isMixed() ? EXPLAIN_PROMPT_MIXED : EXPLAIN_PROMPT)
+      : (promptsForMode()[state.fillStep] || '');
   }
 
   function renderAll() {
@@ -532,13 +799,14 @@ function toast(msg, kind) {
   }
 
   function openKeypad(field) {
-    if (field === 'pn' || field === 'pd') return;
+    if (field === 'pn' || field === 'pd' || field === 'pw') return;
     stopAnim();
     state.highlight = null;
     state.editing = field;
     var bd = $('exp-keypad-backdrop');
     var hint = $('exp-keypad-hint');
-    hint.textContent = FIELD_HINT[field] || '請選擇數字';
+    var hints = isMixed() ? FIELD_HINT_MIXED : FIELD_HINT;
+    hint.textContent = hints[field] || '請選擇數字';
     bd.classList.add('show');
     bd.setAttribute('aria-hidden', 'false');
     updateChipsUI();
@@ -553,11 +821,27 @@ function toast(msg, kind) {
     updateChipsUI();
   }
 
+  function digitError(field, n) {
+    if ((field === 'bd' || field === 'rd') && n === 0) return '分母不能為 0';
+    if (!isMixed()) return '';
+    if (field === 'bw' && n === 0) return '整數部分不能為 0';
+    if ((field === 'bd' || field === 'rd') && n < 2) return '分母至少是 2';
+    if (field === 'bn' || field === 'rn') {
+      if (n === 0) return '分子不能為 0';
+      var den = field === 'bn' ? state.bd : state.rd;
+      if (den != null && n >= den) return '分子要小於分母';
+    }
+    if (field === 'bd' && state.bn != null && state.bn >= n) return '分母要大於分子';
+    if (field === 'rd' && state.rn != null && state.rn >= n) return '分母要大於分子';
+    return '';
+  }
+
   function applyDigit(n) {
     var f = state.editing;
     if (!f) return;
-    if ((f === 'bd' || f === 'rd') && n === 0) {
-      if (typeof toast === 'function') toast('分母不能為 0', 'bad');
+    var err = digitError(f, n);
+    if (err) {
+      if (typeof toast === 'function') toast(err, 'bad');
       return;
     }
     state[f] = n;
@@ -569,22 +853,34 @@ function toast(msg, kind) {
   }
 
   function resetExplorer() {
-    state.bn = state.bd = state.rn = state.rd = null;
+    state.bw = state.bn = state.bd = state.rn = state.rd = null;
     state.highlight = null;
     state.editing = null;
     state.fillStep = 1;
-    state.revealed = { bd: false, bn: false, rd: false, rn: false };
+    state.revealed = { bw: false, bd: false, bn: false, rd: false, rn: false };
     stopAnim();
     closeKeypad();
     renderAll();
   }
 
+  function setMode(mode) {
+    if (mode !== 'proper' && mode !== 'mixed') return;
+    if (state.mode === mode) return;
+    state.mode = mode;
+    try {
+      if (mode === 'mixed') history.replaceState(null, '', '#mixed');
+      else history.replaceState(null, '', location.pathname + location.search);
+    } catch (e) {}
+    resetExplorer();
+  }
+
   function fieldForStep(step) {
+    if (isMixed()) return { 1: 'bw', 2: 'bd', 3: 'bn', 4: 'rd', 5: 'rn' }[step];
     return { 1: 'bd', 2: 'bn', 3: 'rd', 4: 'rn' }[step];
   }
 
   function onDigitPointer(field, isDouble) {
-    if (field === 'pn' || field === 'pd') {
+    if (field === 'pn' || field === 'pd' || field === 'pw') {
       if (answerRevealed()) {
         state.highlight = (state.highlight === field) ? null : field;
         renderAll();
@@ -628,7 +924,7 @@ function toast(msg, kind) {
         cancelHold();
         holdOpened = false;
         var field = el.getAttribute('data-field');
-        if (field === 'pn' || field === 'pd') return;
+        if (field === 'pn' || field === 'pd' || field === 'pw') return;
         holdTimer = setTimeout(function () {
           holdTimer = 0;
           if (state[field] == null) return;
@@ -659,6 +955,21 @@ function toast(msg, kind) {
           }
           return;
         }
+        if (color === 'blue' && isMixed()) {
+          if (state.bw == null && state.bd == null && state.bn == null) {
+            if (!isComplete()) {
+              var expectMixed = fieldForStep(state.fillStep);
+              if (expectMixed) openKeypad(expectMixed);
+            }
+            return;
+          }
+          if (state.bw != null && !state.revealed.bw) playExplain('bw');
+          else if (state.bd != null && !state.revealed.bd) playExplain('bd');
+          else if (state.bn != null) playExplain('bn');
+          else if (state.bd != null) playExplain('bd');
+          else playExplain('bw');
+          return;
+        }
         var numF = color === 'blue' ? 'bn' : 'rn';
         var denF = color === 'blue' ? 'bd' : 'rd';
         if (state[denF] == null && state[numF] == null) {
@@ -675,6 +986,12 @@ function toast(msg, kind) {
     });
 
     $('exp-btn-reset').onclick = resetExplorer;
+
+    document.querySelectorAll('.exp-mode-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setMode(btn.getAttribute('data-mode'));
+      });
+    });
 
     $('exp-keypad').addEventListener('click', function (e) {
       var btn = e.target.closest('button[data-dig]');
