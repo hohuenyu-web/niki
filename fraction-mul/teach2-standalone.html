@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>分數乘法二教學｜順德聯誼總會何日東小學— 何老師設計</title>
+<style>
+  :root {
+    --bg: #fff8f0; --text: #2c3e50; --muted: #7f8c8d;
+    --success: #27ae60; --danger: #e74c3c;
+    --shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; max-width: 100%; min-height: 100%;
+    font-family: "PingFang HK", "Noto Sans TC", "Microsoft JhengHei", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+    -webkit-tap-highlight-color: transparent; overflow-x: hidden;
+  }
+  body { min-height: 100vh; }
+  .page {
+    min-height: 100vh; padding: 12px; width: 100%;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .header { text-align: center; margin-bottom: 14px; width: 100%; }
+  .header h1 { font-size: clamp(1.35rem, 4vw, 1.85rem); color: #d35400; margin-bottom: 4px; }
+  .header .school { font-size: 0.85rem; color: var(--muted); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: none; border-radius: 12px; padding: 12px 18px;
+    font-size: 1rem; font-weight: 600; cursor: pointer; font-family: inherit;
+    transition: transform 0.1s, background 0.15s; min-height: 48px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-ghost { background: #f5f0ea; color: var(--text); }
+  .btn-ghost:hover { background: #ebe3d8; }
+
+  .exp-card {
+    width: 100%; max-width: min(960px, 100%);
+    background: #fff; border-radius: 18px; box-shadow: var(--shadow);
+    border: 2px solid #e8eef5; padding: 14px 14px 18px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .exp-title {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: clamp(1.15rem, 3.5vw, 1.45rem); font-weight: 800; color: #2c5aa0;
+  }
+  .exp-title .exp-ico {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: linear-gradient(135deg, #5dade2, #e74c3c 40%, #f1c40f 70%, #27ae60);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.5);
+    flex-shrink: 0;
+  }
+  .exp-body {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; justify-content: center;
+  }
+  .exp-canvas-wrap {
+    flex: 1 1 280px; max-width: 480px; min-width: 240px;
+    aspect-ratio: 1 / 1; width: 100%;
+    position: relative;
+  }
+  #exp-canvas {
+    width: 100%; height: 100%; display: block;
+    background: #fff; border-radius: 4px;
+    touch-action: none; -webkit-user-select: none; user-select: none;
+  }
+  .exp-right {
+    flex: 1 1 260px; max-width: 420px; min-width: 240px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    padding-top: 8px;
+  }
+  .exp-eq {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; flex-wrap: wrap; font-size: clamp(1.4rem, 4vw, 1.9rem); font-weight: 800;
+  }
+  .exp-op { color: #95a5a6; font-size: 1.3em; padding: 0 2px; user-select: none; }
+  .exp-chip {
+    display: inline-flex; flex-direction: column; align-items: center;
+    border: 2.5px solid transparent; border-radius: 12px;
+    padding: 6px 10px; min-width: 56px; cursor: pointer;
+    -webkit-user-select: none; user-select: none;
+    transition: box-shadow 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .exp-chip.blue { background: #eaf3fb; color: #2471a3; border-color: #a9cce3; }
+  .exp-chip.red { background: #fdecea; color: #c0392b; border-color: #f5b7b1; }
+  .exp-chip.purple { background: #f5eef8; color: #6c3483; border-color: #d2b4de; cursor: default; }
+  .exp-chip.empty { background: #f7f9fc; color: #b0b8c4; border-color: #d5dde8; border-style: dashed; }
+  .exp-chip.selected {
+    border-style: dashed; border-width: 3px; border-color: #7f8c8d !important;
+    box-shadow: 0 0 0 2px rgba(127, 140, 141, 0.18);
+  }
+  .exp-chip .exp-num, .exp-chip .exp-den {
+    min-width: 1.4em; text-align: center; line-height: 1.15;
+    padding: 2px 4px; border-radius: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .exp-chip .exp-num { border-bottom: 3px solid currentColor; margin-bottom: 3px; padding-bottom: 3px; }
+  .exp-chip .digit-hit {
+    display: inline-block; min-width: 1.6em; min-height: 1.6em;
+    line-height: 1.6em; text-align: center; border-radius: 8px;
+    padding: 4px 8px; cursor: pointer;
+  }
+  .exp-chip .digit-hit.expect {
+    outline: 2px dashed currentColor; background: rgba(255,255,255,0.85);
+  }
+  .exp-chip .digit-hit:active { background: rgba(0,0,0,0.06); }
+  .exp-chip.editing-digit .digit-hit.editing {
+    outline: 2px dashed currentColor; background: rgba(255,255,255,0.7);
+  }
+  .exp-prompt {
+    background: #eaf2fb; color: #2c5aa0; border-radius: 999px;
+    padding: 10px 16px; font-weight: 700; font-size: 0.95rem;
+    text-align: center; max-width: 100%; line-height: 1.45;
+  }
+  .exp-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
+  .exp-actions .btn { min-width: 120px; }
+
+  .exp-keypad-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 150;
+    background: rgba(0,0,0,0.18); align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .exp-keypad-backdrop.show { display: flex; }
+  .exp-keypad {
+    background: #fff; border-radius: 16px; padding: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.22);
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    width: min(280px, 90vw);
+  }
+  .exp-keypad button {
+    border: 2px solid #e8eef5; background: #f7fafc; border-radius: 12px;
+    font-size: 1.45rem; font-weight: 800; font-family: inherit;
+    min-height: 56px; cursor: pointer; color: var(--text);
+  }
+  .exp-keypad button:active { background: #eaf4fb; transform: scale(0.96); }
+  .exp-keypad button.zero { grid-column: 2; }
+  .exp-keypad-hint {
+    grid-column: 1 / -1; text-align: center; color: var(--muted);
+    font-size: 0.85rem; font-weight: 600; padding: 4px 0 2px;
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: 24px;
+    transform: translateX(-50%) translateY(calc(100% + 48px));
+    background: #2c3e50; color: #fff; padding: 12px 18px; border-radius: 12px;
+    font-weight: 600; z-index: 200; transition: transform 0.25s; max-width: 90vw;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.bad { background: var(--danger); }
+  .toast.ok { background: var(--success); }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="header">
+    <h1>分數乘法二教學</h1>
+    <div class="school">順德聯誼總會何日東小學— 何老師設計</div>
+  </header>
+
+  <div id="explorer-shared" class="exp-card">
+    <div class="exp-title"><span class="exp-ico" aria-hidden="true"></span>分數乘法探索器</div>
+    <div class="exp-body">
+      <div class="exp-canvas-wrap">
+        <canvas id="exp-canvas" width="560" height="560" aria-label="分數乘法面積模型"></canvas>
+      </div>
+      <div class="exp-right">
+        <div class="exp-eq" id="exp-eq" aria-label="分數乘法算式">
+          <div class="exp-chip blue empty" data-chip="blue" id="exp-chip-blue">
+            <span class="exp-num"><span class="digit-hit" data-field="bn">?</span></span>
+            <span class="exp-den"><span class="digit-hit" data-field="bd">?</span></span>
+          </div>
+          <span class="exp-op">×</span>
+          <div class="exp-chip red empty" data-chip="red" id="exp-chip-red">
+            <span class="exp-num"><span class="digit-hit" data-field="rn">?</span></span>
+            <span class="exp-den"><span class="digit-hit" data-field="rd">?</span></span>
+          </div>
+          <span class="exp-op">=</span>
+          <div class="exp-chip purple empty" data-chip="purple" id="exp-chip-purple">
+            <span class="exp-num"><span class="digit-hit" data-field="pn">?</span></span>
+            <span class="exp-den"><span class="digit-hit" data-field="pd">?</span></span>
+          </div>
+        </div>
+        <div class="exp-prompt" id="exp-prompt">第一步：先填寫左側藍色的分母</div>
+        <div class="exp-actions">
+          <button type="button" class="btn btn-ghost" id="exp-btn-reset">重新開始</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="exp-keypad-backdrop" id="exp-keypad-backdrop" aria-hidden="true">
+  <div class="exp-keypad" id="exp-keypad" role="dialog" aria-label="數字鍵盤">
+    <div class="exp-keypad-hint" id="exp-keypad-hint">請選擇數字</div>
+    <button type="button" data-dig="1">1</button>
+    <button type="button" data-dig="2">2</button>
+    <button type="button" data-dig="3">3</button>
+    <button type="button" data-dig="4">4</button>
+    <button type="button" data-dig="5">5</button>
+    <button type="button" data-dig="6">6</button>
+    <button type="button" data-dig="7">7</button>
+    <button type="button" data-dig="8">8</button>
+    <button type="button" data-dig="9">9</button>
+    <button type="button" class="zero" data-dig="0">0</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* 分數乘法二教學（獨立頁）
+   從課堂頁的面積模型抽出，可離線開啟或整份嵌入。
+   沒有 PubNub、課堂編號、老師監察、學生提交，也沒有其他分頁。
+   先點分母出分割線，再點分子出斜線。四個數填完不會立刻顯示答案。
+   再點已填的數字會重播該步。斜線旁的三句說明已刪，不要加回。
+   乘積按分子相乘、分母相乘直接顯示，本教學頁不另約成最簡。
+   順德聯誼總會何日東小學— 何老師設計
+*/
+function toast(msg, kind) {
+  var el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'toast show' + (kind ? ' ' + kind : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function () { el.classList.remove('show', 'ok', 'bad'); }, 2400);
+}
+
+(function () {
+  var state = {
+    bn: null, bd: null, rn: null, rd: null,
+    highlight: null,
+    editing: null,
+    fillStep: 1,     // 1 bd, 2 bn, 3 rd, 4 rn, 5 done
+    lastTap: { field: null, t: 0 },
+    /* Canvas stays blank until that part of the fraction is tapped. */
+    revealed: { bd: false, bn: false, rd: false, rn: false },
+    anim: null
+  };
+
+  var PROMPTS = {
+    1: '第一步：先填寫左側藍色的分母',
+    2: '第二步：再填寫左側藍色的分子',
+    3: '第三步：再填寫右側紅色的分母',
+    4: '第四步：再填寫右側紅色的分子'
+  };
+  var FIELD_HINT = {
+    bd: '填寫左側藍色的分母',
+    bn: '填寫左側藍色的分子',
+    rd: '填寫右側紅色的分母',
+    rn: '填寫右側紅色的分子'
+  };
+  var EXPLAIN_PROMPT = '點分母看分割，點分子看斜線。再點可重播。';
+
+  var canvas, ctx;
+  var animRaf = 0;
+
+  function $(id) { return document.getElementById(id); }
+
+  function product() {
+    if (state.bn == null || state.bd == null || state.rn == null || state.rd == null) return null;
+    return { n: state.bn * state.rn, d: state.bd * state.rd };
+  }
+
+  function isComplete() {
+    return state.bn != null && state.bd != null && state.rn != null && state.rd != null;
+  }
+
+  function recomputeStep() {
+    if (state.bd == null) state.fillStep = 1;
+    else if (state.bn == null) state.fillStep = 2;
+    else if (state.rd == null) state.fillStep = 3;
+    else if (state.rn == null) state.fillStep = 4;
+    else state.fillStep = 5;
+  }
+
+  function answerRevealed() {
+    return !!(state.revealed.bn && state.revealed.rn &&
+      state.bn != null && state.rn != null && state.bd && state.rd);
+  }
+
+  function easeOut(t) {
+    t = Math.max(0, Math.min(1, t));
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function fieldProgress(field) {
+    if (state.anim && state.anim.field === field) {
+      var t = (performance.now() - state.anim.t0) / state.anim.dur;
+      if (t >= 1) return 1;
+      return easeOut(t);
+    }
+    return state.revealed[field] ? 1 : 0;
+  }
+
+  function stopAnim() {
+    if (animRaf) cancelAnimationFrame(animRaf);
+    animRaf = 0;
+    state.anim = null;
+  }
+
+  function playExplain(field) {
+    if (field !== 'bd' && field !== 'bn' && field !== 'rd' && field !== 'rn') return;
+    if (state[field] == null) return;
+    state.revealed[field] = true;
+    state.highlight = field;
+    state.anim = { field: field, t0: performance.now(), dur: 720 };
+    updateChipsUI();
+    if (animRaf) cancelAnimationFrame(animRaf);
+    function frame() {
+      if (!canvas || !state.anim || state.anim.field !== field) return;
+      var t = (performance.now() - state.anim.t0) / state.anim.dur;
+      drawModel(canvas.clientWidth || 400);
+      if (t < 1 && state.anim && state.anim.field === field) animRaf = requestAnimationFrame(frame);
+      else if (state.anim && state.anim.field === field) state.anim = null;
+    }
+    frame();
+  }
+
+  function clearReveal(field) {
+    state.revealed[field] = false;
+    if (field === 'bd') state.revealed.bn = false;
+    if (field === 'rd') state.revealed.rn = false;
+  }
+
+  function resizeCanvas() {
+    if (!canvas) return;
+    var wrap = canvas.parentElement;
+    var size = Math.floor(Math.min(wrap.clientWidth || 480, wrap.clientHeight || 480, 560));
+    if (size < 200) size = 280;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawModel(size);
+  }
+
+  var HATCH_NEUTRAL = '#2c3e50';
+
+  function hatch(x, y, w, h, color, dir, gap, lineWidth) {
+    gap = gap || 8;
+    if (!(w > 0) || !(h > 0) || !(gap > 0)) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth || 1.6;
+    ctx.beginPath();
+    var span = w + h;
+    var rem = span % gap;
+    if (rem < 0) rem += gap;
+    if (gap - rem < 0.05) rem = 0;
+    var margin = rem / 2;
+    var i;
+    var start = -h + margin;
+    var end = w - margin;
+    if (dir < 0) {
+      for (i = start; i <= end + 0.01; i += gap) {
+        ctx.moveTo(x + i, y);
+        ctx.lineTo(x + i + h, y + h);
+      }
+    } else {
+      for (i = start; i <= end + 0.01; i += gap) {
+        ctx.moveTo(x + i, y + h);
+        ctx.lineTo(x + i + h, y);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function strokeGrowingLines(x0, y0, W, H, count, vertical, color, progress) {
+    if (!(count > 1) || !(progress > 0)) return;
+    var lines = count - 1;
+    var slot = 0.62;
+    var gap = lines > 1 ? (1 - slot) / (lines - 1) : 0;
+    ctx.save();
+    ctx.setLineDash([6, 5]);
+    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    var i, lp, pos;
+    for (i = 1; i <= lines; i++) {
+      lp = (progress - (i - 1) * gap) / slot;
+      if (lp <= 0) continue;
+      if (lp > 1) lp = 1;
+      if (vertical) {
+        pos = x0 + (W / count) * i;
+        ctx.moveTo(pos, y0);
+        ctx.lineTo(pos, y0 + H * lp);
+      } else {
+        pos = y0 + (H / count) * i;
+        ctx.moveTo(x0, pos);
+        ctx.lineTo(x0 + W * lp, pos);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function strokePartitionLines(x0, y0, W, H) {
+    if (state.revealed.bd) strokeGrowingLines(x0, y0, W, H, state.bd, true, '#5dade2', fieldProgress('bd'));
+    if (state.revealed.rd) strokeGrowingLines(x0, y0, W, H, state.rd, false, '#e74c3c', fieldProgress('rd'));
+  }
+
+  function withRevealClip(field, x, y, w, h, axis, draw) {
+    ctx.save();
+    if (field && state.anim && state.anim.field === field) {
+      var p = fieldProgress(field);
+      ctx.beginPath();
+      if (axis === 'y') ctx.rect(x, y, w, Math.max(0.01, h * p));
+      else ctx.rect(x, y, Math.max(0.01, w * p), h);
+      ctx.clip();
+    }
+    draw();
+    ctx.restore();
+  }
+
+  function drawModel(cssSize) {
+    if (!ctx) return;
+    var S = cssSize || (canvas.clientWidth || 400);
+    var pad = 10;
+    var x0 = pad, y0 = pad, W = S - pad * 2, H = S - pad * 2;
+
+    ctx.clearRect(0, 0, S, S);
+    ctx.setLineDash([]);
+
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#2c3e50';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x0, y0, W, H);
+    ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
+
+    var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
+    var showBn = state.revealed.bn && bd && bn != null && bn > 0;
+    var showRn = state.revealed.rn && rd && rn != null && rn > 0;
+    var bw = showBn ? (W / bd) * Math.min(bn, bd) : 0;
+    var rh2 = showRn ? (H / rd) * Math.min(rn, rd) : 0;
+    var hasOverlap = bw > 0 && rh2 > 0;
+
+    if (bw > 0) {
+      withRevealClip('bn', x0, y0, bw, H, 'x', function () {
+        var by = y0 + (hasOverlap ? rh2 : 0);
+        var bh = H - (hasOverlap ? rh2 : 0);
+        hatch(x0, by, bw, bh, HATCH_NEUTRAL, -1, 36);
+      });
+    }
+    if (rh2 > 0) {
+      withRevealClip('rn', x0, y0, W, rh2, 'y', function () {
+        var rx = x0 + (hasOverlap ? bw : 0);
+        var rw = W - (hasOverlap ? bw : 0);
+        hatch(rx, y0, rw, rh2, HATCH_NEUTRAL, 1, 36);
+      });
+    }
+    if (hasOverlap) {
+      var overlapField = (state.anim && (state.anim.field === 'bn' || state.anim.field === 'rn')) ? state.anim.field : null;
+      withRevealClip(overlapField, x0, y0, bw, rh2, overlapField === 'rn' ? 'y' : 'x', function () {
+        hatch(x0, y0, bw, rh2, HATCH_NEUTRAL, -1, 28);
+        hatch(x0, y0, bw, rh2, HATCH_NEUTRAL, 1, 28);
+      });
+    }
+
+    strokePartitionLines(x0, y0, W, H);
+
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#2c3e50';
+    ctx.setLineDash([]);
+    ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
+  }
+
+  function setDigitText(field, val) {
+    var el = document.querySelector('#exp-eq .digit-hit[data-field="' + field + '"]');
+    if (!el) return;
+    el.textContent = (val == null) ? '?' : String(val);
+  }
+
+  function updateChipsUI() {
+    setDigitText('bn', state.bn);
+    setDigitText('bd', state.bd);
+    setDigitText('rn', state.rn);
+    setDigitText('rd', state.rd);
+    var p = product();
+    var showAnswer = answerRevealed();
+    setDigitText('pn', showAnswer && p ? p.n : null);
+    setDigitText('pd', showAnswer && p ? p.d : null);
+
+    var blue = $('exp-chip-blue');
+    var red = $('exp-chip-red');
+    var purple = $('exp-chip-purple');
+    function syncChip(el, hasAny, colorClass) {
+      el.classList.remove('empty', 'selected', 'blue', 'red', 'purple');
+      el.classList.add(colorClass);
+      if (!hasAny) el.classList.add('empty');
+    }
+    syncChip(blue, state.bn != null || state.bd != null, 'blue');
+    syncChip(red, state.rn != null || state.rd != null, 'red');
+    syncChip(purple, showAnswer && !!p, 'purple');
+
+    var map = { bn: blue, bd: blue, rn: red, rd: red, pn: purple, pd: purple };
+    if (state.highlight && map[state.highlight]) {
+      map[state.highlight].classList.add('selected');
+    }
+
+    recomputeStep();
+    var expectField = null;
+    if (state.fillStep >= 1 && state.fillStep <= 4) {
+      expectField = { 1: 'bd', 2: 'bn', 3: 'rd', 4: 'rn' }[state.fillStep];
+    }
+    document.querySelectorAll('#exp-eq .digit-hit').forEach(function (d) {
+      var f = d.getAttribute('data-field');
+      d.classList.toggle('editing', state.editing === f);
+      d.classList.toggle('expect', expectField === f && state.editing == null);
+    });
+    blue.classList.toggle('editing-digit', state.editing === 'bn' || state.editing === 'bd');
+    red.classList.toggle('editing-digit', state.editing === 'rn' || state.editing === 'rd');
+    if (expectField && !state.highlight) {
+      if (expectField === 'bn' || expectField === 'bd') blue.classList.add('selected');
+      if (expectField === 'rn' || expectField === 'rd') red.classList.add('selected');
+    }
+
+    var prompt = $('exp-prompt');
+    var filled = state.fillStep === 5;
+    prompt.hidden = false;
+    prompt.setAttribute('aria-hidden', 'false');
+    prompt.textContent = filled ? EXPLAIN_PROMPT : (PROMPTS[state.fillStep] || '');
+  }
+
+  function renderAll() {
+    updateChipsUI();
+    resizeCanvas();
+  }
+
+  function openKeypad(field) {
+    if (field === 'pn' || field === 'pd') return;
+    stopAnim();
+    state.highlight = null;
+    state.editing = field;
+    var bd = $('exp-keypad-backdrop');
+    var hint = $('exp-keypad-hint');
+    hint.textContent = FIELD_HINT[field] || '請選擇數字';
+    bd.classList.add('show');
+    bd.setAttribute('aria-hidden', 'false');
+    updateChipsUI();
+    if (canvas) drawModel(canvas.clientWidth || 400);
+  }
+
+  function closeKeypad() {
+    state.editing = null;
+    var bd = $('exp-keypad-backdrop');
+    bd.classList.remove('show');
+    bd.setAttribute('aria-hidden', 'true');
+    updateChipsUI();
+  }
+
+  function applyDigit(n) {
+    var f = state.editing;
+    if (!f) return;
+    if ((f === 'bd' || f === 'rd') && n === 0) {
+      if (typeof toast === 'function') toast('分母不能為 0', 'bad');
+      return;
+    }
+    state[f] = n;
+    clearReveal(f);
+    stopAnim();
+    recomputeStep();
+    closeKeypad();
+    renderAll();
+  }
+
+  function resetExplorer() {
+    state.bn = state.bd = state.rn = state.rd = null;
+    state.highlight = null;
+    state.editing = null;
+    state.fillStep = 1;
+    state.revealed = { bd: false, bn: false, rd: false, rn: false };
+    stopAnim();
+    closeKeypad();
+    renderAll();
+  }
+
+  function fieldForStep(step) {
+    return { 1: 'bd', 2: 'bn', 3: 'rd', 4: 'rn' }[step];
+  }
+
+  function onDigitPointer(field, isDouble) {
+    if (field === 'pn' || field === 'pd') {
+      if (answerRevealed()) {
+        state.highlight = (state.highlight === field) ? null : field;
+        renderAll();
+      }
+      return;
+    }
+
+    if (state[field] == null) {
+      if (!isComplete()) {
+        var expected = fieldForStep(state.fillStep);
+        openKeypad(field === expected ? field : (expected || field));
+      }
+      return;
+    }
+
+    /* A filled number replays its picture. A quick second tap still opens
+       the keypad so a wrong digit can be corrected without 重新開始. */
+    if (isDouble) {
+      openKeypad(field);
+      return;
+    }
+    playExplain(field);
+  }
+
+  function handleDigitEvent(field) {
+    var now = Date.now();
+    var isDouble = (state.lastTap.field === field && (now - state.lastTap.t) < 350);
+    state.lastTap = { field: field, t: now };
+    onDigitPointer(field, isDouble);
+  }
+
+  function wireExplorer() {
+    document.querySelectorAll('#exp-eq .digit-hit').forEach(function (el) {
+      var holdTimer = 0;
+      var holdOpened = false;
+      function cancelHold() {
+        if (holdTimer) clearTimeout(holdTimer);
+        holdTimer = 0;
+      }
+      el.addEventListener('pointerdown', function () {
+        cancelHold();
+        holdOpened = false;
+        var field = el.getAttribute('data-field');
+        if (field === 'pn' || field === 'pd') return;
+        holdTimer = setTimeout(function () {
+          holdTimer = 0;
+          if (state[field] == null) return;
+          holdOpened = true;
+          openKeypad(field);
+        }, 550);
+      });
+      el.addEventListener('pointerup', cancelHold);
+      el.addEventListener('pointerleave', cancelHold);
+      el.addEventListener('pointercancel', cancelHold);
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (holdOpened) { holdOpened = false; return; }
+        handleDigitEvent(el.getAttribute('data-field'));
+      });
+    });
+    ['exp-chip-blue', 'exp-chip-red', 'exp-chip-purple'].forEach(function (id) {
+      var chip = $(id);
+      if (!chip) return;
+      chip.addEventListener('click', function (e) {
+        if (e.target.classList.contains('digit-hit')) return;
+        var color = chip.getAttribute('data-chip');
+        if (color === 'purple') {
+          if (answerRevealed()) {
+            state.highlight = state.highlight === 'pn' ? null : 'pn';
+            renderAll();
+          }
+          return;
+        }
+        var numF = color === 'blue' ? 'bn' : 'rn';
+        var denF = color === 'blue' ? 'bd' : 'rd';
+        if (state[denF] == null && state[numF] == null) {
+          if (!isComplete()) {
+            var expected = fieldForStep(state.fillStep);
+            if (expected) openKeypad(expected);
+          }
+          return;
+        }
+        if (state[denF] != null && !state.revealed[denF]) playExplain(denF);
+        else if (state[numF] != null) playExplain(numF);
+        else playExplain(denF);
+      });
+    });
+
+    $('exp-btn-reset').onclick = resetExplorer;
+
+    $('exp-keypad').addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-dig]');
+      if (!btn) return;
+      applyDigit(parseInt(btn.getAttribute('data-dig'), 10));
+    });
+    $('exp-keypad-backdrop').addEventListener('click', function (e) {
+      if (e.target === $('exp-keypad-backdrop')) closeKeypad();
+    });
+
+    window.addEventListener('resize', function () {
+      if ($('explorer-shared') && !$('explorer-shared').hidden) resizeCanvas();
+    });
+  }
+
+  canvas = $('exp-canvas');
+  ctx = canvas.getContext('2d');
+  wireExplorer();
+  renderAll();
+})();
+</script>
+</body>
+</html>
