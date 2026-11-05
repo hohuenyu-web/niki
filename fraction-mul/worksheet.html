@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分數乘法工作紙｜順德聯誼總會何日東小學</title>
+<style>
+  :root {
+    --bg: #fff8f0; --text: #2c3e50; --muted: #7f8c8d;
+    --primary: #e67e22; --primary-dark: #d35400;
+    --shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; max-width: 100%; min-height: 100%;
+    font-family: "PingFang HK", "Noto Sans TC", "Microsoft JhengHei", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+  }
+  body { min-height: 100vh; }
+  [hidden] { display: none !important; }
+  .page {
+    min-height: 100vh; padding: 12px 14px 32px; width: 100%;
+    max-width: 880px; margin: 0 auto;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+  .header { text-align: center; width: 100%; }
+  .header h1 { font-size: clamp(1.35rem, 4vw, 1.85rem); color: var(--primary-dark); margin-bottom: 4px; }
+  .header .school { font-size: 0.85rem; color: var(--muted); }
+  .page-nav { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+  .page-nav a {
+    text-decoration: none; border: 2px solid #f0e6d8; background: #fff; border-radius: 12px;
+    padding: 8px 14px; font-weight: 800; color: var(--muted); min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .page-nav a[aria-current="page"] { border-color: var(--primary); background: #ffe8d1; color: var(--primary-dark); }
+  .panel {
+    width: 100%; background: #fff; border: 2px solid #e8eef5; border-radius: 18px;
+    box-shadow: var(--shadow); padding: 18px 16px 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+  .panel h2 { color: #2c5aa0; font-size: 1.25rem; text-align: center; }
+  .hint { color: var(--muted); font-weight: 600; line-height: 1.5; text-align: center; max-width: 36em; }
+  .pick-grid { width: 100%; max-width: 560px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pick-btn, .btn {
+    border: 2px solid #f0e6d8; background: #fff; border-radius: 14px;
+    font-family: inherit; font-weight: 800; cursor: pointer; color: var(--text);
+  }
+  .pick-btn { min-height: 92px; font-size: 1.55rem; }
+  .pick-btn:hover, .btn:hover { background: #fff5eb; border-color: var(--primary); }
+  .pick-btn:active, .btn:active { transform: scale(0.98); }
+  .btn {
+    background: #f5f0ea; min-height: 48px; padding: 10px 16px; font-size: 1rem;
+  }
+  .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn.primary:disabled { opacity: 0.55; cursor: default; transform: none; }
+  .demo-top { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .q-name { font-weight: 800; color: var(--primary-dark); font-size: 1.15rem; }
+  .col-label { font-weight: 800; color: #2c5aa0; letter-spacing: 0.08em; }
+  .exp-eq {
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+    gap: 8px; font-size: clamp(1.6rem, 5vw, 2.15rem); font-weight: 800;
+  }
+  .exp-eq.mixed { font-size: clamp(1.35rem, 4vw, 1.85rem); }
+  .op { color: #95a5a6; }
+  .exp-chip {
+    display: inline-flex; flex-direction: column; align-items: center;
+    border: 2.5px solid transparent; border-radius: 12px; padding: 6px 10px; min-width: 64px;
+  }
+  .exp-chip.blue { background: #eaf3fb; color: #2471a3; border-color: #a9cce3; }
+  .exp-chip.red { background: #fdecea; color: #c0392b; border-color: #f5b7b1; }
+  .exp-chip.purple { background: #f5eef8; color: #6c3483; border-color: #d2b4de; }
+  .exp-chip.next { border-style: dashed; border-width: 3px; border-color: #7f8c8d; }
+  .exp-chip.as-mixed {
+    display: inline-grid; grid-template-columns: auto auto; grid-template-rows: auto auto;
+    align-items: center; justify-items: center; column-gap: 4px;
+  }
+  .exp-chip.as-mixed .exp-whole { grid-column: 1; grid-row: 1 / span 2; }
+  .exp-chip.as-mixed .exp-num { grid-column: 2; grid-row: 1; }
+  .exp-chip.as-mixed .exp-den { grid-column: 2; grid-row: 2; }
+  .exp-chip.as-int .exp-num, .exp-chip.as-int .exp-den { display: none; }
+  .exp-whole[hidden] { display: none !important; }
+  .exp-num, .exp-den { min-width: 1.4em; text-align: center; line-height: 1.1; }
+  .exp-num { border-bottom: 3px solid currentColor; padding-bottom: 2px; margin-bottom: 2px; }
+  button.digit {
+    border: none; background: transparent; color: inherit; font: inherit; font-weight: 800;
+    min-width: 1.7em; min-height: 1.7em; border-radius: 8px; cursor: pointer; padding: 2px 6px;
+  }
+  button.digit.expect { outline: 2px dashed currentColor; background: rgba(255,255,255,0.88); }
+  button.digit:active { background: rgba(0,0,0,0.06); }
+  .product-digit { min-width: 1.2em; text-align: center; display: inline-block; padding: 2px 4px; }
+  .canvas-wrap { width: min(520px, 100%); display: flex; justify-content: center; }
+  #demo-canvas { display: block; background: #fff; cursor: pointer; max-width: 100%; touch-action: manipulation; }
+  .prompt {
+    background: #eaf2fb; color: #2c5aa0; border-radius: 999px;
+    padding: 10px 16px; font-weight: 800; text-align: center; line-height: 1.45; max-width: 100%;
+  }
+  .step-count { color: var(--muted); font-weight: 700; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  @media (max-width: 560px) {
+    .pick-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="header">
+    <h1>分數乘法工作紙</h1>
+    <div class="school">順德聯誼總會何日東小學</div>
+    <nav class="page-nav" aria-label="頁面">
+      <a href="teach2-standalone.html">分數乘法二教學</a>
+      <a href="worksheet.html" aria-current="page">工作紙</a>
+    </nav>
+  </header>
+
+  <section class="panel" id="picker" aria-label="選擇題目">
+    <h2>請選擇題目</h2>
+    <p class="hint">選好之後才顯示列式。然後點一下，逐步看分割線和斜線，跟教學頁同一種示範。</p>
+    <div class="pick-grid" role="group">
+      <button type="button" class="pick-btn" data-q="0">題目一</button>
+      <button type="button" class="pick-btn" data-q="1">題目二</button>
+      <button type="button" class="pick-btn" data-q="2">題目三</button>
+      <button type="button" class="pick-btn" data-q="3">題目四</button>
+    </div>
+  </section>
+
+  <section class="panel" id="demo" hidden aria-label="列式同斜線示範">
+    <div class="demo-top">
+      <div class="q-name" id="q-name">題目一</div>
+      <button type="button" class="btn" id="btn-back">返回選題</button>
+    </div>
+    <div class="col-label">列式</div>
+    <div class="exp-eq" id="eq" aria-label="列式">
+      <div class="exp-chip blue" id="chip-a">
+        <span class="exp-whole" id="whole-a" hidden><button type="button" class="digit" data-field="bw">1</button></span>
+        <span class="exp-num"><button type="button" class="digit" data-field="bn">1</button></span>
+        <span class="exp-den"><button type="button" class="digit" data-field="bd">2</button></span>
+      </div>
+      <span class="op">×</span>
+      <div class="exp-chip red" id="chip-b">
+        <span class="exp-num"><button type="button" class="digit" data-field="rn">1</button></span>
+        <span class="exp-den"><button type="button" class="digit" data-field="rd">3</button></span>
+      </div>
+      <span class="op">=</span>
+      <div class="exp-chip purple" id="chip-p">
+        <span class="exp-whole" id="whole-p" hidden><span class="product-digit" data-field="pw">?</span></span>
+        <span class="exp-num"><span class="product-digit" data-field="pn">?</span></span>
+        <span class="exp-den"><span class="product-digit" data-field="pd">?</span></span>
+      </div>
+    </div>
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="demo-canvas" width="520" height="520" aria-label="斜線示範，點一下看下一步"></canvas>
+    </div>
+    <p class="step-count" id="step-count"></p>
+    <p class="prompt" id="prompt" aria-live="polite"></p>
+    <div class="actions">
+      <button type="button" class="btn primary" id="btn-next">下一步</button>
+      <button type="button" class="btn" id="btn-reset">重新示範</button>
+    </div>
+  </section>
+</main>
+<script>
+/* 分數乘法工作紙
+   1. 先選題目一至題目四
+   2. 再顯示列式（數字一開始就在，不用學生自己填）
+   3. 點一下逐步出斜線，畫法跟 teach2-standalone.html：
+      真分數：藍直分割、\ 斜線、紅橫分割、/ 同交叉斜線。
+      帶分數：整數格、單位分數、斜線、分成等份、取幾份。
+      積大於或等於 1 時，交叉斜線收成完整的 1 加餘數，不約簡。
+   順德聯誼總會何日東小學
+*/
+(function () {
+  var QUESTIONS = [
+    { name: '題目一', mode: 'proper', bw: 0, bn: 1, bd: 2, rn: 1, rd: 3 },
+    { name: '題目二', mode: 'proper', bw: 0, bn: 3, bd: 4, rn: 2, rd: 3 },
+    { name: '題目三', mode: 'mixed', bw: 1, bn: 1, bd: 2, rn: 1, rd: 4 },
+    { name: '題目四', mode: 'mixed', bw: 2, bn: 1, bd: 2, rn: 2, rd: 3 }
+  ];
+  var PROPER_STEPS = ['bd', 'bn', 'rd', 'rn'];
+  var MIXED_STEPS = ['bw', 'bd', 'bn', 'rd', 'rn'];
+  var PROPER_PROMPTS = [
+    '點一下，先看左側分母的分割線',
+    '點一下，再看左側分子的斜線',
+    '點一下，再看右側分母的分割線',
+    '點一下，再看右側分子的斜線',
+    '斜線示範完成。可重播最後一步，或按重新示範。'
+  ];
+  var MIXED_PROMPTS = [
+    '點一下，先看整數有幾多格',
+    '點一下，再看分母把每一格分成單位分數',
+    '點一下，再看分子的斜線',
+    '點一下，把每個單位分數分成等份',
+    '點一下，取其中的幾份',
+    '斜線示範完成。可重播最後一步，或按重新示範。'
+  ];
+  var HATCH = '#2c3e50';
+
+  var state = {
+    q: null,
+    mode: 'proper',
+    bw: 0, bn: 1, bd: 2, rn: 1, rd: 3,
+    revealed: { bw: false, bd: false, bn: false, rd: false, rn: false },
+    anim: null
+  };
+  var canvas, ctx, cssW = 0, cssH = 0, animRaf = 0;
+
+  function $(id) { return document.getElementById(id); }
+  function isMixed() { return state.mode === 'mixed'; }
+  function steps() { return isMixed() ? MIXED_STEPS : PROPER_STEPS; }
+  function prompts() { return isMixed() ? MIXED_PROMPTS : PROPER_PROMPTS; }
+
+  function doneCount() {
+    var n = 0, list = steps(), i;
+    for (i = 0; i < list.length; i++) {
+      if (state.revealed[list[i]] && !(state.anim && state.anim.field === list[i])) n++;
+    }
+    return n;
+  }
+  function nextField() {
+    var list = steps(), i;
+    for (i = 0; i < list.length; i++) if (!state.revealed[list[i]]) return list[i];
+    return null;
+  }
+
+  function product() {
+    if (isMixed()) return { n: (state.bw * state.bd + state.bn) * state.rn, d: state.bd * state.rd };
+    return { n: state.bn * state.rn, d: state.bd * state.rd };
+  }
+  function formatProduct() {
+    var p = product();
+    if (!isMixed()) return { kind: 'frac', n: p.n, d: p.d };
+    if (p.n >= p.d) {
+      var w = Math.floor(p.n / p.d);
+      var rem = p.n % p.d;
+      if (rem === 0) return { kind: 'int', w: w };
+      return { kind: 'mixed', w: w, n: rem, d: p.d };
+    }
+    return { kind: 'frac', n: p.n, d: p.d };
+  }
+  function productView() {
+    var fmt = formatProduct();
+    var wholes = 0, rem = 0;
+    if (fmt.kind === 'int') wholes = fmt.w;
+    else if (fmt.kind === 'mixed') { wholes = fmt.w; rem = fmt.n; }
+    else rem = fmt.n;
+    var slots = wholes + (rem > 0 ? 1 : 0);
+    if (slots < 1) slots = 1;
+    return { wholes: wholes, rem: rem, cols: state.bd, rows: state.rd, per: state.bd * state.rd, slots: slots };
+  }
+  function unitFractionView() {
+    return !!(state.revealed.bd || state.revealed.bn || state.revealed.rd || state.revealed.rn);
+  }
+  function wholeOnlyView() {
+    if (state.anim && state.anim.field === 'bw') return true;
+    return !unitFractionView();
+  }
+  function showingProduct() {
+    if (!isMixed() || !state.revealed.rn) return false;
+    var fmt = formatProduct();
+    if (!fmt || fmt.kind === 'frac') return false;
+    if (state.anim && state.anim.field !== 'rn') return false;
+    return true;
+  }
+  function layoutSlots() {
+    if (!isMixed()) return 1;
+    if (!state.revealed.bw && !unitFractionView()) return 1;
+    if (wholeOnlyView()) return Math.max(1, state.bw || 1);
+    if (showingProduct()) return productView().slots;
+    return Math.max(1, (state.bw || 0) + 1);
+  }
+
+  function easeOut(t) {
+    t = Math.max(0, Math.min(1, t));
+    return 1 - Math.pow(1 - t, 3);
+  }
+  function fieldProgress(field) {
+    if (state.anim && state.anim.field === field) {
+      var t = (performance.now() - state.anim.t0) / state.anim.dur;
+      if (t >= 1) return 1;
+      return easeOut(t);
+    }
+    return state.revealed[field] ? 1 : 0;
+  }
+
+  function hatch(x, y, w, h, color, dir, gap, lineWidth) {
+    gap = gap || 8;
+    if (!(w > 0) || !(h > 0) || !(gap > 0)) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth || 1.6;
+    ctx.beginPath();
+    var span = w + h;
+    var rem = span % gap;
+    if (rem < 0) rem += gap;
+    if (gap - rem < 0.05) rem = 0;
+    var margin = rem / 2;
+    var i, start = -h + margin, end = w - margin;
+    if (dir < 0) {
+      for (i = start; i <= end + 0.01; i += gap) {
+        ctx.moveTo(x + i, y);
+        ctx.lineTo(x + i + h, y + h);
+      }
+    } else {
+      for (i = start; i <= end + 0.01; i += gap) {
+        ctx.moveTo(x + i, y + h);
+        ctx.lineTo(x + i + h, y);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function strokeGrowingLines(x0, y0, W, H, count, vertical, color, progress) {
+    if (!(count > 1) || !(progress > 0)) return;
+    var lines = count - 1;
+    var slot = 0.62;
+    var gap = lines > 1 ? (1 - slot) / (lines - 1) : 0;
+    ctx.save();
+    ctx.setLineDash([6, 5]);
+    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    var i, lp, pos;
+    for (i = 1; i <= lines; i++) {
+      lp = (progress - (i - 1) * gap) / slot;
+      if (lp <= 0) continue;
+      if (lp > 1) lp = 1;
+      if (vertical) {
+        pos = x0 + (W / count) * i;
+        ctx.moveTo(pos, y0);
+        ctx.lineTo(pos, y0 + H * lp);
+      } else {
+        pos = y0 + (H / count) * i;
+        ctx.moveTo(x0, pos);
+        ctx.lineTo(x0 + W * lp, pos);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function withRevealClip(field, x, y, w, h, axis, draw) {
+    ctx.save();
+    if (field && state.anim && state.anim.field === field) {
+      var p = fieldProgress(field);
+      ctx.beginPath();
+      if (axis === 'y') ctx.rect(x, y, w, Math.max(0.01, h * p));
+      else ctx.rect(x, y, Math.max(0.01, w * p), h);
+      ctx.clip();
+    }
+    draw();
+    ctx.restore();
+  }
+
+  function slash(x, y, w, h, unit, both) {
+    if (!(w > 0.5) || !(h > 0.5)) return;
+    var gap = Math.max(7, Math.min(both ? 16 : 22, unit / 7));
+    hatch(x, y, w, h, HATCH, -1, gap);
+    if (both) hatch(x, y, w, h, HATCH, 1, Math.max(6, gap * 0.85));
+  }
+  function hatchCellCount(sx, y0, unit, cols, rows, count) {
+    if (count <= 0) return;
+    var cw = unit / cols, rh = unit / rows;
+    var fullRows = Math.floor(count / cols);
+    var extra = count % cols;
+    if (fullRows > 0) slash(sx, y0, unit, Math.min(unit, fullRows * rh), unit, true);
+    if (extra > 0 && fullRows < rows) slash(sx, y0 + fullRows * rh, extra * cw, rh, unit, true);
+  }
+  function mixedRowGeom(SW, SH, slots) {
+    var pad = 14, gap = slots > 1 ? 12 : 0;
+    var availW = SW - pad * 2 - gap * (slots - 1);
+    var availH = SH - pad * 2;
+    var unit = Math.min(availW / slots, availH);
+    var totalW = unit * slots + gap * (slots - 1);
+    var x0 = pad + Math.max(0, (SW - pad * 2 - totalW) / 2);
+    return { unit: unit, gap: gap, x0: x0, y0: pad, slots: slots };
+  }
+  function paintTaken(x, y, w, h, unit, takeP) {
+    var gh = h * takeP;
+    if (takeP < 1) slash(x, y + gh, w, h - gh, unit, false);
+    if (gh > 0.5) slash(x, y, w, gh, unit, true);
+  }
+
+  function drawProper(SW) {
+    var pad = 10, x0 = pad, y0 = pad, W = SW - pad * 2, H = SW - pad * 2;
+    ctx.clearRect(0, 0, SW, SW);
+    ctx.setLineDash([]);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = HATCH;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x0, y0, W, H);
+    ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
+
+    var showBn = state.revealed.bn && state.bd && state.bn > 0;
+    var showRn = state.revealed.rn && state.rd && state.rn > 0;
+    var bw = showBn ? (W / state.bd) * Math.min(state.bn, state.bd) : 0;
+    var rh = showRn ? (H / state.rd) * Math.min(state.rn, state.rd) : 0;
+    var overlap = bw > 0 && rh > 0;
+    var scale = W / 520;
+    if (scale > 1) scale = 1;
+    if (scale < 0.55) scale = 0.55;
+    var gapA = 36 * scale, gapB = 28 * scale, lw = Math.max(1.15, 1.6 * scale);
+
+    if (bw > 0) {
+      withRevealClip('bn', x0, y0, bw, H, 'x', function () {
+        var by = y0 + (overlap ? rh : 0);
+        hatch(x0, by, bw, H - (overlap ? rh : 0), HATCH, -1, gapA, lw);
+      });
+    }
+    if (rh > 0) {
+      withRevealClip('rn', x0, y0, W, rh, 'y', function () {
+        var rx = x0 + (overlap ? bw : 0);
+        hatch(rx, y0, W - (overlap ? bw : 0), rh, HATCH, 1, gapA, lw);
+      });
+    }
+    if (overlap) {
+      var overlapField = (state.anim && (state.anim.field === 'bn' || state.anim.field === 'rn')) ? state.anim.field : null;
+      withRevealClip(overlapField, x0, y0, bw, rh, overlapField === 'rn' ? 'y' : 'x', function () {
+        hatch(x0, y0, bw, rh, HATCH, -1, gapB, lw);
+        hatch(x0, y0, bw, rh, HATCH, 1, gapB, lw);
+      });
+    }
+    if (state.revealed.bd) strokeGrowingLines(x0, y0, W, H, state.bd, true, '#5dade2', fieldProgress('bd'));
+    if (state.revealed.rd) strokeGrowingLines(x0, y0, W, H, state.rd, false, '#e74c3c', fieldProgress('rd'));
+    ctx.setLineDash([]);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = HATCH;
+    ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
+  }
+
+  function drawProductSquares(SW, SH) {
+    var prod = productView();
+    var g = mixedRowGeom(SW, SH, prod.slots);
+    var unit = g.unit, y0 = g.y0, cols = prod.cols, rows = prod.rows;
+    var total = prod.wholes * prod.per + prod.rem;
+    var progress = (state.anim && state.anim.field === 'rn') ? fieldProgress('rn') : 1;
+    var visible = (progress >= 1) ? total : Math.floor(total * progress + 1e-6);
+    var used = 0, i;
+    for (i = 0; i < prod.slots; i++) {
+      var sx = g.x0 + i * (unit + g.gap);
+      var cap = (i < prod.wholes) ? prod.per : prod.rem;
+      var show = Math.max(0, Math.min(cap, visible - used));
+      used += cap;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(sx, y0, unit, unit);
+      if (show >= cols * rows) slash(sx, y0, unit, unit, unit, true);
+      else hatchCellCount(sx, y0, unit, cols, rows, show);
+      if (cols > 1) strokeGrowingLines(sx, y0, unit, unit, cols, true, '#5dade2', 1);
+      if (rows > 1) strokeGrowingLines(sx, y0, unit, unit, rows, false, '#e74c3c', 1);
+      ctx.setLineDash([]);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = HATCH;
+      ctx.strokeRect(sx + 1, y0 + 1, unit - 2, unit - 2);
+    }
+  }
+
+  function drawTextbook(SW, SH) {
+    var bw = state.bw, bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
+    var wholeOnly = wholeOnlyView();
+    var split = !wholeOnly && bd > 1;
+    /* 分子斜線要等老師點到分子。後面的步驟仍然留住這批斜線。 */
+    var showBn = !wholeOnly && state.revealed.bn && bd && bn > 0;
+    var showRows = !wholeOnly && state.revealed.rd && rd > 1;
+    var showTake = !wholeOnly && state.revealed.rn && rd && rn > 0;
+    var slots = wholeOnly ? Math.max(1, bw) : Math.max(1, bw + 1);
+    var g = mixedRowGeom(SW, SH, slots);
+    var unit = g.unit, y0 = g.y0;
+    var takeP = 0;
+    if (showTake) {
+      takeP = Math.min(rn, rd) / rd;
+      if (state.anim && state.anim.field === 'rn') takeP *= fieldProgress('rn');
+    }
+    var vProg = (state.anim && state.anim.field === 'bd') ? fieldProgress('bd') : 1;
+    var hProg = (state.anim && state.anim.field === 'rd') ? fieldProgress('rd') : 1;
+    var bnProg = (state.anim && state.anim.field === 'bn') ? fieldProgress('bn') : 1;
+    var clipBw = state.anim && state.anim.field === 'bw';
+    if (clipBw) {
+      ctx.save();
+      var span = slots * unit + Math.max(0, slots - 1) * g.gap;
+      ctx.beginPath();
+      ctx.rect(g.x0, y0, Math.max(0.01, span * fieldProgress('bw')), unit);
+      ctx.clip();
+    }
+    var i;
+    for (i = 0; i < slots; i++) {
+      var sx = g.x0 + i * (unit + g.gap);
+      var isWhole = i < bw;
+      var cols = (isWhole && !split) ? 1 : (bd > 1 ? bd : 1);
+      var yellow = cols;
+      if (!isWhole) yellow = showBn ? Math.min(bn, bd) : 0;
+      if (!isWhole && state.anim && state.anim.field === 'bn') yellow *= bnProg;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(sx, y0, unit, unit);
+      if (isWhole && !split) {
+        paintTaken(sx, y0, unit, unit, unit, takeP);
+      } else if (cols > 1 || yellow > 0) {
+        var cw = unit / cols;
+        var yLim = Math.ceil(yellow - 1e-6);
+        var k;
+        for (k = 0; k < cols; k++) {
+          if (k >= yLim) continue;
+          var w = cw;
+          if (k === yLim - 1 && yellow < yLim) w = cw * (yellow - (yLim - 1));
+          paintTaken(sx + k * cw, y0, w, unit, unit, takeP);
+        }
+        if ((split || !isWhole) && cols > 1) strokeGrowingLines(sx, y0, unit, unit, cols, true, '#5dade2', vProg);
+      }
+      if (showRows) strokeGrowingLines(sx, y0, unit, unit, rd, false, '#e74c3c', hProg);
+      ctx.setLineDash([]);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = HATCH;
+      ctx.strokeRect(sx + 1, y0 + 1, unit - 2, unit - 2);
+    }
+    if (clipBw) ctx.restore();
+  }
+
+  function drawMixed(SW, SH) {
+    ctx.clearRect(0, 0, SW, SH);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, SW, SH);
+    if (!state.revealed.bw && !unitFractionView()) {
+      var pad = 10, side = Math.min(SW, SH) - pad * 2;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = HATCH;
+      ctx.strokeRect(pad + 1, pad + 1, side - 2, side - 2);
+      return;
+    }
+    if (showingProduct()) drawProductSquares(SW, SH);
+    else drawTextbook(SW, SH);
+  }
+
+  function draw() {
+    if (!ctx || !cssW) return;
+    if (isMixed()) drawMixed(cssW, cssH);
+    else drawProper(cssW);
+  }
+
+  function resize() {
+    if (!canvas || $('demo').hidden) return;
+    var wrap = canvas.parentElement;
+    var nextW = Math.floor(wrap.clientWidth || 0);
+    if (nextW < 80) return;
+    if (nextW > 520) nextW = 520;
+    var slots = layoutSlots();
+    var nextH = nextW;
+    if (isMixed() && (state.revealed.bw || unitFractionView())) {
+      var pad = 14, gap = slots > 1 ? 12 : 0;
+      var unit = (nextW - pad * 2 - gap * (slots - 1)) / slots;
+      nextH = Math.max(80, Math.ceil(unit + pad * 2));
+    }
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (nextW !== cssW || nextH !== cssH || canvas.width !== Math.round(nextW * dpr)) {
+      cssW = nextW;
+      cssH = nextH;
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    draw();
+  }
+
+  function setText(field, text) {
+    var el = document.querySelector('[data-field="' + field + '"]');
+    if (el) el.textContent = text;
+  }
+
+  function answerWords(fmt) {
+    if (!fmt) return '';
+    if (fmt.kind === 'int') return String(fmt.w);
+    if (fmt.kind === 'mixed') return fmt.w + '又' + fmt.d + '分之' + fmt.n;
+    return fmt.d + '分之' + fmt.n;
+  }
+
+  function updateChrome() {
+    var q = state.q;
+    $('q-name').textContent = q.name;
+    $('eq').classList.toggle('mixed', isMixed());
+    $('chip-a').classList.toggle('as-mixed', isMixed());
+    $('whole-a').hidden = !isMixed();
+    setText('bw', String(state.bw));
+    setText('bn', String(state.bn));
+    setText('bd', String(state.bd));
+    setText('rn', String(state.rn));
+    setText('rd', String(state.rd));
+
+    var showAnswer = !!state.revealed.rn && !(state.anim && state.anim.field === 'rn');
+    var fmt = showAnswer ? formatProduct() : null;
+    var purple = $('chip-p');
+    purple.classList.remove('as-mixed', 'as-int');
+    if (!fmt || fmt.kind === 'frac') {
+      $('whole-p').hidden = true;
+      purple.classList.remove('as-int');
+      setText('pw', '?');
+      setText('pn', fmt ? String(fmt.n) : '?');
+      setText('pd', fmt ? String(fmt.d) : '?');
+    } else if (fmt.kind === 'int') {
+      purple.classList.add('as-int');
+      $('whole-p').hidden = false;
+      setText('pw', String(fmt.w));
+      setText('pn', '');
+      setText('pd', '');
+    } else {
+      purple.classList.add('as-mixed');
+      $('whole-p').hidden = false;
+      setText('pw', String(fmt.w));
+      setText('pn', String(fmt.n));
+      setText('pd', String(fmt.d));
+    }
+
+    var next = nextField();
+    var focus = state.anim ? state.anim.field : next;
+    var list = steps();
+    document.querySelectorAll('#eq button.digit').forEach(function (btn) {
+      var f = btn.getAttribute('data-field');
+      btn.classList.toggle('expect', f === focus);
+    });
+    $('chip-a').classList.toggle('next', focus === 'bw' || focus === 'bn' || focus === 'bd');
+    $('chip-b').classList.toggle('next', focus === 'rn' || focus === 'rd');
+
+    var n = doneCount();
+    $('step-count').textContent = '已示範 ' + n + ' / ' + list.length + ' 步';
+    var prompt = prompts()[n] || '';
+    if (n === list.length && fmt) prompt = '得到 ' + answerWords(fmt) + '。可重播最後一步，或按重新示範。';
+    $('prompt').textContent = prompt;
+    $('btn-next').textContent = next ? '下一步' : '重播最後一步';
+    $('btn-next').disabled = !!state.anim;
+    canvas.setAttribute('aria-label', q.name + '，' + prompt);
+  }
+
+  function play(field) {
+    if (!field || state[field] == null) return;
+    if (state.anim) return;
+    state.revealed[field] = true;
+    state.anim = { field: field, t0: performance.now(), dur: 720 };
+    updateChrome();
+    resize();
+    if (animRaf) cancelAnimationFrame(animRaf);
+    function frame() {
+      if (!state.anim || state.anim.field !== field) return;
+      var t = (performance.now() - state.anim.t0) / state.anim.dur;
+      draw();
+      if (t < 1 && state.anim && state.anim.field === field) animRaf = requestAnimationFrame(frame);
+      else if (state.anim && state.anim.field === field) {
+        state.anim = null;
+        resize();
+        updateChrome();
+      }
+    }
+    frame();
+  }
+
+  function advance() {
+    var next = nextField();
+    if (next) play(next);
+    else play(steps()[steps().length - 1]);
+  }
+
+  function onField(field) {
+    if (state.anim) return;
+    var next = nextField();
+    if (field === next || state.revealed[field]) play(field);
+    else if (next) play(next);
+  }
+
+  function resetDemo() {
+    if (animRaf) cancelAnimationFrame(animRaf);
+    animRaf = 0;
+    state.anim = null;
+    state.revealed = { bw: false, bd: false, bn: false, rd: false, rn: false };
+    updateChrome();
+    resize();
+  }
+
+  function showQuestion(index) {
+    var q = QUESTIONS[index];
+    if (animRaf) cancelAnimationFrame(animRaf);
+    animRaf = 0;
+    state.q = q;
+    state.mode = q.mode;
+    state.bw = q.bw;
+    state.bn = q.bn;
+    state.bd = q.bd;
+    state.rn = q.rn;
+    state.rd = q.rd;
+    state.anim = null;
+    state.revealed = { bw: false, bd: false, bn: false, rd: false, rn: false };
+    cssW = 0;
+    cssH = 0;
+    $('picker').hidden = true;
+    $('demo').hidden = false;
+    updateChrome();
+    requestAnimationFrame(function () { resize(); });
+  }
+
+  function showPicker() {
+    if (animRaf) cancelAnimationFrame(animRaf);
+    animRaf = 0;
+    state.anim = null;
+    $('demo').hidden = true;
+    $('picker').hidden = false;
+  }
+
+  canvas = $('demo-canvas');
+  ctx = canvas.getContext('2d');
+
+  document.querySelectorAll('.pick-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      showQuestion(parseInt(btn.getAttribute('data-q'), 10));
+    });
+  });
+  $('btn-back').addEventListener('click', showPicker);
+  $('btn-next').addEventListener('click', advance);
+  $('btn-reset').addEventListener('click', resetDemo);
+  $('eq').addEventListener('click', function (e) {
+    var btn = e.target.closest('button.digit');
+    if (!btn) return;
+    onField(btn.getAttribute('data-field'));
+  });
+  canvas.addEventListener('click', advance);
+  window.addEventListener('resize', function () {
+    if (!$('demo').hidden) resize();
+  });
+})();
+</script>
+</body>
+</html>

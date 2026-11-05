@@ -138,8 +138,11 @@ window.__pubnubLoadPromise = (function () {
   .tab {
     flex: 1 1 150px; padding: 10px 8px; border-radius: 12px; border: 2px solid var(--border);
     background: #fff; font-weight: 700; font-family: inherit; cursor: pointer; color: var(--muted);
-    text-align: center; line-height: 1.35; font-size: 0.95rem;
+    text-align: center; line-height: 1.35; font-size: 0.95rem; text-decoration: none;
   }
+  .tabs a.tab { display: flex; align-items: center; justify-content: center; }
+  .landing-extra { text-align: center; margin-top: 16px; }
+  .landing-extra a { color: var(--primary-dark); font-weight: 800; }
   .tab.active { border-color: var(--primary); background: #ffe8d1; color: var(--primary-dark); }
   .tab.disabled { opacity: 0.5; cursor: not-allowed; }
   .question-card {
@@ -635,6 +638,7 @@ window.__pubnubLoadPromise = (function () {
       <button class="btn btn-primary" id="btn-student">學生</button>
       <button class="btn btn-accent" id="btn-teacher">老師</button>
     </div>
+    <p class="landing-extra"><a href="worksheet.html">工作紙（斜線圖）</a></p>
   </div>
 </div>
 
@@ -719,6 +723,7 @@ window.__pubnubLoadPromise = (function () {
     <button type="button" class="tab active" data-tab="1">分數乘法一</button>
     <button type="button" class="tab" data-tab="2">分數乘法二</button>
     <button type="button" class="tab" data-tab="3">分數乘法二教學</button>
+    <a class="tab" href="worksheet.html">工作紙</a>
   </div>
   <div class="sync-bar" id="student-sync-bar"></div>
   <div class="student-badge" id="student-badge"></div>
@@ -817,6 +822,7 @@ window.__pubnubLoadPromise = (function () {
     <button type="button" class="tab active" data-tab="1">分數乘法一</button>
     <button type="button" class="tab" data-tab="2">分數乘法二</button>
     <button type="button" class="tab" data-tab="3">分數乘法二教學</button>
+    <a class="tab" href="worksheet.html">工作紙</a>
   </div>
   <div class="sync-bar">
     <div class="sync-pill" id="teacher-room-pill">課堂：----</div>
@@ -973,6 +979,7 @@ window.__pubnubLoadPromise = (function () {
    分頁一：分數×整數／帶分數×整數
    分頁二：真分數×真分數（課室練習，與分頁一同一課堂）
    分頁三：分數乘法二教學（面積模型，不經出題同步）
+   工作紙：worksheet.html（先選題目，顯示列式，再點擊逐步示範斜線，不經課堂）
    同一頻道 hyt-fracmul-v1-<編號>；題目與提交以 practice "1"|"2" 分開。
    快照 modes 同時帶兩個練習的現題與 rev。學生只接受較新的 rev，
    過期快照不能把新題蓋回舊題。在線心跳不寫入歷史，避免沖走題目。
@@ -3828,6 +3835,7 @@ function wire() {
     tab.addEventListener('click', function (e) {
       if (e && e.isTrusted === false) return;
       if (tab.classList.contains('disabled')) return;
+      if (!tab.getAttribute('data-tab')) return;
       var n = parseInt(tab.getAttribute('data-tab'), 10);
       if (window.__fracMulExplorer) window.__fracMulExplorer.setStudentTab(n);
     });
@@ -3835,6 +3843,7 @@ function wire() {
   document.querySelectorAll('#teacher-tabs .tab').forEach(function (tab) {
     tab.addEventListener('click', function () {
       if (tab.classList.contains('disabled')) return;
+      if (!tab.getAttribute('data-tab')) return;
       var n = parseInt(tab.getAttribute('data-tab'), 10);
       if (window.__fracMulExplorer) window.__fracMulExplorer.setTeacherTab(n);
     });
