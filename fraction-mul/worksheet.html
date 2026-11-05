@@ -17,125 +17,87 @@
     background: var(--bg); color: var(--text);
   }
   body { min-height: 100vh; }
+  [hidden] { display: none !important; }
   .page {
-    min-height: 100vh; padding: 12px 14px 28px; width: 100%;
-    max-width: 1040px; margin: 0 auto;
+    min-height: 100vh; padding: 12px 14px 32px; width: 100%;
+    max-width: 880px; margin: 0 auto;
     display: flex; flex-direction: column; align-items: center; gap: 14px;
   }
   .header { text-align: center; width: 100%; }
   .header h1 { font-size: clamp(1.35rem, 4vw, 1.85rem); color: var(--primary-dark); margin-bottom: 4px; }
   .header .school { font-size: 0.85rem; color: var(--muted); }
-  .page-nav {
-    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px;
-  }
+  .page-nav { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
   .page-nav a {
     text-decoration: none; border: 2px solid #f0e6d8; background: #fff; border-radius: 12px;
     padding: 8px 14px; font-weight: 800; color: var(--muted); min-height: 44px;
     display: inline-flex; align-items: center; justify-content: center;
   }
-  .page-nav a[aria-current="page"] {
-    border-color: var(--primary); background: #ffe8d1; color: var(--primary-dark);
-  }
-  .hint { color: var(--muted); font-weight: 600; line-height: 1.5; text-align: center; }
-  .panel, .sheet {
+  .page-nav a[aria-current="page"] { border-color: var(--primary); background: #ffe8d1; color: var(--primary-dark); }
+  .panel {
     width: 100%; background: #fff; border: 2px solid #e8eef5; border-radius: 18px;
-    box-shadow: var(--shadow); padding: 14px;
+    box-shadow: var(--shadow); padding: 18px 16px 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
   }
-  .sheet { box-shadow: none; }
-  .preset-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 8px; }
-  .preset, .btn {
-    border: 2px solid #f0e6d8; background: #fff; border-radius: 12px;
-    padding: 8px 12px; font-weight: 800; font-family: inherit; cursor: pointer;
-    color: var(--text); min-height: 48px;
+  .panel h2 { color: #2c5aa0; font-size: 1.25rem; text-align: center; }
+  .hint { color: var(--muted); font-weight: 600; line-height: 1.5; text-align: center; max-width: 36em; }
+  .pick-grid { width: 100%; max-width: 560px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pick-btn, .btn {
+    border: 2px solid #f0e6d8; background: #fff; border-radius: 14px;
+    font-family: inherit; font-weight: 800; cursor: pointer; color: var(--text);
   }
-  .preset { display: inline-flex; align-items: center; gap: 8px; }
-  .preset.active { border-color: var(--primary); background: #ffe8d1; color: var(--primary-dark); }
-  .preset .q-no { color: var(--muted); font-size: 0.85rem; }
-  .preset.active .q-no { color: var(--primary-dark); }
-  .btn { background: #f5f0ea; }
-  .btn:hover { background: #ebe3d8; }
+  .pick-btn { min-height: 92px; font-size: 1.55rem; }
+  .pick-btn:hover, .btn:hover { background: #fff5eb; border-color: var(--primary); }
+  .pick-btn:active, .btn:active { transform: scale(0.98); }
+  .btn {
+    background: #f5f0ea; min-height: 48px; padding: 10px 16px; font-size: 1rem;
+  }
   .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-  .editor {
-    display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, 440px);
-    gap: 16px; align-items: start; margin-top: 12px;
-  }
-  .preview-box { width: 100%; display: flex; justify-content: center; }
-  .preview-box canvas, .diagram canvas {
-    display: block; background: #fff; max-width: 100%;
-  }
-  .factor-form { display: flex; flex-direction: column; gap: 12px; }
-  .mode-row { display: flex; flex-wrap: wrap; gap: 8px; }
-  .mode-btn {
-    border: 2px solid #d5dde8; background: #f7f9fc; border-radius: 999px;
-    padding: 8px 12px; font-weight: 800; font-family: inherit; cursor: pointer;
-    color: #5d6d7e; min-height: 44px;
-  }
-  .mode-btn.active { border-color: #2c5aa0; background: #eaf2fb; color: #2c5aa0; }
-  .factors { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-  fieldset.factor {
-    border: 2px solid #d6eaf8; border-radius: 14px; padding: 8px 10px 10px;
-    display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end;
-  }
-  fieldset.factor-b { border-color: #f5b7b1; }
-  fieldset.factor legend { font-weight: 800; padding: 0 6px; }
-  fieldset.factor-a legend { color: #2471a3; }
-  fieldset.factor-b legend { color: #c0392b; }
-  .field { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.85rem; font-weight: 700; color: var(--muted); }
-  .field input {
-    width: 4.2em; text-align: center; font-size: 1.35rem; font-weight: 800;
-    border: 2px solid #e8d5c0; border-radius: 10px; padding: 8px 4px;
-    font-family: inherit; color: var(--text); background: #fffaf5;
-  }
-  .whole-field { display: none; }
-  .is-mixed .whole-field { display: flex; }
-  .op-big { font-size: 1.8rem; font-weight: 800; color: #95a5a6; padding: 0 4px; }
-  .eq, .live-eq {
+  .btn.primary:disabled { opacity: 0.55; cursor: default; transform: none; }
+  .demo-top { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .q-name { font-weight: 800; color: var(--primary-dark); font-size: 1.15rem; }
+  .col-label { font-weight: 800; color: #2c5aa0; letter-spacing: 0.08em; }
+  .exp-eq {
     display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
-    gap: 6px; font-weight: 800; font-size: 1.45rem;
+    gap: 8px; font-size: clamp(1.6rem, 5vw, 2.15rem); font-weight: 800;
   }
-  .frac {
-    display: inline-flex; flex-direction: column; align-items: center;
-    line-height: 1.05; vertical-align: middle; margin: 0 1px;
-  }
-  .frac .n { border-bottom: 2px solid currentColor; padding: 0 0.28em 1px; min-width: 1.1em; text-align: center; }
-  .frac .d { padding: 1px 0.28em 0; min-width: 1.1em; text-align: center; }
-  .mixed { display: inline-flex; align-items: center; gap: 1px; }
-  .mixed .w { line-height: 1; }
+  .exp-eq.mixed { font-size: clamp(1.35rem, 4vw, 1.85rem); }
   .op { color: #95a5a6; }
-  .product, .ans { font-weight: 800; text-align: center; }
-  .product { font-size: 1.15rem; color: #6c3483; display: flex; justify-content: center; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .ans { margin-top: 6px; color: #6c3483; display: flex; justify-content: center; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .note, .caption, .legend { color: var(--muted); font-size: 0.9rem; font-weight: 600; line-height: 1.45; text-align: center; }
-  .warn { color: #c0392b; font-weight: 700; min-height: 1.2em; text-align: center; }
-  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
-  .check { display: flex; align-items: center; gap: 8px; font-weight: 700; }
-  .check input { width: 1.15em; height: 1.15em; }
-  .sheet-title { text-align: center; color: #2c5aa0; margin-bottom: 10px; font-size: 1.15rem; }
-  .sheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .q-card {
-    border: 2px solid #e8eef5; border-radius: 14px; padding: 10px 10px 12px;
-    background: #fff; cursor: pointer; display: flex; flex-direction: column; gap: 6px;
+  .exp-chip {
+    display: inline-flex; flex-direction: column; align-items: center;
+    border: 2.5px solid transparent; border-radius: 12px; padding: 6px 10px; min-width: 64px;
   }
-  .q-card.active { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(230, 126, 34, 0.18); }
-  .q-card h3 { text-align: center; font-size: 1rem; color: var(--primary-dark); }
-  .diagram { width: 100%; display: flex; justify-content: center; }
-  .legend { margin-top: 12px; }
-  body.hide-ans .ans, body.hide-ans .product { display: none !important; }
-  @media (max-width: 800px) {
-    .editor, .sheet-grid { grid-template-columns: 1fr; }
+  .exp-chip.blue { background: #eaf3fb; color: #2471a3; border-color: #a9cce3; }
+  .exp-chip.red { background: #fdecea; color: #c0392b; border-color: #f5b7b1; }
+  .exp-chip.purple { background: #f5eef8; color: #6c3483; border-color: #d2b4de; }
+  .exp-chip.next { border-style: dashed; border-width: 3px; border-color: #7f8c8d; }
+  .exp-chip.as-mixed {
+    display: inline-grid; grid-template-columns: auto auto; grid-template-rows: auto auto;
+    align-items: center; justify-items: center; column-gap: 4px;
   }
-  @media print {
-    body { background: #fff; }
-    .no-print { display: none !important; }
-    .page { max-width: none; padding: 0; gap: 8px; }
-    .panel, .sheet, .q-card { box-shadow: none; }
-    .sheet { border: none; padding: 0; }
-    .sheet-grid { gap: 10px; }
-    .q-card { break-inside: avoid; page-break-inside: avoid; cursor: default; }
-    .q-card, .q-card.active { border-color: #e8eef5; box-shadow: none; }
-    body.print-one .q-card:not(.active) { display: none !important; }
-    body.print-one .sheet-title { display: none; }
-    body.print-one .sheet-grid { grid-template-columns: 1fr; }
+  .exp-chip.as-mixed .exp-whole { grid-column: 1; grid-row: 1 / span 2; }
+  .exp-chip.as-mixed .exp-num { grid-column: 2; grid-row: 1; }
+  .exp-chip.as-mixed .exp-den { grid-column: 2; grid-row: 2; }
+  .exp-chip.as-int .exp-num, .exp-chip.as-int .exp-den { display: none; }
+  .exp-whole[hidden] { display: none !important; }
+  .exp-num, .exp-den { min-width: 1.4em; text-align: center; line-height: 1.1; }
+  .exp-num { border-bottom: 3px solid currentColor; padding-bottom: 2px; margin-bottom: 2px; }
+  button.digit {
+    border: none; background: transparent; color: inherit; font: inherit; font-weight: 800;
+    min-width: 1.7em; min-height: 1.7em; border-radius: 8px; cursor: pointer; padding: 2px 6px;
+  }
+  button.digit.expect { outline: 2px dashed currentColor; background: rgba(255,255,255,0.88); }
+  button.digit:active { background: rgba(0,0,0,0.06); }
+  .product-digit { min-width: 1.2em; text-align: center; display: inline-block; padding: 2px 4px; }
+  .canvas-wrap { width: min(520px, 100%); display: flex; justify-content: center; }
+  #demo-canvas { display: block; background: #fff; cursor: pointer; max-width: 100%; touch-action: manipulation; }
+  .prompt {
+    background: #eaf2fb; color: #2c5aa0; border-radius: 999px;
+    padding: 10px 16px; font-weight: 800; text-align: center; line-height: 1.45; max-width: 100%;
+  }
+  .step-count { color: var(--muted); font-weight: 700; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  @media (max-width: 560px) {
+    .pick-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -144,110 +106,129 @@
   <header class="header">
     <h1>分數乘法工作紙</h1>
     <div class="school">順德聯誼總會何日東小學</div>
-    <nav class="page-nav no-print" aria-label="頁面">
+    <nav class="page-nav" aria-label="頁面">
       <a href="teach2-standalone.html">分數乘法二教學</a>
       <a href="worksheet.html" aria-current="page">工作紙</a>
     </nav>
   </header>
 
-  <p class="hint no-print">下面四題可直接看圖、列印。點一題後可改分子、分母，帶分數再改整數，斜線圖即時更新。這頁直接顯示圖，不是學生逐步填數。</p>
-
-  <section class="sheet" id="sheet" aria-label="四題斜線圖">
-    <h2 class="sheet-title">四題斜線圖</h2>
-    <div class="sheet-grid" id="sheet-grid"></div>
-    <p class="legend">藍色虛線按第一個分母直向分割，紅色虛線按第二個分母橫向分割。單向斜線是一個因數，交叉斜線是重疊的部分。帶分數的積若大於或等於 1，交叉斜線收成完整的 1，餘數留在下一格，不約簡。</p>
-  </section>
-
-  <section class="panel no-print" aria-label="設定題目">
-    <div class="preset-row" id="preset-row" role="group" aria-label="例題"></div>
-    <div class="editor">
-      <div class="preview-box" id="preview-box">
-        <canvas id="preview" width="560" height="560" aria-label="目前斜線圖"></canvas>
-      </div>
-      <form class="factor-form" id="editor" autocomplete="off">
-        <div class="mode-row" role="group" aria-label="題型">
-          <button type="button" class="mode-btn active" id="mode-proper" data-mode="proper">真分數 × 真分數</button>
-          <button type="button" class="mode-btn" id="mode-mixed" data-mode="mixed">帶分數 × 真分數</button>
-        </div>
-        <div class="factors">
-          <fieldset class="factor factor-a">
-            <legend>第一個因數</legend>
-            <label class="field whole-field">整數<input id="in-bw" inputmode="numeric" maxlength="1" aria-label="整數"></label>
-            <label class="field">分子<input id="in-bn" inputmode="numeric" maxlength="2" aria-label="第一個分子"></label>
-            <label class="field">分母<input id="in-bd" inputmode="numeric" maxlength="2" aria-label="第一個分母"></label>
-          </fieldset>
-          <div class="op-big" aria-hidden="true">×</div>
-          <fieldset class="factor factor-b">
-            <legend>第二個因數</legend>
-            <label class="field">分子<input id="in-rn" inputmode="numeric" maxlength="2" aria-label="第二個分子"></label>
-            <label class="field">分母<input id="in-rd" inputmode="numeric" maxlength="2" aria-label="第二個分母"></label>
-          </fieldset>
-        </div>
-        <div class="live-eq" id="live-eq" aria-live="polite"></div>
-        <div class="product" id="product"></div>
-        <p class="caption" id="caption"></p>
-        <p class="warn" id="warn" role="status"></p>
-        <div class="actions">
-          <button type="button" class="btn" id="btn-reset">還原此題</button>
-          <button type="button" class="btn" id="btn-print-one">列印此題</button>
-          <button type="button" class="btn primary" id="btn-print-all">列印四題</button>
-        </div>
-        <label class="check"><input type="checkbox" id="show-answer" checked>顯示得數（不約簡，與教學頁相同）</label>
-      </form>
+  <section class="panel" id="picker" aria-label="選擇題目">
+    <h2>請選擇題目</h2>
+    <p class="hint">選好之後才顯示列式。然後點一下，逐步看分割線和斜線，跟教學頁同一種示範。</p>
+    <div class="pick-grid" role="group">
+      <button type="button" class="pick-btn" data-q="0">題目一</button>
+      <button type="button" class="pick-btn" data-q="1">題目二</button>
+      <button type="button" class="pick-btn" data-q="2">題目三</button>
+      <button type="button" class="pick-btn" data-q="3">題目四</button>
     </div>
   </section>
 
+  <section class="panel" id="demo" hidden aria-label="列式同斜線示範">
+    <div class="demo-top">
+      <div class="q-name" id="q-name">題目一</div>
+      <button type="button" class="btn" id="btn-back">返回選題</button>
+    </div>
+    <div class="col-label">列式</div>
+    <div class="exp-eq" id="eq" aria-label="列式">
+      <div class="exp-chip blue" id="chip-a">
+        <span class="exp-whole" id="whole-a" hidden><button type="button" class="digit" data-field="bw">1</button></span>
+        <span class="exp-num"><button type="button" class="digit" data-field="bn">1</button></span>
+        <span class="exp-den"><button type="button" class="digit" data-field="bd">2</button></span>
+      </div>
+      <span class="op">×</span>
+      <div class="exp-chip red" id="chip-b">
+        <span class="exp-num"><button type="button" class="digit" data-field="rn">1</button></span>
+        <span class="exp-den"><button type="button" class="digit" data-field="rd">3</button></span>
+      </div>
+      <span class="op">=</span>
+      <div class="exp-chip purple" id="chip-p">
+        <span class="exp-whole" id="whole-p" hidden><span class="product-digit" data-field="pw">?</span></span>
+        <span class="exp-num"><span class="product-digit" data-field="pn">?</span></span>
+        <span class="exp-den"><span class="product-digit" data-field="pd">?</span></span>
+      </div>
+    </div>
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="demo-canvas" width="520" height="520" aria-label="斜線示範，點一下看下一步"></canvas>
+    </div>
+    <p class="step-count" id="step-count"></p>
+    <p class="prompt" id="prompt" aria-live="polite"></p>
+    <div class="actions">
+      <button type="button" class="btn primary" id="btn-next">下一步</button>
+      <button type="button" class="btn" id="btn-reset">重新示範</button>
+    </div>
+  </section>
 </main>
 <script>
 /* 分數乘法工作紙
-   給老師設定分子、分母（帶分數再加整數），直接畫出斜線圖，可列印。
-   不是教學頁的逐步填數。斜線畫法跟 teach2-standalone.html（PR #64）完成後的圖：
-   真分數 × 真分數：一格裡，左因數是 \ ，右因數是 / ，重疊是交叉斜線。
-   帶分數 × 真分數，積小於 1：整數格加旁邊一格，切成單位分數，取走的部分用交叉斜線。
-   積大於或等於 1：交叉斜線收成完整的 1，餘數只佔下一格，不約簡。
+   1. 先選題目一至題目四
+   2. 再顯示列式（數字一開始就在，不用學生自己填）
+   3. 點一下逐步出斜線，畫法跟 teach2-standalone.html：
+      真分數：藍直分割、\ 斜線、紅橫分割、/ 同交叉斜線。
+      帶分數：整數格、單位分數、斜線、分成等份、取幾份。
+      積大於或等於 1 時，交叉斜線收成完整的 1 加餘數，不約簡。
    順德聯誼總會何日東小學
 */
 (function () {
-  var DEN_MAX = 12;
-  var NUM_MAX = 12;
-  var WHOLE_MAX = 5;
-  var HATCH = '#2c3e50';
-  var PRESETS = [
-    { mode: 'proper', bw: 0, bn: 1, bd: 2, rn: 1, rd: 3 },
-    { mode: 'proper', bw: 0, bn: 3, bd: 4, rn: 2, rd: 3 },
-    { mode: 'mixed', bw: 1, bn: 1, bd: 2, rn: 1, rd: 4 },
-    { mode: 'mixed', bw: 2, bn: 1, bd: 2, rn: 2, rd: 3 }
+  var QUESTIONS = [
+    { name: '題目一', mode: 'proper', bw: 0, bn: 1, bd: 2, rn: 1, rd: 3 },
+    { name: '題目二', mode: 'proper', bw: 0, bn: 3, bd: 4, rn: 2, rd: 3 },
+    { name: '題目三', mode: 'mixed', bw: 1, bn: 1, bd: 2, rn: 1, rd: 4 },
+    { name: '題目四', mode: 'mixed', bw: 2, bn: 1, bd: 2, rn: 2, rd: 3 }
   ];
+  var PROPER_STEPS = ['bd', 'bn', 'rd', 'rn'];
+  var MIXED_STEPS = ['bw', 'bd', 'bn', 'rd', 'rn'];
+  var PROPER_PROMPTS = [
+    '點一下，先看左側分母的分割線',
+    '點一下，再看左側分子的斜線',
+    '點一下，再看右側分母的分割線',
+    '點一下，再看右側分子的斜線',
+    '斜線示範完成。可重播最後一步，或按重新示範。'
+  ];
+  var MIXED_PROMPTS = [
+    '點一下，先看整數有幾多格',
+    '點一下，再看分母把每一格分成單位分數',
+    '點一下，再看分子的斜線',
+    '點一下，把每個單位分數分成等份',
+    '點一下，取其中的幾份',
+    '斜線示範完成。可重播最後一步，或按重新示範。'
+  ];
+  var HATCH = '#2c3e50';
 
-  var cards = PRESETS.map(cloneModel);
-  var active = 0;
-  var ctx = null;
-
-  function cloneModel(m) {
-    return { mode: m.mode, bw: m.bw, bn: m.bn, bd: m.bd, rn: m.rn, rd: m.rd };
-  }
-
-  function sameModel(a, b) {
-    return a.mode === b.mode && a.bw === b.bw && a.bn === b.bn && a.bd === b.bd && a.rn === b.rn && a.rd === b.rd;
-  }
+  var state = {
+    q: null,
+    mode: 'proper',
+    bw: 0, bn: 1, bd: 2, rn: 1, rd: 3,
+    revealed: { bw: false, bd: false, bn: false, rd: false, rn: false },
+    anim: null
+  };
+  var canvas, ctx, cssW = 0, cssH = 0, animRaf = 0;
 
   function $(id) { return document.getElementById(id); }
+  function isMixed() { return state.mode === 'mixed'; }
+  function steps() { return isMixed() ? MIXED_STEPS : PROPER_STEPS; }
+  function prompts() { return isMixed() ? MIXED_PROMPTS : PROPER_PROMPTS; }
 
-  function productOf(m) {
-    if (!m) return null;
-    if (m.mode === 'mixed') {
-      if (m.bw == null || m.bn == null || !(m.bd > 0) || m.rn == null || !(m.rd > 0)) return null;
-      return { n: (m.bw * m.bd + m.bn) * m.rn, d: m.bd * m.rd };
+  function doneCount() {
+    var n = 0, list = steps(), i;
+    for (i = 0; i < list.length; i++) {
+      if (state.revealed[list[i]] && !(state.anim && state.anim.field === list[i])) n++;
     }
-    if (m.bn == null || !(m.bd > 0) || m.rn == null || !(m.rd > 0)) return null;
-    return { n: m.bn * m.rn, d: m.bd * m.rd };
+    return n;
+  }
+  function nextField() {
+    var list = steps(), i;
+    for (i = 0; i < list.length; i++) if (!state.revealed[list[i]]) return list[i];
+    return null;
   }
 
-  function formatProduct(m) {
-    var p = productOf(m);
-    if (!p) return null;
-    if (m.mode !== 'mixed') return { kind: 'frac', n: p.n, d: p.d };
-    if (p.d > 0 && p.n >= p.d) {
+  function product() {
+    if (isMixed()) return { n: (state.bw * state.bd + state.bn) * state.rn, d: state.bd * state.rd };
+    return { n: state.bn * state.rn, d: state.bd * state.rd };
+  }
+  function formatProduct() {
+    var p = product();
+    if (!isMixed()) return { kind: 'frac', n: p.n, d: p.d };
+    if (p.n >= p.d) {
       var w = Math.floor(p.n / p.d);
       var rem = p.n % p.d;
       if (rem === 0) return { kind: 'int', w: w };
@@ -255,29 +236,49 @@
     }
     return { kind: 'frac', n: p.n, d: p.d };
   }
-
-  function productView(m) {
-    var fmt = formatProduct(m);
-    if (!fmt || !(m.bd > 0) || !(m.rd > 0)) return null;
-    var wholes = 0;
-    var rem = 0;
+  function productView() {
+    var fmt = formatProduct();
+    var wholes = 0, rem = 0;
     if (fmt.kind === 'int') wholes = fmt.w;
     else if (fmt.kind === 'mixed') { wholes = fmt.w; rem = fmt.n; }
     else rem = fmt.n;
     var slots = wholes + (rem > 0 ? 1 : 0);
     if (slots < 1) slots = 1;
-    return { wholes: wholes, rem: rem, cols: m.bd, rows: m.rd, per: m.bd * m.rd, slots: slots };
+    return { wholes: wholes, rem: rem, cols: state.bd, rows: state.rd, per: state.bd * state.rd, slots: slots };
+  }
+  function unitFractionView() {
+    return !!(state.revealed.bd || state.revealed.bn || state.revealed.rd || state.revealed.rn);
+  }
+  function wholeOnlyView() {
+    if (state.anim && state.anim.field === 'bw') return true;
+    return !unitFractionView();
+  }
+  function showingProduct() {
+    if (!isMixed() || !state.revealed.rn) return false;
+    var fmt = formatProduct();
+    if (!fmt || fmt.kind === 'frac') return false;
+    if (state.anim && state.anim.field !== 'rn') return false;
+    return true;
+  }
+  function layoutSlots() {
+    if (!isMixed()) return 1;
+    if (!state.revealed.bw && !unitFractionView()) return 1;
+    if (wholeOnlyView()) return Math.max(1, state.bw || 1);
+    if (showingProduct()) return productView().slots;
+    return Math.max(1, (state.bw || 0) + 1);
   }
 
-  function layoutSlots(m) {
-    if (!m || m.mode !== 'mixed' || m.bw == null) return 1;
-    var fmt = formatProduct(m);
-    if (fmt && fmt.kind !== 'frac') {
-      var pv = productView(m);
-      return pv ? pv.slots : 1;
+  function easeOut(t) {
+    t = Math.max(0, Math.min(1, t));
+    return 1 - Math.pow(1 - t, 3);
+  }
+  function fieldProgress(field) {
+    if (state.anim && state.anim.field === field) {
+      var t = (performance.now() - state.anim.t0) / state.anim.dur;
+      if (t >= 1) return 1;
+      return easeOut(t);
     }
-    if (!(m.bd >= 1)) return Math.max(1, m.bw);
-    return Math.max(1, (m.bw || 0) + 1);
+    return state.revealed[field] ? 1 : 0;
   }
 
   function hatch(x, y, w, h, color, dir, gap, lineWidth) {
@@ -295,9 +296,7 @@
     if (rem < 0) rem += gap;
     if (gap - rem < 0.05) rem = 0;
     var margin = rem / 2;
-    var i;
-    var start = -h + margin;
-    var end = w - margin;
+    var i, start = -h + margin, end = w - margin;
     if (dir < 0) {
       for (i = start; i <= end + 0.01; i += gap) {
         ctx.moveTo(x + i, y);
@@ -313,26 +312,45 @@
     ctx.restore();
   }
 
-  function strokePartitions(x0, y0, W, H, count, vertical, color) {
-    if (!(count > 1)) return;
+  function strokeGrowingLines(x0, y0, W, H, count, vertical, color, progress) {
+    if (!(count > 1) || !(progress > 0)) return;
+    var lines = count - 1;
+    var slot = 0.62;
+    var gap = lines > 1 ? (1 - slot) / (lines - 1) : 0;
     ctx.save();
     ctx.setLineDash([6, 5]);
     ctx.lineWidth = 1.8;
     ctx.strokeStyle = color;
     ctx.beginPath();
-    var i, pos;
-    for (i = 1; i < count; i++) {
+    var i, lp, pos;
+    for (i = 1; i <= lines; i++) {
+      lp = (progress - (i - 1) * gap) / slot;
+      if (lp <= 0) continue;
+      if (lp > 1) lp = 1;
       if (vertical) {
         pos = x0 + (W / count) * i;
         ctx.moveTo(pos, y0);
-        ctx.lineTo(pos, y0 + H);
+        ctx.lineTo(pos, y0 + H * lp);
       } else {
         pos = y0 + (H / count) * i;
         ctx.moveTo(x0, pos);
-        ctx.lineTo(x0 + W, pos);
+        ctx.lineTo(x0 + W * lp, pos);
       }
     }
     ctx.stroke();
+    ctx.restore();
+  }
+
+  function withRevealClip(field, x, y, w, h, axis, draw) {
+    ctx.save();
+    if (field && state.anim && state.anim.field === field) {
+      var p = fieldProgress(field);
+      ctx.beginPath();
+      if (axis === 'y') ctx.rect(x, y, w, Math.max(0.01, h * p));
+      else ctx.rect(x, y, Math.max(0.01, w * p), h);
+      ctx.clip();
+    }
+    draw();
     ctx.restore();
   }
 
@@ -342,20 +360,16 @@
     hatch(x, y, w, h, HATCH, -1, gap);
     if (both) hatch(x, y, w, h, HATCH, 1, Math.max(6, gap * 0.85));
   }
-
   function hatchCellCount(sx, y0, unit, cols, rows, count) {
     if (count <= 0) return;
-    var cw = unit / cols;
-    var rh = unit / rows;
+    var cw = unit / cols, rh = unit / rows;
     var fullRows = Math.floor(count / cols);
     var extra = count % cols;
     if (fullRows > 0) slash(sx, y0, unit, Math.min(unit, fullRows * rh), unit, true);
     if (extra > 0 && fullRows < rows) slash(sx, y0 + fullRows * rh, extra * cw, rh, unit, true);
   }
-
   function mixedRowGeom(SW, SH, slots) {
-    var pad = 14;
-    var gap = slots > 1 ? 12 : 0;
+    var pad = 14, gap = slots > 1 ? 12 : 0;
     var availW = SW - pad * 2 - gap * (slots - 1);
     var availH = SH - pad * 2;
     var unit = Math.min(availW / slots, availH);
@@ -363,17 +377,15 @@
     var x0 = pad + Math.max(0, (SW - pad * 2 - totalW) / 2);
     return { unit: unit, gap: gap, x0: x0, y0: pad, slots: slots };
   }
-
   function paintTaken(x, y, w, h, unit, takeP) {
     var gh = h * takeP;
     if (takeP < 1) slash(x, y + gh, w, h - gh, unit, false);
     if (gh > 0.5) slash(x, y, w, gh, unit, true);
   }
 
-  function drawProper(SW, SH, m) {
-    var pad = 10;
-    var x0 = pad, y0 = pad, W = SW - pad * 2, H = SH - pad * 2;
-    ctx.clearRect(0, 0, SW, SH);
+  function drawProper(SW) {
+    var pad = 10, x0 = pad, y0 = pad, W = SW - pad * 2, H = SW - pad * 2;
+    ctx.clearRect(0, 0, SW, SW);
     ctx.setLineDash([]);
     ctx.lineWidth = 4;
     ctx.strokeStyle = HATCH;
@@ -381,54 +393,96 @@
     ctx.fillRect(x0, y0, W, H);
     ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
 
-    var bw = (m.bd && m.bn > 0) ? (W / m.bd) * Math.min(m.bn, m.bd) : 0;
-    var rh = (m.rd && m.rn > 0) ? (H / m.rd) * Math.min(m.rn, m.rd) : 0;
+    var showBn = state.revealed.bn && state.bd && state.bn > 0;
+    var showRn = state.revealed.rn && state.rd && state.rn > 0;
+    var bw = showBn ? (W / state.bd) * Math.min(state.bn, state.bd) : 0;
+    var rh = showRn ? (H / state.rd) * Math.min(state.rn, state.rd) : 0;
     var overlap = bw > 0 && rh > 0;
     var scale = W / 520;
     if (scale > 1) scale = 1;
-    if (scale < 0.45) scale = 0.45;
-    var gapA = 36 * scale;
-    var gapB = 28 * scale;
-    var lw = Math.max(1.05, 1.6 * scale);
+    if (scale < 0.55) scale = 0.55;
+    var gapA = 36 * scale, gapB = 28 * scale, lw = Math.max(1.15, 1.6 * scale);
 
     if (bw > 0) {
-      var by = y0 + (overlap ? rh : 0);
-      var bh = H - (overlap ? rh : 0);
-      hatch(x0, by, bw, bh, HATCH, -1, gapA, lw);
+      withRevealClip('bn', x0, y0, bw, H, 'x', function () {
+        var by = y0 + (overlap ? rh : 0);
+        hatch(x0, by, bw, H - (overlap ? rh : 0), HATCH, -1, gapA, lw);
+      });
     }
     if (rh > 0) {
-      var rx = x0 + (overlap ? bw : 0);
-      var rw = W - (overlap ? bw : 0);
-      hatch(rx, y0, rw, rh, HATCH, 1, gapA, lw);
+      withRevealClip('rn', x0, y0, W, rh, 'y', function () {
+        var rx = x0 + (overlap ? bw : 0);
+        hatch(rx, y0, W - (overlap ? bw : 0), rh, HATCH, 1, gapA, lw);
+      });
     }
     if (overlap) {
-      hatch(x0, y0, bw, rh, HATCH, -1, gapB, lw);
-      hatch(x0, y0, bw, rh, HATCH, 1, gapB, lw);
+      var overlapField = (state.anim && (state.anim.field === 'bn' || state.anim.field === 'rn')) ? state.anim.field : null;
+      withRevealClip(overlapField, x0, y0, bw, rh, overlapField === 'rn' ? 'y' : 'x', function () {
+        hatch(x0, y0, bw, rh, HATCH, -1, gapB, lw);
+        hatch(x0, y0, bw, rh, HATCH, 1, gapB, lw);
+      });
     }
-    if (m.bd > 1) strokePartitions(x0, y0, W, H, m.bd, true, '#5dade2');
-    if (m.rd > 1) strokePartitions(x0, y0, W, H, m.rd, false, '#e74c3c');
+    if (state.revealed.bd) strokeGrowingLines(x0, y0, W, H, state.bd, true, '#5dade2', fieldProgress('bd'));
+    if (state.revealed.rd) strokeGrowingLines(x0, y0, W, H, state.rd, false, '#e74c3c', fieldProgress('rd'));
     ctx.setLineDash([]);
     ctx.lineWidth = 4;
     ctx.strokeStyle = HATCH;
     ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
   }
 
-  function drawTextbook(SW, SH, m) {
-    var bw = m.bw || 0;
-    var bd = m.bd;
-    var bn = m.bn;
-    var rd = m.rd;
-    var rn = m.rn;
-    var wholeOnly = !(bd >= 1);
+  function drawProductSquares(SW, SH) {
+    var prod = productView();
+    var g = mixedRowGeom(SW, SH, prod.slots);
+    var unit = g.unit, y0 = g.y0, cols = prod.cols, rows = prod.rows;
+    var total = prod.wholes * prod.per + prod.rem;
+    var progress = (state.anim && state.anim.field === 'rn') ? fieldProgress('rn') : 1;
+    var visible = (progress >= 1) ? total : Math.floor(total * progress + 1e-6);
+    var used = 0, i;
+    for (i = 0; i < prod.slots; i++) {
+      var sx = g.x0 + i * (unit + g.gap);
+      var cap = (i < prod.wholes) ? prod.per : prod.rem;
+      var show = Math.max(0, Math.min(cap, visible - used));
+      used += cap;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(sx, y0, unit, unit);
+      if (show >= cols * rows) slash(sx, y0, unit, unit, unit, true);
+      else hatchCellCount(sx, y0, unit, cols, rows, show);
+      if (cols > 1) strokeGrowingLines(sx, y0, unit, unit, cols, true, '#5dade2', 1);
+      if (rows > 1) strokeGrowingLines(sx, y0, unit, unit, rows, false, '#e74c3c', 1);
+      ctx.setLineDash([]);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = HATCH;
+      ctx.strokeRect(sx + 1, y0 + 1, unit - 2, unit - 2);
+    }
+  }
+
+  function drawTextbook(SW, SH) {
+    var bw = state.bw, bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
+    var wholeOnly = wholeOnlyView();
     var split = !wholeOnly && bd > 1;
-    var showBn = !wholeOnly && bd && bn != null && bn > 0;
-    var showRows = !wholeOnly && rd > 1;
-    var showTake = !wholeOnly && rd && rn != null && rn > 0;
-    var slots = wholeOnly ? Math.max(1, bw) : Math.max(1, bw + (bd >= 1 ? 1 : 0));
+    /* 分子斜線要等老師點到分子。後面的步驟仍然留住這批斜線。 */
+    var showBn = !wholeOnly && state.revealed.bn && bd && bn > 0;
+    var showRows = !wholeOnly && state.revealed.rd && rd > 1;
+    var showTake = !wholeOnly && state.revealed.rn && rd && rn > 0;
+    var slots = wholeOnly ? Math.max(1, bw) : Math.max(1, bw + 1);
     var g = mixedRowGeom(SW, SH, slots);
-    var unit = g.unit;
-    var y0 = g.y0;
-    var takeP = showTake ? Math.min(rn, rd) / rd : 0;
+    var unit = g.unit, y0 = g.y0;
+    var takeP = 0;
+    if (showTake) {
+      takeP = Math.min(rn, rd) / rd;
+      if (state.anim && state.anim.field === 'rn') takeP *= fieldProgress('rn');
+    }
+    var vProg = (state.anim && state.anim.field === 'bd') ? fieldProgress('bd') : 1;
+    var hProg = (state.anim && state.anim.field === 'rd') ? fieldProgress('rd') : 1;
+    var bnProg = (state.anim && state.anim.field === 'bn') ? fieldProgress('bn') : 1;
+    var clipBw = state.anim && state.anim.field === 'bw';
+    if (clipBw) {
+      ctx.save();
+      var span = slots * unit + Math.max(0, slots - 1) * g.gap;
+      ctx.beginPath();
+      ctx.rect(g.x0, y0, Math.max(0.01, span * fieldProgress('bw')), unit);
+      ctx.clip();
+    }
     var i;
     for (i = 0; i < slots; i++) {
       var sx = g.x0 + i * (unit + g.gap);
@@ -436,6 +490,7 @@
       var cols = (isWhole && !split) ? 1 : (bd > 1 ? bd : 1);
       var yellow = cols;
       if (!isWhole) yellow = showBn ? Math.min(bn, bd) : 0;
+      if (!isWhole && state.anim && state.anim.field === 'bn') yellow *= bnProg;
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(sx, y0, unit, unit);
       if (isWhole && !split) {
@@ -450,316 +505,226 @@
           if (k === yLim - 1 && yellow < yLim) w = cw * (yellow - (yLim - 1));
           paintTaken(sx + k * cw, y0, w, unit, unit, takeP);
         }
-        if ((split || !isWhole) && cols > 1) strokePartitions(sx, y0, unit, unit, cols, true, '#5dade2');
+        if ((split || !isWhole) && cols > 1) strokeGrowingLines(sx, y0, unit, unit, cols, true, '#5dade2', vProg);
       }
-      if (showRows) strokePartitions(sx, y0, unit, unit, rd, false, '#e74c3c');
+      if (showRows) strokeGrowingLines(sx, y0, unit, unit, rd, false, '#e74c3c', hProg);
       ctx.setLineDash([]);
       ctx.lineWidth = 4;
       ctx.strokeStyle = HATCH;
       ctx.strokeRect(sx + 1, y0 + 1, unit - 2, unit - 2);
     }
+    if (clipBw) ctx.restore();
   }
 
-  function drawProductSquares(SW, SH, m) {
-    var prod = productView(m);
-    if (!prod) return;
-    var g = mixedRowGeom(SW, SH, prod.slots);
-    var unit = g.unit;
-    var y0 = g.y0;
-    var cols = prod.cols;
-    var rows = prod.rows;
-    var i;
-    for (i = 0; i < prod.slots; i++) {
-      var sx = g.x0 + i * (unit + g.gap);
-      var cap = (i < prod.wholes) ? prod.per : prod.rem;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(sx, y0, unit, unit);
-      if (cap >= cols * rows) slash(sx, y0, unit, unit, unit, true);
-      else hatchCellCount(sx, y0, unit, cols, rows, cap);
-      if (cols > 1) strokePartitions(sx, y0, unit, unit, cols, true, '#5dade2');
-      if (rows > 1) strokePartitions(sx, y0, unit, unit, rows, false, '#e74c3c');
-      ctx.setLineDash([]);
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = HATCH;
-      ctx.strokeRect(sx + 1, y0 + 1, unit - 2, unit - 2);
-    }
-  }
-
-  function drawMixed(SW, SH, m) {
+  function drawMixed(SW, SH) {
     ctx.clearRect(0, 0, SW, SH);
     ctx.setLineDash([]);
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, SW, SH);
-    if (m.bw == null) {
+    if (!state.revealed.bw && !unitFractionView()) {
+      var pad = 10, side = Math.min(SW, SH) - pad * 2;
       ctx.lineWidth = 4;
       ctx.strokeStyle = HATCH;
-      ctx.strokeRect(15, 15, Math.min(SW, SH) - 30, Math.min(SW, SH) - 30);
+      ctx.strokeRect(pad + 1, pad + 1, side - 2, side - 2);
       return;
     }
-    var fmt = formatProduct(m);
-    if (fmt && fmt.kind !== 'frac') drawProductSquares(SW, SH, m);
-    else drawTextbook(SW, SH, m);
+    if (showingProduct()) drawProductSquares(SW, SH);
+    else drawTextbook(SW, SH);
   }
 
-  function paint(canvas, model) {
-    if (!canvas) return;
+  function draw() {
+    if (!ctx || !cssW) return;
+    if (isMixed()) drawMixed(cssW, cssH);
+    else drawProper(cssW);
+  }
+
+  function resize() {
+    if (!canvas || $('demo').hidden) return;
     var wrap = canvas.parentElement;
-    var cssW = Math.floor(wrap.clientWidth || 0);
-    if (cssW < 80) return;
-    if (cssW > 560) cssW = 560;
-    var slots = layoutSlots(model);
-    var cssH = cssW;
-    if (model && model.mode === 'mixed') {
-      var pad = 14;
-      var gap = slots > 1 ? 12 : 0;
-      var unit = (cssW - pad * 2 - gap * (slots - 1)) / slots;
-      cssH = Math.max(80, Math.ceil(unit + pad * 2));
+    var nextW = Math.floor(wrap.clientWidth || 0);
+    if (nextW < 80) return;
+    if (nextW > 520) nextW = 520;
+    var slots = layoutSlots();
+    var nextH = nextW;
+    if (isMixed() && (state.revealed.bw || unitFractionView())) {
+      var pad = 14, gap = slots > 1 ? 12 : 0;
+      var unit = (nextW - pad * 2 - gap * (slots - 1)) / slots;
+      nextH = Math.max(80, Math.ceil(unit + pad * 2));
     }
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(cssW * dpr);
-    canvas.height = Math.round(cssH * dpr);
-    canvas.style.width = cssW + 'px';
-    canvas.style.height = cssH + 'px';
-    ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (!model) {
-      ctx.clearRect(0, 0, cssW, cssH);
-      return;
+    if (nextW !== cssW || nextH !== cssH || canvas.width !== Math.round(nextW * dpr)) {
+      cssW = nextW;
+      cssH = nextH;
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
-    if (model.mode === 'mixed') drawMixed(cssW, cssH, model);
-    else drawProper(cssW, cssH, model);
-    canvas.setAttribute('aria-label', ariaFor(model));
+    draw();
   }
 
-  function fracHtml(n, d) {
-    return '<span class="frac"><span class="n">' + n + '</span><span class="d">' + d + '</span></span>';
+  function setText(field, text) {
+    var el = document.querySelector('[data-field="' + field + '"]');
+    if (el) el.textContent = text;
   }
 
-  function factorHtml(m, which) {
-    if (which === 'b') return fracHtml(m.rn, m.rd);
-    if (m.mode === 'mixed') {
-      return '<span class="mixed"><span class="w">' + m.bw + '</span>' + fracHtml(m.bn, m.bd) + '</span>';
-    }
-    return fracHtml(m.bn, m.bd);
-  }
-
-  function eqHtml(m) {
-    return factorHtml(m, 'a') + '<span class="op">×</span>' + factorHtml(m, 'b');
-  }
-
-  function productHtml(m) {
-    var fmt = formatProduct(m);
+  function answerWords(fmt) {
     if (!fmt) return '';
     if (fmt.kind === 'int') return String(fmt.w);
-    if (fmt.kind === 'mixed') {
-      return '<span class="mixed"><span class="w">' + fmt.w + '</span>' + fracHtml(fmt.n, fmt.d) + '</span>';
+    if (fmt.kind === 'mixed') return fmt.w + '又' + fmt.d + '分之' + fmt.n;
+    return fmt.d + '分之' + fmt.n;
+  }
+
+  function updateChrome() {
+    var q = state.q;
+    $('q-name').textContent = q.name;
+    $('eq').classList.toggle('mixed', isMixed());
+    $('chip-a').classList.toggle('as-mixed', isMixed());
+    $('whole-a').hidden = !isMixed();
+    setText('bw', String(state.bw));
+    setText('bn', String(state.bn));
+    setText('bd', String(state.bd));
+    setText('rn', String(state.rn));
+    setText('rd', String(state.rd));
+
+    var showAnswer = !!state.revealed.rn && !(state.anim && state.anim.field === 'rn');
+    var fmt = showAnswer ? formatProduct() : null;
+    var purple = $('chip-p');
+    purple.classList.remove('as-mixed', 'as-int');
+    if (!fmt || fmt.kind === 'frac') {
+      $('whole-p').hidden = true;
+      purple.classList.remove('as-int');
+      setText('pw', '?');
+      setText('pn', fmt ? String(fmt.n) : '?');
+      setText('pd', fmt ? String(fmt.d) : '?');
+    } else if (fmt.kind === 'int') {
+      purple.classList.add('as-int');
+      $('whole-p').hidden = false;
+      setText('pw', String(fmt.w));
+      setText('pn', '');
+      setText('pd', '');
+    } else {
+      purple.classList.add('as-mixed');
+      $('whole-p').hidden = false;
+      setText('pw', String(fmt.w));
+      setText('pn', String(fmt.n));
+      setText('pd', String(fmt.d));
     }
-    return fracHtml(fmt.n, fmt.d);
-  }
 
-  function captionFor(m) {
-    var fmt = formatProduct(m);
-    if (!fmt) return '';
-    if (m.mode === 'mixed' && fmt.kind !== 'frac') {
-      return '得數大於或等於 1：交叉斜線收成完整的 1，餘數留在下一格（不約簡）。';
-    }
-    if (m.mode === 'mixed') return '得數小於 1：交叉斜線留在各單位分數裡面。';
-    return '單向斜線是一個因數，交叉斜線是重疊部分。';
-  }
-
-  function ariaFor(m) {
-    if (!m) return '斜線圖';
-    var spoken = (m.mode === 'mixed' ? (m.bw + '又' + m.bd + '分之' + m.bn) : (m.bd + '分之' + m.bn)) +
-      '乘' + m.rd + '分之' + m.rn;
-    return spoken + '的斜線圖';
-  }
-
-  function noteFor(m) {
-    var fmt = formatProduct(m);
-    if (!fmt || m.mode !== 'mixed') return '';
-    if (fmt.kind !== 'frac') return '積大於或等於 1，圖是完整的 1 加餘數。';
-    return '積小於 1，圖是各單位分數中取出的部分。';
-  }
-
-  function build() {
-    var row = $('preset-row');
-    var grid = $('sheet-grid');
-    row.innerHTML = '';
-    grid.innerHTML = '';
-    cards.forEach(function (m, i) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'preset' + (i === active ? ' active' : '');
-      btn.setAttribute('data-i', String(i));
-      btn.innerHTML = '<span class="q-no">第' + (i + 1) + '題</span>' + eqHtml(PRESETS[i]);
-      btn.addEventListener('click', function () { selectPreset(i); });
-      row.appendChild(btn);
-
-      var card = document.createElement('article');
-      card.className = 'q-card' + (i === active ? ' active' : '');
-      card.id = 'card-' + i;
-      card.innerHTML =
-        '<h3>第' + (i + 1) + '題</h3>' +
-        '<div class="eq"></div>' +
-        '<div class="diagram"><canvas id="card-canvas-' + i + '" width="480" height="480"></canvas></div>' +
-        '<div class="ans"></div>' +
-        '<p class="note"></p>';
-      card.addEventListener('click', function () { selectCard(i); });
-      grid.appendChild(card);
+    var next = nextField();
+    var focus = state.anim ? state.anim.field : next;
+    var list = steps();
+    document.querySelectorAll('#eq button.digit').forEach(function (btn) {
+      var f = btn.getAttribute('data-field');
+      btn.classList.toggle('expect', f === focus);
     });
+    $('chip-a').classList.toggle('next', focus === 'bw' || focus === 'bn' || focus === 'bd');
+    $('chip-b').classList.toggle('next', focus === 'rn' || focus === 'rd');
+
+    var n = doneCount();
+    $('step-count').textContent = '已示範 ' + n + ' / ' + list.length + ' 步';
+    var prompt = prompts()[n] || '';
+    if (n === list.length && fmt) prompt = '得到 ' + answerWords(fmt) + '。可重播最後一步，或按重新示範。';
+    $('prompt').textContent = prompt;
+    $('btn-next').textContent = next ? '下一步' : '重播最後一步';
+    $('btn-next').disabled = !!state.anim;
+    canvas.setAttribute('aria-label', q.name + '，' + prompt);
   }
 
-  function refreshCard(i) {
-    var card = $('card-' + i);
-    if (!card) return;
-    card.classList.toggle('active', i === active);
-    card.querySelector('.eq').innerHTML = eqHtml(cards[i]);
-    card.querySelector('.ans').innerHTML = '得數 ' + productHtml(cards[i]);
-    card.querySelector('.note').textContent = noteFor(cards[i]);
-    var presetBtn = document.querySelector('.preset[data-i="' + i + '"]');
-    if (presetBtn) presetBtn.classList.toggle('active', i === active);
-    paint($('card-canvas-' + i), cards[i]);
-  }
-
-  function refreshEditor() {
-    var m = cards[active];
-    var form = $('editor');
-    form.classList.toggle('is-mixed', m.mode === 'mixed');
-    $('mode-proper').classList.toggle('active', m.mode !== 'mixed');
-    $('mode-mixed').classList.toggle('active', m.mode === 'mixed');
-    $('mode-proper').setAttribute('aria-pressed', m.mode !== 'mixed' ? 'true' : 'false');
-    $('mode-mixed').setAttribute('aria-pressed', m.mode === 'mixed' ? 'true' : 'false');
-    $('in-bw').value = m.mode === 'mixed' && m.bw != null ? String(m.bw) : (m.mode === 'mixed' ? '' : '');
-    $('in-bn').value = m.bn == null ? '' : String(m.bn);
-    $('in-bd').value = m.bd == null ? '' : String(m.bd);
-    $('in-rn').value = m.rn == null ? '' : String(m.rn);
-    $('in-rd').value = m.rd == null ? '' : String(m.rd);
-    $('live-eq').innerHTML = eqHtml(m);
-    $('product').innerHTML = '得數 ' + productHtml(m);
-    $('caption').textContent = captionFor(m);
-    $('warn').textContent = '';
-    paint($('preview'), m);
-  }
-
-  function redrawAll() {
-    cards.forEach(function (_, i) { refreshCard(i); });
-    paint($('preview'), cards[active]);
-  }
-
-  function selectCard(i) {
-    active = i;
-    refreshEditor();
-    cards.forEach(function (_, n) { refreshCard(n); });
-  }
-
-  function selectPreset(i) {
-    cards[i] = cloneModel(PRESETS[i]);
-    selectCard(i);
-  }
-
-  function readInt(id) {
-    var raw = $(id).value.trim();
-    if (raw === '') return { empty: true };
-    if (!/^\d+$/.test(raw)) return { bad: true };
-    return { v: parseInt(raw, 10) };
-  }
-
-  function applyEditor() {
-    var mode = $('mode-mixed').classList.contains('active') ? 'mixed' : 'proper';
-    var bn = readInt('in-bn');
-    var bd = readInt('in-bd');
-    var rn = readInt('in-rn');
-    var rd = readInt('in-rd');
-    var bw = readInt('in-bw');
-    var warn = $('warn');
-    function bad(msg) {
-      warn.textContent = msg;
-      return;
+  function play(field) {
+    if (!field || state[field] == null) return;
+    if (state.anim) return;
+    state.revealed[field] = true;
+    state.anim = { field: field, t0: performance.now(), dur: 720 };
+    updateChrome();
+    resize();
+    if (animRaf) cancelAnimationFrame(animRaf);
+    function frame() {
+      if (!state.anim || state.anim.field !== field) return;
+      var t = (performance.now() - state.anim.t0) / state.anim.dur;
+      draw();
+      if (t < 1 && state.anim && state.anim.field === field) animRaf = requestAnimationFrame(frame);
+      else if (state.anim && state.anim.field === field) {
+        state.anim = null;
+        resize();
+        updateChrome();
+      }
     }
-    if (bn.empty || bd.empty || rn.empty || rd.empty || (mode === 'mixed' && bw.empty)) {
-      bad('請填寫分子和分母' + (mode === 'mixed' ? '，帶分數亦要填整數。' : '。'));
-      return;
-    }
-    if (bn.bad || bd.bad || rn.bad || rd.bad || (mode === 'mixed' && bw.bad)) {
-      bad('請輸入整數。');
-      return;
-    }
-    if (mode === 'mixed' && (bw.v < 0 || bw.v > WHOLE_MAX)) {
-      bad('整數須為 0 至 ' + WHOLE_MAX + '。');
-      return;
-    }
-    if (bn.v > NUM_MAX || rn.v > NUM_MAX) {
-      bad('分子須為 0 至 ' + NUM_MAX + '。');
-      return;
-    }
-    if (bd.v < 1 || bd.v > DEN_MAX || rd.v < 1 || rd.v > DEN_MAX) {
-      bad('分母須為 1 至 ' + DEN_MAX + '。');
-      return;
-    }
-    var next = {
-      mode: mode,
-      bw: mode === 'mixed' ? bw.v : 0,
-      bn: bn.v,
-      bd: bd.v,
-      rn: rn.v,
-      rd: rd.v
-    };
-    cards[active] = next;
-    var soft = '';
-    if (mode === 'mixed' && bn.v >= bd.v) soft = '帶分數的分子應小於分母。斜線仍會按已填數字畫出。';
-    else if (mode !== 'mixed' && (bn.v >= bd.v || rn.v >= rd.v)) soft = '分子大於或等於分母時，該邊的斜線會畫滿。';
-    warn.textContent = soft;
-    $('live-eq').innerHTML = eqHtml(next);
-    $('product').innerHTML = '得數 ' + productHtml(next);
-    $('caption').textContent = captionFor(next);
-    refreshCard(active);
-    paint($('preview'), next);
+    frame();
   }
 
-  function setMode(mode) {
-    var m = cards[active];
-    if (m.mode === mode) return;
-    m.mode = mode;
-    if (mode === 'mixed' && !(m.bw > 0)) m.bw = 1;
-    refreshEditor();
-    refreshCard(active);
+  function advance() {
+    var next = nextField();
+    if (next) play(next);
+    else play(steps()[steps().length - 1]);
   }
 
-  function wire() {
-    ['in-bw', 'in-bn', 'in-bd', 'in-rn', 'in-rd'].forEach(function (id) {
-      $(id).addEventListener('input', applyEditor);
+  function onField(field) {
+    if (state.anim) return;
+    var next = nextField();
+    if (field === next || state.revealed[field]) play(field);
+    else if (next) play(next);
+  }
+
+  function resetDemo() {
+    if (animRaf) cancelAnimationFrame(animRaf);
+    animRaf = 0;
+    state.anim = null;
+    state.revealed = { bw: false, bd: false, bn: false, rd: false, rn: false };
+    updateChrome();
+    resize();
+  }
+
+  function showQuestion(index) {
+    var q = QUESTIONS[index];
+    if (animRaf) cancelAnimationFrame(animRaf);
+    animRaf = 0;
+    state.q = q;
+    state.mode = q.mode;
+    state.bw = q.bw;
+    state.bn = q.bn;
+    state.bd = q.bd;
+    state.rn = q.rn;
+    state.rd = q.rd;
+    state.anim = null;
+    state.revealed = { bw: false, bd: false, bn: false, rd: false, rn: false };
+    cssW = 0;
+    cssH = 0;
+    $('picker').hidden = true;
+    $('demo').hidden = false;
+    updateChrome();
+    requestAnimationFrame(function () { resize(); });
+  }
+
+  function showPicker() {
+    if (animRaf) cancelAnimationFrame(animRaf);
+    animRaf = 0;
+    state.anim = null;
+    $('demo').hidden = true;
+    $('picker').hidden = false;
+  }
+
+  canvas = $('demo-canvas');
+  ctx = canvas.getContext('2d');
+
+  document.querySelectorAll('.pick-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      showQuestion(parseInt(btn.getAttribute('data-q'), 10));
     });
-    $('editor').addEventListener('submit', function (e) { e.preventDefault(); applyEditor(); });
-    $('mode-proper').addEventListener('click', function () { setMode('proper'); });
-    $('mode-mixed').addEventListener('click', function () { setMode('mixed'); });
-    $('btn-reset').addEventListener('click', function () { selectPreset(active); });
-    $('btn-print-one').addEventListener('click', function () { doPrint('one'); });
-    $('btn-print-all').addEventListener('click', function () { doPrint('all'); });
-    $('show-answer').addEventListener('change', function () {
-      document.body.classList.toggle('hide-ans', !this.checked);
-    });
-    window.addEventListener('resize', redrawAll);
-    window.addEventListener('beforeprint', redrawAll);
-    window.addEventListener('afterprint', function () {
-      document.body.classList.remove('print-one', 'print-all');
-      redrawAll();
-    });
-  }
-
-  function doPrint(mode) {
-    document.body.classList.toggle('print-one', mode === 'one');
-    document.body.classList.toggle('print-all', mode === 'all');
-    requestAnimationFrame(function () {
-      redrawAll();
-      window.print();
-    });
-  }
-
-  build();
-  wire();
-  refreshEditor();
-  redrawAll();
-  window.addEventListener('load', redrawAll);
+  });
+  $('btn-back').addEventListener('click', showPicker);
+  $('btn-next').addEventListener('click', advance);
+  $('btn-reset').addEventListener('click', resetDemo);
+  $('eq').addEventListener('click', function (e) {
+    var btn = e.target.closest('button.digit');
+    if (!btn) return;
+    onField(btn.getAttribute('data-field'));
+  });
+  canvas.addEventListener('click', advance);
+  window.addEventListener('resize', function () {
+    if (!$('demo').hidden) resize();
+  });
 })();
 </script>
 </body>
