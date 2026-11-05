@@ -246,8 +246,9 @@
    從課堂頁的面積模型抽出，可離線開啟或整份嵌入。
    沒有 PubNub、課堂編號、老師監察、學生提交，也沒有其他分頁。
    預設是真分數 × 真分數：先點分母出分割線，再點分子出斜線。
-   可切換帶分數 × 真分數：左側多填一個整數。點整數出整數格，
-   點分母把每一格直向分割（看成假分數），點分子出斜線，再乘右側真分數。
+   可切換帶分數 × 真分數，圖照課本四步：整數格加真分數、化成假分數的直條、
+   再取右側真分數（只塗在那些直條上）。積小於 1 就留在這格圖裡。
+   積大於或等於 1 時，把塗色收成完整的 1 各佔一格，餘數只佔下一格的若干份。
    數字填完不會立刻顯示答案。再點已填的數字會重播該步。
    斜線旁的三句說明已刪，不要加回。
    乘積按分子相乘、分母相乘直接顯示，本教學頁不另約成最簡。
@@ -303,7 +304,6 @@ function toast(msg, kind) {
     rn: '填寫右側紅色的分子'
   };
   var EXPLAIN_PROMPT = '點分母看分割，點分子看斜線。再點可重播。';
-  var EXPLAIN_PROMPT_MIXED = '點整數看整數格，點分母看分割，點分子看斜線。再點可重播。';
 
   function isMixed() { return state.mode === 'mixed'; }
 
@@ -362,7 +362,11 @@ function toast(msg, kind) {
   }
 
   function answerRevealed() {
-    if (isMixed() && !state.bw) return false;
+    if (isMixed()) {
+      /* 課本最後一步是「取其中的幾份」之後得到積，對應點開右側分子。 */
+      return !!(state.revealed.rn && state.bw && state.bn != null &&
+        state.rn != null && state.bd && state.rd);
+    }
     return !!(state.revealed.bn && state.revealed.rn &&
       state.bn != null && state.rn != null && state.bd && state.rd);
   }
@@ -402,7 +406,11 @@ function toast(msg, kind) {
       var t = (performance.now() - state.anim.t0) / state.anim.dur;
       drawModel(canvas.clientWidth || 400);
       if (t < 1 && state.anim && state.anim.field === field) animRaf = requestAnimationFrame(frame);
-      else if (state.anim && state.anim.field === field) state.anim = null;
+      else if (state.anim && state.anim.field === field) {
+        state.anim = null;
+        /* 重播被乘數的步驟之後，畫面回到積，避免停在整數格。 */
+        if (isMixed() && answerRevealed()) resizeCanvas();
+      }
     }
     frame();
   }
@@ -424,7 +432,8 @@ function toast(msg, kind) {
       if (cssW > 560) cssW = 560;
       if (cssW < 200) cssW = 280;
       var pad = 14;
-      var unit = (cssW - pad * 2) / slots;
+      var gap = slots > 1 ? 12 : 0;
+      var unit = (cssW - pad * 2 - gap * (slots - 1)) / slots;
       var cssH = Math.ceil(unit + pad * 2);
       canvas.width = Math.round(cssW * dpr);
       canvas.height = Math.round(cssH * dpr);
@@ -584,7 +593,11 @@ function toast(msg, kind) {
     ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
   }
 
-  /* 帶分數畫成整數格，再加一格給真分數部分。直向按該分母分割（化假分數），橫向是右側真分數。 */
+  var MIX_YELLOW = '#f6c445';
+  var MIX_GREEN = '#8ed14a';
+
+  /* 填數時照課本：黃格是帶分數，直條是假分數，綠色是取走的份。
+     積大於或等於 1 時，改把綠色收成完整的 1 和餘下的一格，避免看起來像兩格都塗滿。 */
   function mixedStructure() {
     if (state.bw == null) return null;
     var any = state.revealed.bw || state.revealed.bd || state.revealed.bn || state.revealed.rd || state.revealed.rn;
@@ -593,10 +606,198 @@ function toast(msg, kind) {
     return { wholes: state.bw, frac: !!frac };
   }
 
+  function showingProduct() {
+    if (!isMixed() || !answerRevealed()) return false;
+    var fmt = formatProduct(product());
+    if (!fmt || fmt.kind === 'frac') return false;
+    if (state.anim && state.anim.field !== 'rn') return false;
+    return true;
+  }
+
+  function productView() {
+    var p = product();
+    var fmt = formatProduct(p);
+    if (!p || !fmt || !state.bd || !state.rd) return null;
+    var cols = state.bd;
+    var rows = state.rd;
+    var wholes = 0;
+    var rem = 0;
+    if (fmt.kind === 'int') wholes = fmt.w;
+    else if (fmt.kind === 'mixed') { wholes = fmt.w; rem = fmt.n; }
+    else rem = fmt.n;
+    var slots = wholes + (rem > 0 ? 1 : 0);
+    if (slots < 1) slots = 1;
+    return { wholes: wholes, rem: rem, cols: cols, rows: rows, per: cols * rows, slots: slots };
+  }
+
   function mixedLayoutSlots() {
+    if (showingProduct()) {
+      var prod = productView();
+      if (prod) return prod.slots;
+    }
     var struct = mixedStructure();
     if (!struct) return 1;
     return struct.wholes + (struct.frac ? 1 : 0);
+  }
+
+  function mixedRowGeom(SW, SH, slots) {
+    var pad = 14;
+    var gap = slots > 1 ? 12 : 0;
+    var availW = SW - pad * 2 - gap * (slots - 1);
+    var availH = SH - pad * 2;
+    var unit = Math.min(availW / slots, availH);
+    var totalW = unit * slots + gap * (slots - 1);
+    var x0 = pad + Math.max(0, (SW - pad * 2 - totalW) / 2);
+    return { unit: unit, gap: gap, x0: x0, y0: pad, slots: slots };
+  }
+
+  function strokeCellGrid(sx, y0, unit, cols, rows, vProg, hProg) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(44, 62, 80, 0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    var i, pos;
+    if (cols > 1 && vProg > 0) {
+      for (i = 1; i < cols; i++) {
+        pos = sx + (unit / cols) * i;
+        ctx.moveTo(pos, y0);
+        ctx.lineTo(pos, y0 + unit * vProg);
+      }
+    }
+    if (rows > 1 && hProg > 0) {
+      for (i = 1; i < rows; i++) {
+        pos = y0 + (unit / rows) * i;
+        ctx.moveTo(sx, pos);
+        ctx.lineTo(sx + unit * hProg, pos);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function fillCellCount(sx, y0, unit, cols, rows, count, color) {
+    if (count <= 0) return;
+    var cw = unit / cols;
+    var rh = unit / rows;
+    var fullRows = Math.floor(count / cols);
+    var extra = count % cols;
+    ctx.fillStyle = color;
+    if (fullRows > 0) ctx.fillRect(sx, y0, unit, Math.min(unit, fullRows * rh));
+    if (extra > 0 && fullRows < rows) ctx.fillRect(sx, y0 + fullRows * rh, extra * cw, rh);
+  }
+
+  /* 把綠色小格收成：每一個 1 佔滿一格，餘數只塗下一格的若干小格。 */
+  function drawProductSquares(SW, SH) {
+    var prod = productView();
+    if (!prod) return;
+    var g = mixedRowGeom(SW, SH, prod.slots);
+    var unit = g.unit;
+    var y0 = g.y0;
+    var cols = prod.cols;
+    var rows = prod.rows;
+    var total = prod.wholes * prod.per + prod.rem;
+    var progress = 1;
+    if (state.anim && state.anim.field === 'rn') progress = fieldProgress('rn');
+    var visible = (progress >= 1) ? total : Math.floor(total * progress + 1e-6);
+    var used = 0;
+    var i;
+    for (i = 0; i < prod.slots; i++) {
+      var sx = g.x0 + i * (unit + g.gap);
+      var cap = (i < prod.wholes) ? prod.per : prod.rem;
+      var show = Math.max(0, Math.min(cap, visible - used));
+      used += cap;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(sx, y0, unit, unit);
+      if (show >= cols * rows) {
+        ctx.fillStyle = MIX_GREEN;
+        ctx.fillRect(sx, y0, unit, unit);
+      } else {
+        fillCellCount(sx, y0, unit, cols, rows, show, MIX_GREEN);
+      }
+      strokeCellGrid(sx, y0, unit, cols, rows, 1, 1);
+      ctx.setLineDash([]);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#2c3e50';
+      ctx.strokeRect(sx + 1, y0 + 1, unit - 2, unit - 2);
+    }
+  }
+
+  /* 課本：黃 = 帶分數／假分數直條；綠 = 那些直條裡取走的真分數。空白是沒有取的部分。 */
+  function drawTextbook(SW, SH) {
+    var bw = state.bw;
+    var bd = state.bd;
+    var bn = state.bn;
+    var rd = state.rd;
+    var rn = state.rn;
+    /* 一進入「共有幾個單位分數／分成等份」就把每一格直向切開，整數格也要數得出來。 */
+    var split = !!(bd > 1 && (state.revealed.bd || state.revealed.bn || state.revealed.rd || state.revealed.rn));
+    var showBn = !!(state.revealed.bn && bd && bn != null && bn > 0);
+    var showRows = !!(state.revealed.rd && rd > 1);
+    var showTake = !!(state.revealed.rn && rd && rn != null && rn > 0);
+    var fracSlot = !!(bd && (state.revealed.bd || state.revealed.bn || state.revealed.rd || state.revealed.rn));
+    var slots = bw + (fracSlot ? 1 : 0);
+    var g = mixedRowGeom(SW, SH, slots);
+    var unit = g.unit;
+    var y0 = g.y0;
+    var takeP = 0;
+    if (showTake) {
+      takeP = Math.min(rn, rd) / rd;
+      if (state.anim && state.anim.field === 'rn') takeP *= fieldProgress('rn');
+    }
+    var vProg = (state.anim && state.anim.field === 'bd') ? fieldProgress('bd') : 1;
+    var hProg = (state.anim && state.anim.field === 'rd') ? fieldProgress('rd') : 1;
+    var bnProg = (state.anim && state.anim.field === 'bn') ? fieldProgress('bn') : 1;
+    var clipBw = state.anim && state.anim.field === 'bw';
+    if (clipBw) {
+      ctx.save();
+      var span = slots * unit + Math.max(0, slots - 1) * g.gap;
+      ctx.beginPath();
+      ctx.rect(g.x0, y0, Math.max(0.01, span * fieldProgress('bw')), unit);
+      ctx.clip();
+    }
+    var i;
+    for (i = 0; i < slots; i++) {
+      var sx = g.x0 + i * (unit + g.gap);
+      var isWhole = i < bw;
+      var cols = (isWhole && !split) ? 1 : (bd > 1 ? bd : 1);
+      var yellow = cols;
+      if (!isWhole) yellow = showBn ? Math.min(bn, bd) : 0;
+      if (!isWhole && state.anim && state.anim.field === 'bn') yellow *= bnProg;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(sx, y0, unit, unit);
+      if (isWhole && !split) {
+        ctx.fillStyle = MIX_YELLOW;
+        ctx.fillRect(sx, y0, unit, unit);
+        if (takeP > 0) {
+          ctx.fillStyle = MIX_GREEN;
+          ctx.fillRect(sx, y0, unit, unit * takeP);
+        }
+      } else if (cols > 1 || yellow > 0) {
+        var cw = unit / cols;
+        var k, x, yHere;
+        var yLim = Math.ceil(yellow - 1e-6);
+        for (k = 0; k < cols; k++) {
+          if (k >= yLim) continue;
+          x = sx + k * cw;
+          var w = cw;
+          if (k === yLim - 1 && yellow < yLim) w = cw * (yellow - (yLim - 1));
+          ctx.fillStyle = MIX_YELLOW;
+          ctx.fillRect(x, y0, w, unit);
+          if (takeP > 0) {
+            ctx.fillStyle = MIX_GREEN;
+            ctx.fillRect(x, y0, w, unit * takeP);
+          }
+        }
+        if (split || !isWhole) strokeCellGrid(sx, y0, unit, cols, 1, vProg, 0);
+      }
+      if (showRows) strokeCellGrid(sx, y0, unit, 1, rd, 0, hProg);
+      ctx.setLineDash([]);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#2c3e50';
+      ctx.strokeRect(sx + 1, y0 + 1, unit - 2, unit - 2);
+    }
+    if (clipBw) ctx.restore();
   }
 
   function drawMixedModel(cssSize, cssHeight) {
@@ -606,8 +807,12 @@ function toast(msg, kind) {
     ctx.clearRect(0, 0, SW, SH);
     ctx.setLineDash([]);
 
-    var struct = mixedStructure();
-    if (!struct) {
+    if (showingProduct()) {
+      drawProductSquares(SW, SH);
+      return;
+    }
+
+    if (!mixedStructure()) {
       var pad0 = 10;
       var side = Math.min(SW, SH) - pad0 * 2;
       ctx.lineWidth = 4;
@@ -618,84 +823,7 @@ function toast(msg, kind) {
       return;
     }
 
-    var pad = 14;
-    var wholes = struct.wholes;
-    var slots = wholes + (struct.frac ? 1 : 0);
-    var availW = SW - pad * 2;
-    var availH = SH - pad * 2;
-    var unit = Math.min(availW / slots, availH);
-    var totalW = unit * slots;
-    var x0 = pad + (availW - totalW) / 2;
-    var y0 = pad;
-
-    var clipBw = state.anim && state.anim.field === 'bw';
-    if (clipBw) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(x0, y0, Math.max(0.01, totalW * fieldProgress('bw')), unit);
-      ctx.clip();
-    }
-
-    var i;
-    ctx.fillStyle = '#ffffff';
-    for (i = 0; i < slots; i++) ctx.fillRect(x0 + i * unit, y0, unit, unit);
-
-    var bd = state.bd, bn = state.bn, rd = state.rd, rn = state.rn;
-    var showBn = state.revealed.bn && bd && bn != null && bn > 0;
-    var showRn = state.revealed.rn && rd && rn != null && rn > 0;
-    var bnUse = showBn ? Math.min(bn, bd) : 0;
-    var blueW = 0;
-    if (showBn) {
-      blueW = wholes * unit;
-      if (struct.frac) blueW += (unit / bd) * bnUse;
-    }
-    var redH = showRn ? (unit / rd) * Math.min(rn, rd) : 0;
-    var hasOverlap = blueW > 0 && redH > 0;
-    var gapH = Math.max(6, Math.min(22, unit / 6));
-
-    if (blueW > 0) {
-      withRevealClip('bn', x0, y0, blueW, unit, 'x', function () {
-        var by = y0 + (hasOverlap ? redH : 0);
-        var bh = unit - (hasOverlap ? redH : 0);
-        hatch(x0, by, blueW, bh, HATCH_NEUTRAL, -1, gapH);
-      });
-    }
-    if (redH > 0) {
-      withRevealClip('rn', x0, y0, totalW, redH, 'y', function () {
-        var rx = x0 + (hasOverlap ? blueW : 0);
-        var rw = totalW - (hasOverlap ? blueW : 0);
-        hatch(rx, y0, rw, redH, HATCH_NEUTRAL, 1, gapH);
-      });
-    }
-    if (hasOverlap) {
-      var overlapField = (state.anim && (state.anim.field === 'bn' || state.anim.field === 'rn')) ? state.anim.field : null;
-      withRevealClip(overlapField, x0, y0, blueW, redH, overlapField === 'rn' ? 'y' : 'x', function () {
-        var og = Math.max(5, gapH * 0.75);
-        hatch(x0, y0, blueW, redH, HATCH_NEUTRAL, -1, og);
-        hatch(x0, y0, blueW, redH, HATCH_NEUTRAL, 1, og);
-      });
-    }
-
-    if (state.revealed.bd && bd > 1) {
-      var lp = fieldProgress('bd');
-      var lineSlots = struct.frac ? slots : wholes;
-      for (i = 0; i < lineSlots; i++) {
-        strokeGrowingLines(x0 + i * unit, y0, unit, unit, bd, true, '#5dade2', lp);
-      }
-    }
-    if (state.revealed.rd && rd > 1) {
-      strokeGrowingLines(x0, y0, totalW, unit, rd, false, '#e74c3c', fieldProgress('rd'));
-    }
-
-    ctx.setLineDash([]);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = '#2c3e50';
-    for (i = 0; i < slots; i++) {
-      var sx = x0 + i * unit;
-      ctx.strokeRect(sx + 1, y0 + 1, unit - 2, unit - 2);
-    }
-
-    if (clipBw) ctx.restore();
+    drawTextbook(SW, SH);
   }
 
   function setDigitText(field, val) {
@@ -788,9 +916,46 @@ function toast(msg, kind) {
     var filled = state.fillStep === doneStep();
     prompt.hidden = false;
     prompt.setAttribute('aria-hidden', 'false');
-    prompt.textContent = filled
-      ? (isMixed() ? EXPLAIN_PROMPT_MIXED : EXPLAIN_PROMPT)
-      : (promptsForMode()[state.fillStep] || '');
+    prompt.textContent = isMixed()
+      ? mixedTeachPrompt()
+      : (filled ? EXPLAIN_PROMPT : (PROMPTS[state.fillStep] || ''));
+  }
+
+  function unitPiecePhrase() {
+    return state.bd ? (state.bd + '分之1') : '';
+  }
+
+  function answerPhrase(fmt) {
+    if (!fmt) return '';
+    if (fmt.kind === 'int') return String(fmt.w);
+    if (fmt.kind === 'mixed') return fmt.w + '又' + fmt.d + '分之' + fmt.n;
+    return fmt.d + '分之' + fmt.n;
+  }
+
+  /* 課本句序：全部共有幾個單位分數 → 每個分成幾等份 → 取其中幾份 → 得到。 */
+  function mixedTeachPrompt() {
+    if (state.bw == null) return PROMPTS_MIXED[1];
+    if (state.bd == null) return PROMPTS_MIXED[2];
+    if (state.bn == null) return PROMPTS_MIXED[3];
+    var piece = unitPiecePhrase();
+    var count = state.bw * state.bd + state.bn;
+    if (state.rd == null) {
+      return '1. 全部共有 ' + count + ' 個' + piece + '。2. 把每個' + piece + '都分成？等份';
+    }
+    if (state.rn == null) {
+      return '2. 把每個' + piece + '都分成 ' + state.rd + ' 等份。3. 取其中的？份';
+    }
+    if (!answerRevealed()) {
+      return '3. 取其中的 ' + state.rn + ' 份。再點紅色分子，看得到多少';
+    }
+    return '4. 得到 ' + answerPhrase(formatProduct(product())) + '。再點可重播。';
+  }
+
+  function mixedFieldHint(field) {
+    var piece = unitPiecePhrase();
+    if (field === 'rd' && piece) return '把每個' + piece + '都分成幾等份？';
+    if (field === 'rn') return '取其中的幾份？';
+    return FIELD_HINT_MIXED[field] || '請選擇數字';
   }
 
   function renderAll() {
@@ -805,8 +970,7 @@ function toast(msg, kind) {
     state.editing = field;
     var bd = $('exp-keypad-backdrop');
     var hint = $('exp-keypad-hint');
-    var hints = isMixed() ? FIELD_HINT_MIXED : FIELD_HINT;
-    hint.textContent = hints[field] || '請選擇數字';
+    hint.textContent = (isMixed() ? mixedFieldHint(field) : FIELD_HINT[field]) || '請選擇數字';
     bd.classList.add('show');
     bd.setAttribute('aria-hidden', 'false');
     updateChipsUI();
