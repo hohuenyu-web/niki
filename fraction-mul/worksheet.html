@@ -20,7 +20,7 @@
   [hidden] { display: none !important; }
   .page {
     min-height: 100vh; padding: 12px 14px 32px; width: 100%;
-    max-width: 880px; margin: 0 auto;
+    max-width: 1080px; margin: 0 auto;
     display: flex; flex-direction: column; align-items: center; gap: 14px;
   }
   .header { text-align: center; width: 100%; }
@@ -56,7 +56,18 @@
   .demo-top { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .q-name { font-weight: 800; color: var(--primary-dark); font-size: 1.15rem; }
   .col-label { font-weight: 800; color: #2c5aa0; letter-spacing: 0.08em; }
+  /* 跟教學頁 .exp-body 的兩欄 flex-wrap；工作紙把列式放左、斜線放右。窄螢幕時列式在上。 */
+  .demo-body {
+    width: 100%;
+    display: flex; flex-wrap: wrap; gap: 16px 20px;
+    align-items: flex-start; justify-content: center;
+  }
+  .demo-eq-col {
+    flex: 1 1 280px; max-width: 420px; min-width: min(100%, 240px);
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
   .exp-eq {
+    width: 100%;
     display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
     gap: 8px; font-size: clamp(1.6rem, 5vw, 2.15rem); font-weight: 800;
   }
@@ -88,14 +99,18 @@
   button.digit.expect { outline: 2px dashed currentColor; background: rgba(255,255,255,0.88); }
   button.digit:active { background: rgba(0,0,0,0.06); }
   .product-digit { min-width: 1.2em; text-align: center; display: inline-block; padding: 2px 4px; }
-  .canvas-wrap { width: min(520px, 100%); display: flex; justify-content: center; }
-  #demo-canvas { display: block; background: #fff; cursor: pointer; max-width: 100%; touch-action: manipulation; }
+  .canvas-wrap {
+    flex: 1 1 320px; max-width: 520px; min-width: min(100%, 240px);
+    display: flex; justify-content: center;
+  }
+  #demo-canvas { display: block; background: #fff; cursor: pointer; max-width: 100%; min-width: 0; touch-action: manipulation; }
   .prompt {
+    width: 100%;
     background: #eaf2fb; color: #2c5aa0; border-radius: 999px;
-    padding: 10px 16px; font-weight: 800; text-align: center; line-height: 1.45; max-width: 100%;
+    padding: 10px 16px; font-weight: 800; text-align: center; line-height: 1.45;
   }
   .step-count { color: var(--muted); font-weight: 700; }
-  .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .actions { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
   @media (max-width: 560px) {
     .pick-grid { grid-template-columns: 1fr; }
   }
@@ -128,33 +143,37 @@
       <div class="q-name" id="q-name">題目一</div>
       <button type="button" class="btn" id="btn-back">返回選題</button>
     </div>
-    <div class="col-label">列式</div>
-    <div class="exp-eq" id="eq" aria-label="列式">
-      <div class="exp-chip blue" id="chip-a">
-        <span class="exp-whole" id="whole-a" hidden><button type="button" class="digit" data-field="bw">1</button></span>
-        <span class="exp-num"><button type="button" class="digit" data-field="bn">1</button></span>
-        <span class="exp-den"><button type="button" class="digit" data-field="bd">2</button></span>
+    <div class="demo-body">
+      <div class="demo-eq-col">
+        <div class="col-label">列式</div>
+        <div class="exp-eq" id="eq" aria-label="列式">
+          <div class="exp-chip blue" id="chip-a">
+            <span class="exp-whole" id="whole-a" hidden><button type="button" class="digit" data-field="bw">1</button></span>
+            <span class="exp-num"><button type="button" class="digit" data-field="bn">1</button></span>
+            <span class="exp-den"><button type="button" class="digit" data-field="bd">2</button></span>
+          </div>
+          <span class="op">×</span>
+          <div class="exp-chip red" id="chip-b">
+            <span class="exp-num"><button type="button" class="digit" data-field="rn">1</button></span>
+            <span class="exp-den"><button type="button" class="digit" data-field="rd">3</button></span>
+          </div>
+          <span class="op">=</span>
+          <div class="exp-chip purple" id="chip-p">
+            <span class="exp-whole" id="whole-p" hidden><span class="product-digit" data-field="pw">?</span></span>
+            <span class="exp-num"><span class="product-digit" data-field="pn">?</span></span>
+            <span class="exp-den"><span class="product-digit" data-field="pd">?</span></span>
+          </div>
+        </div>
+        <p class="step-count" id="step-count"></p>
+        <p class="prompt" id="prompt" aria-live="polite" hidden></p>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-next">下一步</button>
+          <button type="button" class="btn" id="btn-reset">重新示範</button>
+        </div>
       </div>
-      <span class="op">×</span>
-      <div class="exp-chip red" id="chip-b">
-        <span class="exp-num"><button type="button" class="digit" data-field="rn">1</button></span>
-        <span class="exp-den"><button type="button" class="digit" data-field="rd">3</button></span>
+      <div class="canvas-wrap" id="canvas-wrap">
+        <canvas id="demo-canvas" width="520" height="520" aria-label="斜線示範，點一下看下一步"></canvas>
       </div>
-      <span class="op">=</span>
-      <div class="exp-chip purple" id="chip-p">
-        <span class="exp-whole" id="whole-p" hidden><span class="product-digit" data-field="pw">?</span></span>
-        <span class="exp-num"><span class="product-digit" data-field="pn">?</span></span>
-        <span class="exp-den"><span class="product-digit" data-field="pd">?</span></span>
-      </div>
-    </div>
-    <div class="canvas-wrap" id="canvas-wrap">
-      <canvas id="demo-canvas" width="520" height="520" aria-label="斜線示範，點一下看下一步"></canvas>
-    </div>
-    <p class="step-count" id="step-count"></p>
-    <p class="prompt" id="prompt" aria-live="polite"></p>
-    <div class="actions">
-      <button type="button" class="btn primary" id="btn-next">下一步</button>
-      <button type="button" class="btn" id="btn-reset">重新示範</button>
     </div>
   </section>
 </main>
@@ -179,20 +198,19 @@
   ];
   var PROPER_STEPS = ['bd', 'bn', 'rd', 'rn'];
   var MIXED_STEPS = ['bw', 'bd', 'bn', 'rd', 'rn'];
+  /* 只保留做到一半的提示。做完不再出「得到…」或「點已示範的數字可回到該步」。 */
   var PROPER_PROMPTS = [
     '點一下，先看左側分母的分割線',
     '點一下，再看左側分子的斜線',
     '點一下，再看右側分母的分割線',
-    '點一下，再看右側分子的斜線',
-    '斜線示範完成。點已示範的數字可回到該步，或按重新示範。'
+    '點一下，再看右側分子的斜線'
   ];
   var MIXED_PROMPTS = [
     '點一下，先看整數有幾多格',
     '點一下，再看分母把每一格分成單位分數',
     '點一下，再看分子的斜線',
     '點一下，把每個單位分數分成等份',
-    '點一下，取其中的幾份',
-    '斜線示範完成。點已示範的數字可回到該步，或按重新示範。'
+    '點一下，取其中的幾份'
   ];
   var HATCH = '#2c3e50';
 
@@ -519,13 +537,6 @@
     if (el) el.textContent = text;
   }
 
-  function answerWords(fmt) {
-    if (!fmt) return '';
-    if (fmt.kind === 'int') return String(fmt.w);
-    if (fmt.kind === 'mixed') return fmt.w + '又' + fmt.d + '分之' + fmt.n;
-    return fmt.d + '分之' + fmt.n;
-  }
-
   function updateChrome() {
     var q = state.q;
     $('q-name').textContent = q.name;
@@ -575,11 +586,12 @@
     var n = doneCount();
     $('step-count').textContent = '已示範 ' + n + ' / ' + list.length + ' 步';
     var prompt = prompts()[n] || '';
-    if (n === list.length && fmt) prompt = '得到 ' + answerWords(fmt) + '。點已示範的數字可回到該步，或按重新示範。';
-    $('prompt').textContent = prompt;
+    var promptEl = $('prompt');
+    promptEl.textContent = prompt;
+    promptEl.hidden = !prompt;
     $('btn-next').textContent = next ? '下一步' : '重播最後一步';
     $('btn-next').disabled = !!state.anim;
-    canvas.setAttribute('aria-label', q.name + '，' + prompt);
+    canvas.setAttribute('aria-label', prompt ? (q.name + '，' + prompt) : (q.name + '斜線示範'));
   }
 
   function play(field) {
