@@ -20,7 +20,7 @@
   [hidden] { display: none !important; }
   .page {
     min-height: 100vh; padding: 12px 14px 32px; width: 100%;
-    max-width: 880px; margin: 0 auto;
+    max-width: 960px; margin: 0 auto;
     display: flex; flex-direction: column; align-items: center; gap: 14px;
   }
   .header { text-align: center; width: 100%; }
@@ -53,9 +53,33 @@
   }
   .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
   .btn.primary:disabled { opacity: 0.55; cursor: default; transform: none; }
-  .demo-top { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .demo-top { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
   .q-name { font-weight: 800; color: var(--primary-dark); font-size: 1.15rem; }
-  .col-label { font-weight: 800; color: #2c5aa0; letter-spacing: 0.08em; }
+  .col-label { font-weight: 800; color: #2c5aa0; letter-spacing: 0.08em; text-align: center; }
+  /* 跟教學頁 .exp-body 並排；列式在左、斜線圖在右。窄螢幕 flex-wrap 時列式在上。 */
+  .demo-body {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .demo-eq {
+    flex: 0 1 420px;
+    max-width: min(420px, 100%);
+    min-width: min(240px, 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding-top: 8px;
+  }
+  .demo-eq .col-label,
+  .demo-eq .exp-eq,
+  .demo-eq .step-count,
+  .demo-eq .prompt,
+  .demo-eq .actions { width: 100%; max-width: 100%; }
   .exp-eq {
     display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
     gap: 8px; font-size: clamp(1.6rem, 5vw, 2.15rem); font-weight: 800;
@@ -88,8 +112,19 @@
   button.digit.expect { outline: 2px dashed currentColor; background: rgba(255,255,255,0.88); }
   button.digit:active { background: rgba(0,0,0,0.06); }
   .product-digit { min-width: 1.2em; text-align: center; display: inline-block; padding: 2px 4px; }
-  .canvas-wrap { width: min(520px, 100%); display: flex; justify-content: center; }
-  #demo-canvas { display: block; background: #fff; cursor: pointer; max-width: 100%; touch-action: manipulation; }
+  .canvas-wrap {
+    flex: 1 1 260px;
+    max-width: min(520px, 100%);
+    min-width: min(200px, 100%);
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  #demo-canvas {
+    display: block; background: #fff; cursor: pointer;
+    width: 100%; max-width: 100%; min-width: 0; height: auto;
+    touch-action: manipulation;
+  }
   .prompt {
     background: #eaf2fb; color: #2c5aa0; border-radius: 999px;
     padding: 10px 16px; font-weight: 800; text-align: center; line-height: 1.45; max-width: 100%;
@@ -128,33 +163,37 @@
       <div class="q-name" id="q-name">題目一</div>
       <button type="button" class="btn" id="btn-back">返回選題</button>
     </div>
-    <div class="col-label">列式</div>
-    <div class="exp-eq" id="eq" aria-label="列式">
-      <div class="exp-chip blue" id="chip-a">
-        <span class="exp-whole" id="whole-a" hidden><button type="button" class="digit" data-field="bw">1</button></span>
-        <span class="exp-num"><button type="button" class="digit" data-field="bn">1</button></span>
-        <span class="exp-den"><button type="button" class="digit" data-field="bd">2</button></span>
+    <div class="demo-body">
+      <div class="demo-eq">
+        <div class="col-label">列式</div>
+        <div class="exp-eq" id="eq" aria-label="列式">
+          <div class="exp-chip blue" id="chip-a">
+            <span class="exp-whole" id="whole-a" hidden><button type="button" class="digit" data-field="bw">1</button></span>
+            <span class="exp-num"><button type="button" class="digit" data-field="bn">1</button></span>
+            <span class="exp-den"><button type="button" class="digit" data-field="bd">2</button></span>
+          </div>
+          <span class="op">×</span>
+          <div class="exp-chip red" id="chip-b">
+            <span class="exp-num"><button type="button" class="digit" data-field="rn">1</button></span>
+            <span class="exp-den"><button type="button" class="digit" data-field="rd">3</button></span>
+          </div>
+          <span class="op">=</span>
+          <div class="exp-chip purple" id="chip-p">
+            <span class="exp-whole" id="whole-p" hidden><span class="product-digit" data-field="pw">?</span></span>
+            <span class="exp-num"><span class="product-digit" data-field="pn">?</span></span>
+            <span class="exp-den"><span class="product-digit" data-field="pd">?</span></span>
+          </div>
+        </div>
+        <p class="step-count" id="step-count"></p>
+        <p class="prompt" id="prompt" aria-live="polite"></p>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-next">下一步</button>
+          <button type="button" class="btn" id="btn-reset">重新示範</button>
+        </div>
       </div>
-      <span class="op">×</span>
-      <div class="exp-chip red" id="chip-b">
-        <span class="exp-num"><button type="button" class="digit" data-field="rn">1</button></span>
-        <span class="exp-den"><button type="button" class="digit" data-field="rd">3</button></span>
+      <div class="canvas-wrap" id="canvas-wrap">
+        <canvas id="demo-canvas" width="520" height="520" aria-label="斜線示範，點一下看下一步"></canvas>
       </div>
-      <span class="op">=</span>
-      <div class="exp-chip purple" id="chip-p">
-        <span class="exp-whole" id="whole-p" hidden><span class="product-digit" data-field="pw">?</span></span>
-        <span class="exp-num"><span class="product-digit" data-field="pn">?</span></span>
-        <span class="exp-den"><span class="product-digit" data-field="pd">?</span></span>
-      </div>
-    </div>
-    <div class="canvas-wrap" id="canvas-wrap">
-      <canvas id="demo-canvas" width="520" height="520" aria-label="斜線示範，點一下看下一步"></canvas>
-    </div>
-    <p class="step-count" id="step-count"></p>
-    <p class="prompt" id="prompt" aria-live="polite"></p>
-    <div class="actions">
-      <button type="button" class="btn primary" id="btn-next">下一步</button>
-      <button type="button" class="btn" id="btn-reset">重新示範</button>
     </div>
   </section>
 </main>
@@ -162,6 +201,7 @@
 /* 分數乘法工作紙
    1. 先選題目一至題目四
    2. 再顯示列式（數字一開始就在，不用學生自己填）
+      列式在左、斜線圖在右，跟教學頁並排；窄螢幕先列式再圖。
    3. 點一下逐步出斜線，斜線樣式跟 teach2-standalone.html：
       真分數：藍直分割、\ 斜線、紅橫分割、/ 同交叉斜線。
       帶分數：整數格、單位分數、斜線、分成等份，再在原格取幾份。
