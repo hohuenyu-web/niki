@@ -162,11 +162,12 @@
 /* 分數乘法工作紙
    1. 先選題目一至題目四
    2. 再顯示列式（數字一開始就在，不用學生自己填）
-   3. 點一下逐步出斜線，畫法跟 teach2-standalone.html：
+   3. 點一下逐步出斜線，斜線樣式跟 teach2-standalone.html：
       真分數：藍直分割、\ 斜線、紅橫分割、/ 同交叉斜線。
-      帶分數：整數格、單位分數、斜線、分成等份、取幾份。
+      帶分數：整數格、單位分數、斜線、分成等份，再在原格取幾份。
       已示範的數字可再點，畫布回到該步（其後的步驟收起）再播一次。
-      積大於或等於 1 時，交叉斜線收成完整的 1 加餘數，不約簡。
+      帶分數即使積大於或等於 1，也留在原來的方格就地取份，不改排成積的圖。
+      紫色答案格在最後一步顯示積，不約簡。
    順德聯誼總會何日東小學
 */
 (function () {
@@ -237,16 +238,6 @@
     }
     return { kind: 'frac', n: p.n, d: p.d };
   }
-  function productView() {
-    var fmt = formatProduct();
-    var wholes = 0, rem = 0;
-    if (fmt.kind === 'int') wholes = fmt.w;
-    else if (fmt.kind === 'mixed') { wholes = fmt.w; rem = fmt.n; }
-    else rem = fmt.n;
-    var slots = wholes + (rem > 0 ? 1 : 0);
-    if (slots < 1) slots = 1;
-    return { wholes: wholes, rem: rem, cols: state.bd, rows: state.rd, per: state.bd * state.rd, slots: slots };
-  }
   function unitFractionView() {
     return !!(state.revealed.bd || state.revealed.bn || state.revealed.rd || state.revealed.rn);
   }
@@ -254,18 +245,10 @@
     if (state.anim && state.anim.field === 'bw') return true;
     return !unitFractionView();
   }
-  function showingProduct() {
-    if (!isMixed() || !state.revealed.rn) return false;
-    var fmt = formatProduct();
-    if (!fmt || fmt.kind === 'frac') return false;
-    if (state.anim && state.anim.field !== 'rn') return false;
-    return true;
-  }
   function layoutSlots() {
     if (!isMixed()) return 1;
     if (!state.revealed.bw && !unitFractionView()) return 1;
     if (wholeOnlyView()) return Math.max(1, state.bw || 1);
-    if (showingProduct()) return productView().slots;
     return Math.max(1, (state.bw || 0) + 1);
   }
 
@@ -361,14 +344,6 @@
     hatch(x, y, w, h, HATCH, -1, gap);
     if (both) hatch(x, y, w, h, HATCH, 1, Math.max(6, gap * 0.85));
   }
-  function hatchCellCount(sx, y0, unit, cols, rows, count) {
-    if (count <= 0) return;
-    var cw = unit / cols, rh = unit / rows;
-    var fullRows = Math.floor(count / cols);
-    var extra = count % cols;
-    if (fullRows > 0) slash(sx, y0, unit, Math.min(unit, fullRows * rh), unit, true);
-    if (extra > 0 && fullRows < rows) slash(sx, y0 + fullRows * rh, extra * cw, rh, unit, true);
-  }
   function mixedRowGeom(SW, SH, slots) {
     var pad = 14, gap = slots > 1 ? 12 : 0;
     var availW = SW - pad * 2 - gap * (slots - 1);
@@ -429,32 +404,6 @@
     ctx.lineWidth = 4;
     ctx.strokeStyle = HATCH;
     ctx.strokeRect(x0 + 1, y0 + 1, W - 2, H - 2);
-  }
-
-  function drawProductSquares(SW, SH) {
-    var prod = productView();
-    var g = mixedRowGeom(SW, SH, prod.slots);
-    var unit = g.unit, y0 = g.y0, cols = prod.cols, rows = prod.rows;
-    var total = prod.wholes * prod.per + prod.rem;
-    var progress = (state.anim && state.anim.field === 'rn') ? fieldProgress('rn') : 1;
-    var visible = (progress >= 1) ? total : Math.floor(total * progress + 1e-6);
-    var used = 0, i;
-    for (i = 0; i < prod.slots; i++) {
-      var sx = g.x0 + i * (unit + g.gap);
-      var cap = (i < prod.wholes) ? prod.per : prod.rem;
-      var show = Math.max(0, Math.min(cap, visible - used));
-      used += cap;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(sx, y0, unit, unit);
-      if (show >= cols * rows) slash(sx, y0, unit, unit, unit, true);
-      else hatchCellCount(sx, y0, unit, cols, rows, show);
-      if (cols > 1) strokeGrowingLines(sx, y0, unit, unit, cols, true, '#5dade2', 1);
-      if (rows > 1) strokeGrowingLines(sx, y0, unit, unit, rows, false, '#e74c3c', 1);
-      ctx.setLineDash([]);
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = HATCH;
-      ctx.strokeRect(sx + 1, y0 + 1, unit - 2, unit - 2);
-    }
   }
 
   function drawTextbook(SW, SH) {
@@ -529,8 +478,8 @@
       ctx.strokeRect(pad + 1, pad + 1, side - 2, side - 2);
       return;
     }
-    if (showingProduct()) drawProductSquares(SW, SH);
-    else drawTextbook(SW, SH);
+    /* 取份留在原本的方格，就地畫交叉斜線，不改排成積的圖。 */
+    drawTextbook(SW, SH);
   }
 
   function draw() {
