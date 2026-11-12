@@ -263,7 +263,7 @@
    預設是真分數 × 真分數：先點分母出分割線，再點分子出斜線。
    可切換帶分數 × 真分數。句序跟課本：全部共有幾個單位分數、分成等份、取幾份、得到。
    圖仍用真分數那套斜線：單向斜線是單位分數，交叉斜線是取走的積。
-   第二個分數的斜線，和它的橫向分割，只畫在第一個分數的範圍裡。範圍以外不畫斜線。
+   第二個分數的斜線只畫在第一個分數的範圍裡，範圍以外不畫斜線。橫向紅虛線仍橫跨整格。
    積小於 1 留在直條圖裡。積大於或等於 1 時，交叉斜線收成完整的 1 各佔一格，餘數只佔下一格的若干份。
    數字填完不會立刻顯示答案。再點已填的數字會重播該步。
    斜線旁的三句說明已刪，不要加回。
@@ -533,15 +533,9 @@ function toast(msg, kind) {
     ctx.restore();
   }
 
-  /* factorW 是第一個分數已畫出的寬度。第二個分數的橫線只畫在這段裡面，
-     例如 1/2 × 1/3 的兩條紅色虛線只穿過左半。還沒畫出第一個分子時，橫線仍橫跨整格。 */
-  function strokePartitionLines(x0, y0, W, H, factorW) {
+  function strokePartitionLines(x0, y0, W, H) {
     if (state.revealed.bd) strokeGrowingLines(x0, y0, W, H, state.bd, true, '#5dade2', fieldProgress('bd'));
-    if (state.revealed.rd) {
-      var span = W;
-      if (factorW > 0 && factorW < W - 0.5) span = factorW;
-      strokeGrowingLines(x0, y0, span, H, state.rd, false, '#e74c3c', fieldProgress('rd'));
-    }
+    if (state.revealed.rd) strokeGrowingLines(x0, y0, W, H, state.rd, false, '#e74c3c', fieldProgress('rd'));
   }
 
   function withRevealClip(field, x, y, w, h, axis, draw) {
@@ -601,7 +595,7 @@ function toast(msg, kind) {
       });
     }
 
-    strokePartitionLines(x0, y0, W, H, bw);
+    strokePartitionLines(x0, y0, W, H);
 
     ctx.lineWidth = 4;
     ctx.strokeStyle = '#2c3e50';
@@ -724,8 +718,8 @@ function toast(msg, kind) {
     }
   }
 
-  /* 單向斜線是單位分數直條，交叉斜線是取走的份。分割線仍是藍直、紅橫。
-     紅橫線和取走的斜線只畫在這個分數佔到的直條，空出的部分保持空白。 */
+  /* 單向斜線是單位分數直條，交叉斜線是取走的份。分割線仍是藍直、紅橫，紅橫線橫跨整格。
+     取走的斜線只畫在這個分數佔到的直條，空出的部分不畫斜線。 */
   function paintTaken(x, y, w, h, unit, takeP) {
     var gh = h * takeP;
     if (takeP < 1) slash(x, y + gh, w, h - gh, unit, false);
@@ -791,14 +785,7 @@ function toast(msg, kind) {
           strokeGrowingLines(sx, y0, unit, unit, cols, true, '#5dade2', vProg);
         }
       }
-      if (showRows) {
-        var rowSpan = unit;
-        if (!isWhole) {
-          var factorCols = showBn ? Math.min(bn, cols) : 0;
-          rowSpan = factorCols > 0 ? unit * (factorCols / cols) : 0;
-        }
-        if (rowSpan > 0.5) strokeGrowingLines(sx, y0, rowSpan, unit, rd, false, '#e74c3c', hProg);
-      }
+      if (showRows) strokeGrowingLines(sx, y0, unit, unit, rd, false, '#e74c3c', hProg);
       ctx.setLineDash([]);
       ctx.lineWidth = 4;
       ctx.strokeStyle = '#2c3e50';
