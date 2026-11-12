@@ -182,8 +182,9 @@
    1. 先選題目一至題目四
    2. 再顯示列式（數字一開始就在，不用學生自己填）
    3. 點一下逐步出斜線，斜線樣式跟 teach2-standalone.html：
-      真分數：藍直分割、\ 斜線、紅橫分割、/ 同交叉斜線。
-      帶分數：整數格、單位分數、斜線、分成等份，再在原格取幾份。
+      真分數：藍直分割、\ 斜線、紅橫分割只畫在左側範圍內，交叉斜線是積。
+      右側分子的斜線不畫出左側範圍。
+      帶分數：整數格、單位分數、斜線、分成等份只畫在第一個分數的範圍內，再在原格取幾份。
       已示範的數字可再點，畫布回到該步（其後的步驟收起）再播一次。
       帶分數即使積大於或等於 1，也留在原來的方格就地取份，不改排成積的圖。
       紫色答案格在最後一步顯示積，不約簡。
@@ -403,12 +404,7 @@
         hatch(x0, by, bw, H - (overlap ? rh : 0), HATCH, -1, gapA, lw);
       });
     }
-    if (rh > 0) {
-      withRevealClip('rn', x0, y0, W, rh, 'y', function () {
-        var rx = x0 + (overlap ? bw : 0);
-        hatch(rx, y0, W - (overlap ? bw : 0), rh, HATCH, 1, gapA, lw);
-      });
-    }
+    /* 第二個分數的斜線只留在與第一個分數重疊的交叉區。右上那格不畫斜線。 */
     if (overlap) {
       var overlapField = (state.anim && (state.anim.field === 'bn' || state.anim.field === 'rn')) ? state.anim.field : null;
       withRevealClip(overlapField, x0, y0, bw, rh, overlapField === 'rn' ? 'y' : 'x', function () {
@@ -417,7 +413,11 @@
       });
     }
     if (state.revealed.bd) strokeGrowingLines(x0, y0, W, H, state.bd, true, '#5dade2', fieldProgress('bd'));
-    if (state.revealed.rd) strokeGrowingLines(x0, y0, W, H, state.rd, false, '#e74c3c', fieldProgress('rd'));
+    if (state.revealed.rd) {
+      var span = W;
+      if (bw > 0 && bw < W - 0.5) span = bw;
+      strokeGrowingLines(x0, y0, span, H, state.rd, false, '#e74c3c', fieldProgress('rd'));
+    }
     ctx.setLineDash([]);
     ctx.lineWidth = 4;
     ctx.strokeStyle = HATCH;
@@ -475,7 +475,15 @@
         }
         if ((split || !isWhole) && cols > 1) strokeGrowingLines(sx, y0, unit, unit, cols, true, '#5dade2', vProg);
       }
-      if (showRows) strokeGrowingLines(sx, y0, unit, unit, rd, false, '#e74c3c', hProg);
+      if (showRows) {
+        /* 第二個分數的等份只畫在這個帶分數實際佔到的直條裡。空出的部分不畫橫線。 */
+        var rowSpan = unit;
+        if (!isWhole) {
+          var factorCols = showBn ? Math.min(bn, cols) : 0;
+          rowSpan = factorCols > 0 ? unit * (factorCols / cols) : 0;
+        }
+        if (rowSpan > 0.5) strokeGrowingLines(sx, y0, rowSpan, unit, rd, false, '#e74c3c', hProg);
+      }
       ctx.setLineDash([]);
       ctx.lineWidth = 4;
       ctx.strokeStyle = HATCH;
